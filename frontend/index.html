@@ -3,192 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIS AI Assistant | SIH 2026 Regulatory Intelligence Engine</title>
+    <title>BIS AI Assistant | Indian Standards Research Workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=12.f.5">
+    <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png?v=12.f.5">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=12.f.5">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css?v=12.f.5" id="appStyles">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Top Navigation Bar -->
-        <header class="navbar">
-            <div class="brand">
-                <div class="logo-badge">BIS</div>
-                <div class="brand-info">
-                    <h1>BIS Technical Assistant <span class="version-badge">Phase 5 Production</span></h1>
-                    <span class="subtext">Bureau of Indian Standards Regulatory Intelligence, Multi-Hop Chain Reasoner & Evidence Gate</span>
+    <div class="app-shell">
+        <!-- ======================================================= -->
+        <!-- LEFT SIDEBAR: Persistent AI Hub Style Navigation       -->
+        <!-- ======================================================= -->
+        <aside class="sidebar" id="sidebar" aria-label="Sidebar Navigation">
+            <!-- Brand -->
+            <div class="sidebar-brand">
+                <a href="#assistant" class="brand-left" id="brandLink">
+                    <div class="brand-emblem-wrap">
+                        <div class="brand-emblem-glow"></div>
+                        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.16)"/>
+                            <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
+                            <path d="M16 6V11M16 21V26M7 11.5L11 13.8M21 18.2L25 20.5" stroke="#6C63FF" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div class="brand-titles">
+                        <h1 class="brand-name">BIS Assistant</h1>
+                        <span class="brand-sub">RESEARCH WORKSPACE</span>
+                    </div>
+                </a>
+                <button type="button" class="mobile-sidebar-close" id="mobileSidebarClose" aria-label="Close sidebar">✕</button>
+            </div>
+
+            <!-- Primary Nav Links -->
+            <nav class="sidebar-nav">
+                <button type="button" class="nav-link active" id="navAssistant" title="AI Assistant Workspace">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Assistant</span>
+                </button>
+                <button type="button" class="nav-link" id="navHome" title="Product Overview & Standards Hub">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span>Home</span>
+                </button>
+            </nav>
+
+            <!-- Conversations Section -->
+            <div class="sidebar-conversations-wrap">
+                <div class="conv-section-header">
+                    <span class="conv-section-label">CONVERSATIONS</span>
+                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new chat">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="sidebar-search-box">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search..." aria-label="Search conversations">
+                </div>
+
+                <!-- Scrollable Conversation History (Grouped: Today, Earlier) -->
+                <div class="sidebar-conv-list no-scrollbar" id="conversationList">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
-            <div class="stats-bar" id="statsBar">
-                <div class="stat-pill badge-green"><span class="pill-dot green"></span> <strong id="statPSCoverage">100%</strong> PS Coverage (25/25)</div>
-                <div class="stat-pill"><span class="pill-dot green"></span> <strong id="statEvidence">2,166</strong> Evidence Records</div>
-                <div class="stat-pill"><span class="pill-dot green"></span> <strong id="statEdges">13,339</strong> Graph Edges</div>
-                <div class="stat-pill badge-green"><span class="pill-dot green"></span> <strong>100%</strong> Evidence-Bound</div>
-            </div>
-        </header>
 
-        <!-- Main Layout -->
-        <main class="main-layout">
-            <!-- Left Section: Query & Intelligence Response -->
-            <section class="query-section">
-                <!-- Search Card -->
-                <div class="glass-card query-card">
-                    <div class="card-header">
-                        <h2>🔍 Ask BIS Technical Compliance & Standards</h2>
-                        <span class="badge-tag">Deterministic Grounding Enforced</span>
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-profile-card" id="btnSystemInfo" role="button" tabindex="0" title="View BIS Baseline & Architecture">
+                    <div class="profile-avatar-group">
+                        <div class="profile-dot-wrap"></div>
+                        <div class="profile-info">
+                            <span class="profile-name">BIS Evidence Gate</span>
+                            <span class="profile-role">Phase 12.E Verified</span>
+                        </div>
+                    </div>
+                    <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" title="Toggle sidebar collapse" aria-label="Toggle sidebar collapse">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ======================================================= -->
+        <!-- WORKSPACE CONTAINER                                     -->
+        <!-- ======================================================= -->
+        <div class="workspace-container">
+            <!-- 1. VIEW: ASSISTANT (AI Hub Style Conversation Workspace) -->
+            <main class="main-workspace ambient-glow-chat" id="viewAssistant" role="main">
+                <!-- Topbar -->
+                <header class="workspace-topbar" id="workspaceTopbar">
+                    <div class="topbar-left">
+                        <button type="button" class="mobile-menu-trigger" id="mobileMenuBtn" aria-label="Open navigation sidebar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                        </button>
+                        <span class="topbar-title" id="currentChatTitle">New Session</span>
                     </div>
 
-                    <form id="queryForm" class="query-form">
-                        <div class="input-group">
+                    <div class="topbar-right">
+                    </div>
+                </header>
+
+                <!-- Scrollable Chat Viewport -->
+                <div class="chat-viewport no-scrollbar" id="chatViewport">
+                    <!-- Empty State (AI Hub 2.0 Style) -->
+                    <div class="welcome-container" id="welcomeContainer">
+                        <div class="welcome-inner">
+                            <div class="welcome-emblem-wrap">
+                                <div class="welcome-emblem-blur"></div>
+                                <div class="welcome-emblem">
+                                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.16)"/>
+                                        <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
+                                        <path d="M16 6V11M16 21V26M7 11.5L11 13.8M21 18.2L25 20.5" stroke="#6C63FF" stroke-width="1.8"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="welcome-header-text">
+                                <h1 class="welcome-title">BIS AI Assistant</h1>
+                                <p class="welcome-subtitle">
+                                    Ask about Indian Standards, certification, laboratory scope, testing evidence, or BIS procedures.
+                                </p>
+                            </div>
+
+                            <!-- Suggestions Grid (Clean, unobtrusive) -->
+                            <div class="suggestions-grid">
+                                <button type="button" class="suggestion-card" data-query="What is IS 8978?">
+                                    <span class="suggestion-text">What is IS 8978?</span>
+                                    <span class="suggestion-tag">Standard Specification</span>
+                                </button>
+                                <button type="button" class="suggestion-card" data-query="Which laboratories have scope for IS 8978?">
+                                    <span class="suggestion-text">Which laboratories have scope for IS 8978?</span>
+                                    <span class="suggestion-tag">Accredited Testing Scope</span>
+                                </button>
+                                <button type="button" class="suggestion-card" data-query="What is the testing fee for IS 8978?">
+                                    <span class="suggestion-text">What is the testing fee for IS 8978?</span>
+                                    <span class="suggestion-tag">LIMS Fee Boundaries</span>
+                                </button>
+                                <button type="button" class="suggestion-card" data-query="Is there authoritative evidence for this requirement?">
+                                    <span class="suggestion-text">Is there authoritative evidence for this requirement?</span>
+                                    <span class="suggestion-tag">Evidence Verification</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Messages Stream -->
+                    <div class="messages-stream hidden" id="messagesStream"></div>
+                </div>
+
+                <!-- Floating Bottom Composer -->
+                <div class="chat-dock-wrapper">
+                    <div class="chat-dock-container">
+                        <form id="chatForm" class="composer-box">
                             <textarea 
-                                id="queryInput" 
-                                class="query-textarea" 
-                                placeholder="E.g., I manufacture 5-star ceiling fans. Do I need BIS certification and what tests are required?"
-                                rows="3"
+                                id="chatInput" 
+                                class="composer-textarea no-scrollbar" 
+                                placeholder="Ask anything about BIS evidence..." 
+                                rows="1"
+                                aria-label="Ask about BIS evidence"
                                 required
                             ></textarea>
-                        </div>
-
-                        <div class="form-controls">
-                            <div class="control-item">
-                                <label for="asOfDateSelect">📅 Temporal Applicability Date:</label>
-                                <select id="asOfDateSelect" class="select-input">
-                                    <option value="" selected>Current Active Standards (2026/2027)</option>
-                                    <option value="2024-01-01">2024-01-01 (Rebar 2024 Revision / QCO Active)</option>
-                                    <option value="2020-01-01">2020-01-01 (IS 374:2019 / Historical)</option>
-                                    <option value="2018-01-01">2018-01-01 (Pre-QCO Appliance Era)</option>
-                                    <option value="custom">Custom Date...</option>
-                                </select>
-                                <input type="date" id="customDateInput" class="select-input hidden" style="margin-top: 6px;">
+                            <div class="composer-actions">
+                                <button type="submit" id="sendBtn" class="btn-composer-send" title="Send message" aria-label="Send message" disabled>
+                                    <svg id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                                    <div id="inputSpinner" class="thinking-dot hidden" aria-hidden="true"></div>
+                                </button>
                             </div>
-
-                            <div class="control-item">
-                                <label for="topKSelect">🔢 Context Depth:</label>
-                                <select id="topKSelect" class="select-input">
-                                    <option value="3">Top 3 Candidates</option>
-                                    <option value="5" selected>Top 5 Candidates</option>
-                                    <option value="8">Top 8 Candidates</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" id="submitBtn" class="btn-primary">
-                                <span id="btnText">Execute Intelligence Query</span>
-                                <div id="btnSpinner" class="spinner hidden"></div>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Quick Sample Questions -->
-                    <div class="samples-wrapper">
-                        <div class="samples-header">
-                            <span>⚡ Suggested Production Queries:</span>
-                        </div>
-                        <div class="samples-tags" id="samplesContainer">
-                            <button type="button" class="sample-chip" data-q="I manufacture 5-star ceiling fans. Do I need BIS certification and what tests are required?">Ceiling Fans (IS 374)</button>
-                            <button type="button" class="sample-chip" data-q="What is the minimum yield strength and elongation for Fe 500D rebar under IS 1786?">TMT Steel Rebars (IS 1786)</button>
-                            <button type="button" class="sample-chip" data-q="Is BIS registration required for Lithium-Ion Batteries under CRS Scheme-II?">Li-ion Batteries (IS 16046)</button>
-                            <button type="button" class="sample-chip" data-q="What are the mandatory hallmarking and 6-digit HUID purity grades for 22K Gold Jewellery?">Gold Hallmarking & HUID (IS 1417)</button>
-                            <button type="button" class="sample-chip" data-q="How can a consumer verify ISI mark licence CM/L or file a complaint on BIS Care app?">BIS Care & Complaint SLAs</button>
-                            <button type="button" class="sample-chip" data-q="What is the tensile strength of titanium alloy Grade 5?">Adversarial: Titanium Trap</button>
-                        </div>
+                        </form>
                     </div>
                 </div>
+            </main>
 
-                <!-- Intelligence Response Display -->
-                <div id="resultsCard" class="glass-card results-card hidden">
-                    <div class="result-top-bar">
-                        <div class="status-indicator">
-                            <span id="groundingBadge" class="badge-success">🟢 VERIFIED</span>
-                            <span id="intentBadge" class="badge-neutral">MANDATORY_STATUS</span>
-                            <span id="schemeBadge" class="badge-scheme">SCHEME-I (ISI Mark)</span>
+            <!-- 2. VIEW: HOME (Concise Product Landing Page) -->
+            <section class="home-view hidden" id="viewHome">
+                <div class="home-content-container">
+                    <div class="home-hero">
+                        <div class="home-badge">
+                            <span class="badge-dot"></span>
+                            <span>Authoritative Normative Intelligence</span>
                         </div>
-                        <div class="confidence-indicator">
-                            <span>Evidence Confidence: <strong id="confidenceVal">0.98</strong></span>
+                        <h1 class="home-title">Bureau of Indian Standards <br><span class="gradient-text">AI Technical Assistant</span></h1>
+                        <p class="home-description">
+                            A zero-hallucination research workspace designed for Indian Standards compliance, accredited laboratory scopes, and testing parameters. Every factual assertion is bounded by cryptographic primary sources.
+                        </p>
+                        <div class="home-principle-card">
+                            <div class="principle-label">CORE SYSTEM PRINCIPLE</div>
+                            <div class="principle-quote">"Never invent an answer when authoritative BIS evidence is insufficient."</div>
                         </div>
-                    </div>
-
-                    <!-- Warnings Banner (if any) -->
-                    <div id="warningsBanner" class="warnings-banner hidden"></div>
-
-                    <!-- Executive Verdict Card -->
-                    <div id="verdictSection" class="verdict-section">
-                        <div class="verdict-box" id="verdictBox"></div>
-                    </div>
-
-                    <!-- Interactive Visual Certification Stepper -->
-                    <div id="certificationSection" class="certification-section">
-                        <h4>🔗 Deterministic Certification Pathway</h4>
-                        <div id="chainStepper" class="chain-stepper"></div>
-                    </div>
-
-                    <!-- Answer Markdown & Regulatory Guidance -->
-                    <div class="answer-content">
-                        <h4>📋 Regulatory Guidance & Explanation</h4>
-                        <div id="answerText" class="answer-text markdown-body"></div>
-                    </div>
-
-                    <!-- Normative Compliance Tests Table -->
-                    <div id="testsSection" class="tests-section hidden">
-                        <h4>🧪 Prescribed Compliance Tests & Normative Limits</h4>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Test / Parameter</th>
-                                        <th>Normative Requirement</th>
-                                        <th>Test Method</th>
-                                        <th>Applicable Clause</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="testsTableBody"></tbody>
-                            </table>
+                        <div class="home-cta-group">
+                            <button type="button" class="btn-primary-cta" id="btnStartAssistant">
+                                <span>Start / Ask Assistant</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Regulatory Timeline -->
-                    <div id="timelineSection" class="timeline-section hidden">
-                        <h4>⏱️ Regulatory Timeline & Amendment Milestones</h4>
-                        <div id="timelineEvents" class="timeline-events"></div>
+                    <!-- Example Questions -->
+                    <div class="home-section">
+                        <h2 class="home-section-title">Explore by Example</h2>
+                        <div class="home-examples-grid">
+                            <button type="button" class="home-example-card" data-query="What is IS 8978?">
+                                <span class="card-icon">📖</span>
+                                <div>
+                                    <span class="example-q">What is IS 8978?</span>
+                                    <span class="example-desc">Inspect standard specification, scope, and product title</span>
+                                </div>
+                            </button>
+                            <button type="button" class="home-example-card" data-query="Which laboratories have scope for IS 8978?">
+                                <span class="card-icon">🔬</span>
+                                <div>
+                                    <span class="example-q">Which laboratories have scope for IS 8978?</span>
+                                    <span class="example-desc">Verify accredited testing scope across official BIS laboratories</span>
+                                </div>
+                            </button>
+                            <button type="button" class="home-example-card" data-query="What is the testing fee for IS 8978?">
+                                <span class="card-icon">💳</span>
+                                <div>
+                                    <span class="example-q">What is the testing fee for IS 8978?</span>
+                                    <span class="example-desc">Analyze LIMS fee records and evidentiary boundaries</span>
+                                </div>
+                            </button>
+                            <button type="button" class="home-example-card" data-query="What is IS 999999?">
+                                <span class="card-icon">🛡️</span>
+                                <div>
+                                    <span class="example-q">What is IS 999999?</span>
+                                    <span class="example-desc">Observe strict refusal behavior for non-existent entities</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Authoritative Citations & Cryptographic Evidence Ledger -->
-                    <div class="citations-section">
-                        <h4>📜 Authoritative Regulatory Citations & Provenance Ledger</h4>
-                        <div id="citationsList" class="citations-grid"></div>
+                    <!-- What the Assistant Does -->
+                    <div class="home-section">
+                        <h2 class="home-section-title">Architectural Guarantees</h2>
+                        <div class="home-features-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon">🛡️</div>
+                                <h3>Zero-Tolerance Grounding</h3>
+                                <p>All synthesized claims pass through a deterministic ClaimValidator before reaching the user. Unsupported claims are rejected.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">⚡</div>
+                                <h3>Hybrid 3-Way Fusion</h3>
+                                <p>Combines structured attribute search, exact identifier boosting, BM25 keyword matching, and dense semantic embeddings.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">🔍</div>
+                                <h3>Cryptographic Traceability</h3>
+                                <p>Every piece of supporting evidence includes exact clause locators, document page numbers, and SHA-256 integrity hashes.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subtle Technical Baseline Footer Card -->
+                    <div class="home-tech-footer">
+                        <span>Phase 12.E Technical Retrieval Baseline:</span>
+                        <span class="tech-tag">RRF k: 20</span>
+                        <span class="tech-tag">Identifier Boost: 2.5×</span>
+                        <span class="tech-tag">Top-K Depth: 10</span>
+                        <span class="tech-tag">Precision@10: 0.5963</span>
                     </div>
                 </div>
             </section>
-
-            <!-- Right Sidebar: 15-Dimension Standards Explorer -->
-            <aside class="sidebar-section">
-                <div class="glass-card catalog-card">
-                    <div class="catalog-header">
-                        <h3>📖 BIS Governed Catalog</h3>
-                        <span class="badge-count" id="catalogCount">663 Standards</span>
-                    </div>
-
-                    <div class="domain-filter-tabs" id="domainTabs">
-                        <button class="tab-btn active" data-domain="all">All</button>
-                        <button class="tab-btn" data-domain="electrical">Electrical</button>
-                        <button class="tab-btn" data-domain="electronics_it">Electronics</button>
-                        <button class="tab-btn" data-domain="chemicals_materials">Chemicals</button>
-                        <button class="tab-btn" data-domain="construction_civil">Construction</button>
-                        <button class="tab-btn" data-domain="food_agriculture">Food & Agri</button>
-                    </div>
-
-                    <div class="search-catalog-box">
-                        <input type="text" id="catalogSearch" placeholder="Search standard e.g. IS 1786, TMT, cement, fan..." class="select-input">
-                    </div>
-
-                    <div class="standards-list" id="standardsList">
-                        <div class="loading-state">Loading standards universe...</div>
-                    </div>
-                </div>
-            </aside>
-        </main>
+        </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <!-- ======================================================= -->
+    <!-- OFF-CANVAS BACKDROPS & SLIDE-OVER EVIDENCE PANEL        -->
+    <!-- ======================================================= -->
+    <div class="drawer-overlay hidden" id="sidebarBackdrop" aria-hidden="true"></div>
+    <div id="evidenceDrawerBackdrop" class="drawer-overlay hidden" aria-hidden="true"></div>
+
+    <aside id="evidenceDrawer" class="evidence-drawer-panel" aria-labelledby="drawerTitle" aria-hidden="true" role="dialog">
+        <div class="drawer-header">
+            <div class="drawer-header-left">
+                <span class="drawer-badge-tag" id="drawerTypeBadge">Standard Specification</span>
+                <h3 class="drawer-title" id="drawerTitle">ru_std_IS 8978</h3>
+            </div>
+            <button type="button" id="drawerCloseBtn" class="drawer-close-icon" aria-label="Close Evidence Panel">✕</button>
+        </div>
+
+        <div class="drawer-scroll-body no-scrollbar">
+            <div class="drawer-meta-table">
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Evidence Unit ID</span>
+                    <span class="cell-value mono" id="drawerUnitId">ru_std_IS 8978</span>
+                </div>
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Source Authority</span>
+                    <span class="cell-value" id="drawerAuthority">Bureau of Indian Standards</span>
+                </div>
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Governing Standard</span>
+                    <span class="cell-value highlight" id="drawerStandardNum">IS 8978 : 1992</span>
+                </div>
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Clause / Locator</span>
+                    <span class="cell-value" id="drawerLocator">Clause 1.1 (Scope)</span>
+                </div>
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Document Page</span>
+                    <span class="cell-value" id="drawerPage">Page 1</span>
+                </div>
+                <div class="drawer-meta-cell">
+                    <span class="cell-label">Source Reference</span>
+                    <a href="#" target="_blank" rel="noopener" class="cell-value highlight" id="drawerSourceUrl">Official Record</a>
+                </div>
+            </div>
+
+            <div class="drawer-checksum-card">
+                <div class="checksum-header">
+                    <span>SHA-256 Checksum:</span>
+                    <button type="button" id="copyHashBtn" class="btn-copy-checksum">Copy Hash</button>
+                </div>
+                <code class="checksum-code" id="drawerSha256">68229fbe37078b6571da7a0b71747fd4b5b383f232b796c71ae6e773c0c13dbe</code>
+            </div>
+
+            <div class="drawer-section-card">
+                <h4>Extracted Verbatim Passage</h4>
+                <div class="drawer-passage-content" id="drawerPassage"></div>
+            </div>
+
+            <div class="drawer-section-card">
+                <h4>Bound Entity Relationships</h4>
+                <div class="drawer-triples-list" id="drawerTriples"></div>
+            </div>
+        </div>
+
+        <div class="drawer-footer">
+            <span class="provenance-label">✓ Phase 12.E Frozen Immutability Verified</span>
+            <button type="button" id="drawerDoneBtn" class="btn-drawer-done">Close Inspector</button>
+        </div>
+    </aside>
+
+    <!-- ======================================================= -->
+    <!-- SYSTEM INFORMATION MODAL                                -->
+    <!-- ======================================================= -->
+    <div id="systemModalBackdrop" class="modal-overlay hidden" aria-hidden="true">
+        <div id="systemModal" class="system-modal-card" role="dialog" aria-labelledby="sysModalTitle">
+            <div class="modal-header">
+                <h3 id="sysModalTitle">BIS AI Assistant - System Information</h3>
+                <button type="button" id="modalCloseBtn" class="drawer-close-icon" aria-label="Close modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-quote-banner">
+                    <div class="quote-kicker">Core System Principle</div>
+                    <div class="quote-body">"Never invent an answer when authoritative BIS evidence is insufficient."</div>
+                </div>
+                <div class="modal-config-block">
+                    <h4>Phase 12.E Technical Retrieval Baseline</h4>
+                    <div class="modal-grid-3">
+                        <div class="modal-grid-item">
+                            <span class="m-label">RRF k</span>
+                            <span class="m-val">20</span>
+                            <span class="m-sub">Reciprocal rank fusion weight</span>
+                        </div>
+                        <div class="modal-grid-item">
+                            <span class="m-label">Identifier Boost</span>
+                            <span class="m-val">2.5×</span>
+                            <span class="m-sub">Exact standard number multiplier</span>
+                        </div>
+                        <div class="modal-grid-item">
+                            <span class="m-label">Top K Depth</span>
+                            <span class="m-val">10</span>
+                            <span class="m-sub">Context candidates submitted</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;">
+                    <strong>Immutability Status:</strong> Frozen v22 corpus, BM25 indices, vector embeddings, and zero-hallucination verification gate strictly preserved.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="modalOkBtn" class="btn-modal-ack">Acknowledge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="./app.js?v=12.f.6"></script>
 </body>
 </html>

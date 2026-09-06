@@ -1,0 +1,759 @@
+{
+  "checkpoint_version": "Phase F3 Step 5B",
+  "started_at": "2026-09-06T08:12:15.103566+00:00",
+  "last_updated_at": "2026-09-06T08:16:53.486341+00:00",
+  "completed": false,
+  "total_checkpointed": 75,
+  "items": {
+    "4": {
+      "internal_id": 4,
+      "cache_key": "GEO_LAB_4_cc17bf8e7b8c98c6",
+      "address_hash": "cc17bf8e7b8c98c6075e5e72cac7a31a00862b82e47b7a51290ae6636a465b57",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:12:19.338081+00:00",
+      "error_message": null
+    },
+    "5": {
+      "internal_id": 5,
+      "cache_key": "GEO_LAB_5_016eab0ec177ba03",
+      "address_hash": "016eab0ec177ba032062343ae169cc768e7a926bb24c381aeaa8ccaa8d76379e",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:12:29.268207+00:00",
+      "error_message": null
+    },
+    "6": {
+      "internal_id": 6,
+      "cache_key": "GEO_LAB_6_dc9a5ab80496ea22",
+      "address_hash": "dc9a5ab80496ea22ac967322bfc9eb1a596a4ae9ed10aad7886806c302456961",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:12:36.924323+00:00",
+      "error_message": null
+    },
+    "7": {
+      "internal_id": 7,
+      "cache_key": "GEO_LAB_7_84fae142647cb780",
+      "address_hash": "84fae142647cb7809b7ab0ab71500dfd0c8996beec407b46f310264a6ba84397",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:12:47.681187+00:00",
+      "error_message": null
+    },
+    "8": {
+      "internal_id": 8,
+      "cache_key": "GEO_LAB_8_2fab33220c1f284b",
+      "address_hash": "2fab33220c1f284b783e8ee2751cbe87258cf5edef9708c6900d84ca3958e7a3",
+      "processing_status": "FAILED",
+      "geocoding_status": "NETWORK_ERROR",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:00.021778+00:00",
+      "error_message": "Network error communicating with Geoapify: <urlopen error _ssl.c:1063: The handshake operation timed out>"
+    },
+    "9": {
+      "internal_id": 9,
+      "cache_key": "GEO_LAB_9_4ab2f9ddb1108613",
+      "address_hash": "4ab2f9ddb1108613fcaaa6d7a9090da4e3d331ba3163fbd54c94502c7c64dae9",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:03.791052+00:00",
+      "error_message": null
+    },
+    "10": {
+      "internal_id": 10,
+      "cache_key": "GEO_LAB_10_0e9202ba7aaa54a6",
+      "address_hash": "0e9202ba7aaa54a6f71c2af50e8f01cdbc921133663eaedcd9a45e15ae159fc1",
+      "processing_status": "FAILED",
+      "geocoding_status": "NETWORK_ERROR",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:23.438015+00:00",
+      "error_message": "Network error communicating with Geoapify: The read operation timed out"
+    },
+    "11": {
+      "internal_id": 11,
+      "cache_key": "GEO_LAB_11_ddd6050b8932fb33",
+      "address_hash": "ddd6050b8932fb337d4b3acd8c7f4d4022ef9bb414abdb207329d808d3154d75",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:26.978777+00:00",
+      "error_message": null
+    },
+    "15": {
+      "internal_id": 15,
+      "cache_key": "GEO_LAB_15_8b15e0d2aef47989",
+      "address_hash": "8b15e0d2aef47989cb860ff3bb80a821e2ba174dbaa8e2d002362724656ff716",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:35.867508+00:00",
+      "error_message": null
+    },
+    "16": {
+      "internal_id": 16,
+      "cache_key": "GEO_LAB_16_f41aadebaf414a9e",
+      "address_hash": "f41aadebaf414a9e41617522e70fb638f77d1df275b05a506cf853946f8e6fef",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:37.860377+00:00",
+      "error_message": null
+    },
+    "18": {
+      "internal_id": 18,
+      "cache_key": "GEO_LAB_18_359aed719a5a3338",
+      "address_hash": "359aed719a5a33384721939293661026c5387a33d3cf728e9337fc70ccb5f2f2",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:41.025456+00:00",
+      "error_message": null
+    },
+    "19": {
+      "internal_id": 19,
+      "cache_key": "GEO_LAB_19_90d2071ca59ebc22",
+      "address_hash": "90d2071ca59ebc22c59ed3513b97f2fea5978ee4b6bf0486ca8f909ef386ec39",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:42.588974+00:00",
+      "error_message": null
+    },
+    "48": {
+      "internal_id": 48,
+      "cache_key": "GEO_LAB_48_83c0c0592603eaa8",
+      "address_hash": "83c0c0592603eaa804a40408e349632a8b45279cc1bd584aec8e396624dd17e1",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:45.606304+00:00",
+      "error_message": null
+    },
+    "49": {
+      "internal_id": 49,
+      "cache_key": "GEO_LAB_49_856d40fecdf5d8ae",
+      "address_hash": "856d40fecdf5d8ae9934f582dfb8f09e73ff789508618ffce793d2ba1b7cb1ca",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:47.303906+00:00",
+      "error_message": null
+    },
+    "51": {
+      "internal_id": 51,
+      "cache_key": "GEO_LAB_51_9e7ca9d4041d0eec",
+      "address_hash": "9e7ca9d4041d0eec7f8837be08ea9e94627a8d2be72593d18507ce2bb6d880eb",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:49.122745+00:00",
+      "error_message": null
+    },
+    "53": {
+      "internal_id": 53,
+      "cache_key": "GEO_LAB_53_c76ee05426990498",
+      "address_hash": "c76ee054269904987bd6dd27c63006f3291cfd0a9f91cea537889900851a273b",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:53.826715+00:00",
+      "error_message": null
+    },
+    "54": {
+      "internal_id": 54,
+      "cache_key": "GEO_LAB_54_497a14159c515714",
+      "address_hash": "497a14159c5157146e438a869c6a540bffc8f9df0f6ccfd98c89ad343aadf393",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:13:59.282509+00:00",
+      "error_message": null
+    },
+    "55": {
+      "internal_id": 55,
+      "cache_key": "GEO_LAB_55_e6cb09d434cb79ec",
+      "address_hash": "e6cb09d434cb79ec68a640d752c19df60fa2d1d9d4e0df28882b7e15cfb3a222",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:00.712699+00:00",
+      "error_message": null
+    },
+    "58": {
+      "internal_id": 58,
+      "cache_key": "GEO_LAB_58_e9f47787fce079e6",
+      "address_hash": "e9f47787fce079e63098e6e82237ea1ac19d9464d90731edb0059a4a945e0747",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:04.063717+00:00",
+      "error_message": null
+    },
+    "59": {
+      "internal_id": 59,
+      "cache_key": "GEO_LAB_59_f449018b0d46db8d",
+      "address_hash": "f449018b0d46db8da388203d28893115267fb8752a77252b9f1deb12bfe28537",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:05.668300+00:00",
+      "error_message": null
+    },
+    "60": {
+      "internal_id": 60,
+      "cache_key": "GEO_LAB_60_d697787be821d195",
+      "address_hash": "d697787be821d1954d991c3f7e3727d0e17d6e4aaa90904f16c561861c3494be",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:07.348964+00:00",
+      "error_message": null
+    },
+    "61": {
+      "internal_id": 61,
+      "cache_key": "GEO_LAB_61_b27afe110b87fc40",
+      "address_hash": "b27afe110b87fc40e4c05769bbb0a272be6411a569a3f8f3db2b578ee53708d9",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:09.829749+00:00",
+      "error_message": null
+    },
+    "62": {
+      "internal_id": 62,
+      "cache_key": "GEO_LAB_62_04dd7295dc1e3fc0",
+      "address_hash": "04dd7295dc1e3fc09636d7e66495a2b1e1dadd800e64e933981b45e56041a6ef",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:15.282394+00:00",
+      "error_message": null
+    },
+    "63": {
+      "internal_id": 63,
+      "cache_key": "GEO_LAB_63_cdf68b2117ecf598",
+      "address_hash": "cdf68b2117ecf598a32c0c5ff8fd5b6894bfd3e9395a7cdcc6cff5abcbc67ac8",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:16.796135+00:00",
+      "error_message": null
+    },
+    "64": {
+      "internal_id": 64,
+      "cache_key": "GEO_LAB_64_61375628898e3a82",
+      "address_hash": "61375628898e3a8239b740fd9270b4aebcc3318e4f04b2cff7a4db77ce72ebcb",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:18.483274+00:00",
+      "error_message": null
+    },
+    "65": {
+      "internal_id": 65,
+      "cache_key": "GEO_LAB_65_7a77ea3a21053d79",
+      "address_hash": "7a77ea3a21053d79640d49620b8e2c91ec42b922f67b82be4396bb5d49d242e6",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:20.507385+00:00",
+      "error_message": null
+    },
+    "67": {
+      "internal_id": 67,
+      "cache_key": "GEO_LAB_67_1070bd37cc8f164c",
+      "address_hash": "1070bd37cc8f164cb2e3605d5d75997619e6a66acd03d9259653200e88a5e0be",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:27.565355+00:00",
+      "error_message": null
+    },
+    "69": {
+      "internal_id": 69,
+      "cache_key": "GEO_LAB_69_5fe443fe86505ce0",
+      "address_hash": "5fe443fe86505ce031335e1ac939e8e178dee49f8d97b7fdd0c9c31eb137a094",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:29.393326+00:00",
+      "error_message": null
+    },
+    "70": {
+      "internal_id": 70,
+      "cache_key": "GEO_LAB_70_acfc9365319d4ec7",
+      "address_hash": "acfc9365319d4ec76344465ddece718bdd913411fcb16fd4a2e5abdb0a42ff49",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:31.106262+00:00",
+      "error_message": null
+    },
+    "71": {
+      "internal_id": 71,
+      "cache_key": "GEO_LAB_71_286ce1e49cfb29c3",
+      "address_hash": "286ce1e49cfb29c3605102e8921a01673df6692102e069e1b95f510c12129437",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:37.435422+00:00",
+      "error_message": null
+    },
+    "72": {
+      "internal_id": 72,
+      "cache_key": "GEO_LAB_72_44cec44af6af2d7c",
+      "address_hash": "44cec44af6af2d7c6b5db12f7f522c51b61b86f11a5dc8f2cbff84171ec0862e",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:38.982668+00:00",
+      "error_message": null
+    },
+    "73": {
+      "internal_id": 73,
+      "cache_key": "GEO_LAB_73_f3218dbbcefaa6a4",
+      "address_hash": "f3218dbbcefaa6a4e484c184b1846808c671003b380d4c953202711e562bcfab",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:40.628171+00:00",
+      "error_message": null
+    },
+    "74": {
+      "internal_id": 74,
+      "cache_key": "GEO_LAB_74_23ee700d4cd00a3a",
+      "address_hash": "23ee700d4cd00a3a89e24517726fa2439e0e91e0b3ed93ed0dbeb24df25d0523",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:44.393275+00:00",
+      "error_message": null
+    },
+    "75": {
+      "internal_id": 75,
+      "cache_key": "GEO_LAB_75_2f1e935aa5f0d50e",
+      "address_hash": "2f1e935aa5f0d50e52fbcec8969f7ba6f215c2f6e6c832111817f760dc24f683",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:47.391068+00:00",
+      "error_message": null
+    },
+    "76": {
+      "internal_id": 76,
+      "cache_key": "GEO_LAB_76_15c65793056d52fc",
+      "address_hash": "15c65793056d52fcc210d40af5bef0f753bdaa38263a522581a8198bfce8e2ec",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:49.000435+00:00",
+      "error_message": null
+    },
+    "77": {
+      "internal_id": 77,
+      "cache_key": "GEO_LAB_77_9c8386aff5802cec",
+      "address_hash": "9c8386aff5802ceca56407a327f7d7daa0678aba8ca1c990822da0680d1b76a2",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:50.986969+00:00",
+      "error_message": null
+    },
+    "78": {
+      "internal_id": 78,
+      "cache_key": "GEO_LAB_78_6d738f3622b87726",
+      "address_hash": "6d738f3622b87726ba0d0419587ee2871fa53b60b2a1bebdbd2a71bfbc8b6357",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:53.507877+00:00",
+      "error_message": null
+    },
+    "79": {
+      "internal_id": 79,
+      "cache_key": "GEO_LAB_79_b57e8ee368b0564a",
+      "address_hash": "b57e8ee368b0564a609b812cc1c3ab79c42e8d2d857079f3434fd2867a219422",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:55.042488+00:00",
+      "error_message": null
+    },
+    "80": {
+      "internal_id": 80,
+      "cache_key": "GEO_LAB_80_ca7c4bdf57892667",
+      "address_hash": "ca7c4bdf57892667eb1716e93dd18513e3bce9bcbaf21050e36e4be5e57458d2",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:14:56.887185+00:00",
+      "error_message": null
+    },
+    "82": {
+      "internal_id": 82,
+      "cache_key": "GEO_LAB_82_076bb5519afcaceb",
+      "address_hash": "076bb5519afcaceb7b34a99928dcb63cdd1a52372a4d9727bca1c346df462bc6",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:01.137842+00:00",
+      "error_message": null
+    },
+    "84": {
+      "internal_id": 84,
+      "cache_key": "GEO_LAB_84_bd086fe78f2a3a4c",
+      "address_hash": "bd086fe78f2a3a4cceb6652ec4df5d4defc40e04e9ca47d6251bc52328a85a69",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:03.917107+00:00",
+      "error_message": null
+    },
+    "85": {
+      "internal_id": 85,
+      "cache_key": "GEO_LAB_85_d76f72274519d5bd",
+      "address_hash": "d76f72274519d5bd23b72e695775cd1317f776e9a03b2a06f284a687486ca3fe",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:11.839321+00:00",
+      "error_message": null
+    },
+    "86": {
+      "internal_id": 86,
+      "cache_key": "GEO_LAB_86_6f4aa50509ef3264",
+      "address_hash": "6f4aa50509ef32641ccd130864a41c719158b85035ef69dd81bc5c4b41fe9783",
+      "processing_status": "FAILED",
+      "geocoding_status": "ZERO_RESULTS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:12.966050+00:00",
+      "error_message": "Geoapify returned zero matching coordinate results for this address."
+    },
+    "88": {
+      "internal_id": 88,
+      "cache_key": "GEO_LAB_88_637ce336c687e1d4",
+      "address_hash": "637ce336c687e1d4023c0dfc98fa2be1a01793c9db2d54c8f3185a70e144b2bf",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:20.067239+00:00",
+      "error_message": null
+    },
+    "90": {
+      "internal_id": 90,
+      "cache_key": "GEO_LAB_90_f71480a91b7897b7",
+      "address_hash": "f71480a91b7897b7a1d87db8d90049cd23cd80fc7a3a2b3893d0f093a331c498",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:22.180000+00:00",
+      "error_message": null
+    },
+    "91": {
+      "internal_id": 91,
+      "cache_key": "GEO_LAB_91_feca9dc42515560e",
+      "address_hash": "feca9dc42515560ef5d484a93e094e57a77910a881086e64b7014b1fb6be61eb",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:23.409640+00:00",
+      "error_message": null
+    },
+    "92": {
+      "internal_id": 92,
+      "cache_key": "GEO_LAB_92_6c2a31e67811b219",
+      "address_hash": "6c2a31e67811b219f42ab3282ff27df3477cca69e9693d9f95c9f2ab2cbb0af8",
+      "processing_status": "FAILED",
+      "geocoding_status": "NETWORK_ERROR",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:33.873241+00:00",
+      "error_message": "Network error communicating with Geoapify: The read operation timed out"
+    },
+    "93": {
+      "internal_id": 93,
+      "cache_key": "GEO_LAB_93_14b40c1d337de198",
+      "address_hash": "14b40c1d337de198cf010a5345b2ea3e629d1afe5b676c06c27fc4d1586abe3d",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:36.424001+00:00",
+      "error_message": null
+    },
+    "94": {
+      "internal_id": 94,
+      "cache_key": "GEO_LAB_94_7ee03347cd40da8c",
+      "address_hash": "7ee03347cd40da8c6d979c79377e946a55ac3805e914f46d4742088cfe0b48e6",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:39.228362+00:00",
+      "error_message": null
+    },
+    "95": {
+      "internal_id": 95,
+      "cache_key": "GEO_LAB_95_fa03abb00627b2c6",
+      "address_hash": "fa03abb00627b2c61c4f217177ac92b5b7bd3a379c1b33ef0d52fa915f044c22",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:40.872484+00:00",
+      "error_message": null
+    },
+    "98": {
+      "internal_id": 98,
+      "cache_key": "GEO_LAB_98_7c58c8f0fae15c78",
+      "address_hash": "7c58c8f0fae15c789cdb5d37e2b63d06c118702d0f61188f1a40615d618874ee",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:42.350743+00:00",
+      "error_message": null
+    },
+    "99": {
+      "internal_id": 99,
+      "cache_key": "GEO_LAB_99_cd6ba91094d1b82d",
+      "address_hash": "cd6ba91094d1b82d602812701e24204cad513cc67ea51a69bdf45abba7ea1af4",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:43.632724+00:00",
+      "error_message": null
+    },
+    "100": {
+      "internal_id": 100,
+      "cache_key": "GEO_LAB_100_a0dce0ac492a8e92",
+      "address_hash": "a0dce0ac492a8e92441ca5d78d01e6d55d0413bb3a299d50291bab443194d79f",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:44.955340+00:00",
+      "error_message": null
+    },
+    "101": {
+      "internal_id": 101,
+      "cache_key": "GEO_LAB_101_82e8e272b450c4f4",
+      "address_hash": "82e8e272b450c4f45d852bc77a528d75431611d435be9aae1e11f668d4d9de44",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:47.821161+00:00",
+      "error_message": null
+    },
+    "103": {
+      "internal_id": 103,
+      "cache_key": "GEO_LAB_103_03bae06bc8af2ec6",
+      "address_hash": "03bae06bc8af2ec6a65b75604f6e987facb17c940940a80c37558b3d54d03cad",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:49.676486+00:00",
+      "error_message": null
+    },
+    "104": {
+      "internal_id": 104,
+      "cache_key": "GEO_LAB_104_4da0a736c0e01f88",
+      "address_hash": "4da0a736c0e01f88b549a19e87c555841142c38ac37ab629c84c9163ab9b2674",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:52.300639+00:00",
+      "error_message": null
+    },
+    "105": {
+      "internal_id": 105,
+      "cache_key": "GEO_LAB_105_d9170f76ade3a4ab",
+      "address_hash": "d9170f76ade3a4abde658afb340ca9d26f51d8847a0ec1f7ab4e101ac81e0dbc",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:54.508923+00:00",
+      "error_message": null
+    },
+    "106": {
+      "internal_id": 106,
+      "cache_key": "GEO_LAB_106_de9715d6a207b494",
+      "address_hash": "de9715d6a207b494c9a9c80fb5506e0db461b56c9e611e7776a18c45ad9153b6",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:15:57.096665+00:00",
+      "error_message": null
+    },
+    "107": {
+      "internal_id": 107,
+      "cache_key": "GEO_LAB_107_b43cc20c1fa2a9c2",
+      "address_hash": "b43cc20c1fa2a9c26decfb1999069a3dffa232278c9b61b2b03c673ec631328d",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:01.158655+00:00",
+      "error_message": null
+    },
+    "108": {
+      "internal_id": 108,
+      "cache_key": "GEO_LAB_108_942a3772d532ee47",
+      "address_hash": "942a3772d532ee47f1143d7e1fc6f7e44430aec573b494b6b651ea5284bbf55a",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:10.701389+00:00",
+      "error_message": null
+    },
+    "109": {
+      "internal_id": 109,
+      "cache_key": "GEO_LAB_109_5d81c8d18926b79b",
+      "address_hash": "5d81c8d18926b79b4c1189433145db780ced911dcd32f5b6fe9ea884af164dc2",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:13.023577+00:00",
+      "error_message": null
+    },
+    "110": {
+      "internal_id": 110,
+      "cache_key": "GEO_LAB_110_b2aa28ff1a9e545b",
+      "address_hash": "b2aa28ff1a9e545bdda26acf4ea29a705347519cf453d284fb41fdce3f0a177a",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:16.349847+00:00",
+      "error_message": null
+    },
+    "111": {
+      "internal_id": 111,
+      "cache_key": "GEO_LAB_111_84061c08b04f271b",
+      "address_hash": "84061c08b04f271bc1824f4f2ce00b5bea337c40a15043de024d0033de9a036e",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:18.498261+00:00",
+      "error_message": null
+    },
+    "112": {
+      "internal_id": 112,
+      "cache_key": "GEO_LAB_112_c454b1b97eb5ee70",
+      "address_hash": "c454b1b97eb5ee703fe897f55f37e23b4be722427965c6c29cd932605a2012e7",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:22.081890+00:00",
+      "error_message": null
+    },
+    "113": {
+      "internal_id": 113,
+      "cache_key": "GEO_LAB_113_e3b7c45f8b4a4d2f",
+      "address_hash": "e3b7c45f8b4a4d2fa49d7b2f8f7a04c802b3cdc00fbb0ad199ddb0b0f4bf2c3c",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:23.515826+00:00",
+      "error_message": null
+    },
+    "115": {
+      "internal_id": 115,
+      "cache_key": "GEO_LAB_115_a5bf081d6d32864b",
+      "address_hash": "a5bf081d6d32864b1cd0b6d256315e2f91d1aa683c358d4b75ec980d71dd208f",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:26.276022+00:00",
+      "error_message": null
+    },
+    "117": {
+      "internal_id": 117,
+      "cache_key": "GEO_LAB_117_9dc1fa1b531f7104",
+      "address_hash": "9dc1fa1b531f7104aeb467d6c5fa96a21e07e9c438c6c5cc12bb379da9fce2c0",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:28.637250+00:00",
+      "error_message": null
+    },
+    "118": {
+      "internal_id": 118,
+      "cache_key": "GEO_LAB_118_d9d093a3c5657db2",
+      "address_hash": "d9d093a3c5657db202b2e521b38e5757a478735fe63b03e414cfda61a0193ed0",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:30.351796+00:00",
+      "error_message": null
+    },
+    "120": {
+      "internal_id": 120,
+      "cache_key": "GEO_LAB_120_6168043687a361db",
+      "address_hash": "6168043687a361db90114fc6d2b7d77788ecf8ea5aaa14edd29fc8e69e394701",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:32.002979+00:00",
+      "error_message": null
+    },
+    "122": {
+      "internal_id": 122,
+      "cache_key": "GEO_LAB_122_25cb0f76e8224328",
+      "address_hash": "25cb0f76e82243280fae757ff786a17e75bd369f3514cbf2aef41c6964808a17",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:34.710084+00:00",
+      "error_message": null
+    },
+    "123": {
+      "internal_id": 123,
+      "cache_key": "GEO_LAB_123_46caeed9c6529dbc",
+      "address_hash": "46caeed9c6529dbc9f51cf51ec8dc7725afeb38ea4c519443e97c3750a924b24",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:36.222684+00:00",
+      "error_message": null
+    },
+    "124": {
+      "internal_id": 124,
+      "cache_key": "GEO_LAB_124_f78f263dcf0fcd6f",
+      "address_hash": "f78f263dcf0fcd6f1becdda999e8a6ab8340885d34d19350b1cc72c281f34b7b",
+      "processing_status": "FAILED",
+      "geocoding_status": "NETWORK_ERROR",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:46.648708+00:00",
+      "error_message": "Network error communicating with Geoapify: The read operation timed out"
+    },
+    "125": {
+      "internal_id": 125,
+      "cache_key": "GEO_LAB_125_abc0fcf14d22d4a7",
+      "address_hash": "abc0fcf14d22d4a7f8e6d689839462074f5047e2ba84a2ac96066374504d739c",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:48.272577+00:00",
+      "error_message": null
+    },
+    "126": {
+      "internal_id": 126,
+      "cache_key": "GEO_LAB_126_cfe8e2f94c20f6da",
+      "address_hash": "cfe8e2f94c20f6dae6e01b585911ac33c364ea780620963b7ec3d060a650848d",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:51.421705+00:00",
+      "error_message": null
+    },
+    "127": {
+      "internal_id": 127,
+      "cache_key": "GEO_LAB_127_f2a8903cd2934035",
+      "address_hash": "f2a8903cd2934035000b0f2e2b3d1e02e011f471c1b9871752b56d4678402997",
+      "processing_status": "PROCESSED",
+      "geocoding_status": "SUCCESS",
+      "provider_called": true,
+      "timestamp": "2026-09-06T08:16:53.486010+00:00",
+      "error_message": null
+    }
+  }
+}

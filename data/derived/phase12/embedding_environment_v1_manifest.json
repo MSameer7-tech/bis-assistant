@@ -2,7 +2,7 @@
   "status": "FAIL",
   "os": "Darwin",
   "architecture": "arm64",
-  "python_version": "3.9.6",
+  "python_version": "3.14.4",
   "environment": "scratch/venv",
   "pytorch_version": null,
   "sentence_transformers_version": null,

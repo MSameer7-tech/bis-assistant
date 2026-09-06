@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-sys.path.append("/Users/sameer/.gemini/antigravity-ide/brain/8ae9fa33-c4f9-46d1-8353-641188a30582/")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from scripts.phase12d_benchmark import run_benchmark
 
 from data.derived.phase12.grounded_rag_v1.answer_engine import GroundedRAGEngine

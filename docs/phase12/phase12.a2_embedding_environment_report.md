@@ -6,7 +6,7 @@
 ## Environment
 - **macOS version**: 26.6.2
 - **CPU architecture**: arm64
-- **Python version**: 3.9.6
+- **Python version**: 3.14.4
 - **Active virtual environment**: `scratch/venv` (Re-created with Python 3.9 from `/usr/bin/python3`)
 - **pip version**: 26.0.1 (upgraded)
 

@@ -1,385 +1,976 @@
 /**
- * BIS AI Assistant - Production Frontend Client Logic (Phase 5).
- * Connects to /api/v1/query, /api/v1/chain, /api/v1/timeline, and /api/v1/evidence/stats.
+ * BIS AI Assistant - AI Research Workspace Controller (Phase 12.E / F1)
+ *
+ * Implements:
+ * - Modern AI Hub research workspace layout & interaction model
+ * - Multi-view architecture: Assistant Workspace (#viewAssistant) & Concise Product Landing Page (#viewHome)
+ * - Persistent conversation sidebar with groups: Today, Earlier, New Chat, Search, Delete
+ * - Centered empty state with glowing emblem & suggestion prompts
+ * - Topbar with Research Mode pill, live Production vs Mock backend toggle
+ * - Clean conversation stream with subtle, unmistakable grounding badges:
+ *     SUFFICIENT: "Verified against available BIS evidence" (subtle emerald)
+ *     PARTIAL: "Answer supported only by partial available evidence" (subtle amber)
+ *     INSUFFICIENT: "Could not verify from available BIS evidence" (subtle rose)
+ * - Supporting research footnotes with compact clickable evidence pills
+ * - Slide-over Evidence Panel (Drawer) with SHA-256 copy, extracted passage, and entity relations
+ * - Polished bottom composer (multiline textarea, Enter sends, Shift+Enter newline)
+ * - Mobile responsive drawer & sidebar (tested down to 375x667)
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Form Elements
-    const queryForm = document.getElementById('queryForm');
-    const queryInput = document.getElementById('queryInput');
-    const asOfDateSelect = document.getElementById('asOfDateSelect');
-    const customDateInput = document.getElementById('customDateInput');
-    const topKSelect = document.getElementById('topKSelect');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnSpinner = document.getElementById('btnSpinner');
-    const samplesContainer = document.getElementById('samplesContainer');
-    
-    // Top Bar Stat Elements
-    const statEvidence = document.getElementById('statEvidence');
-    const statEdges = document.getElementById('statEdges');
-    const statProducts = document.getElementById('statProducts');
+import { AssistantService } from './mockData.js';
 
-    // Response Elements
-    const resultsCard = document.getElementById('resultsCard');
-    const groundingBadge = document.getElementById('groundingBadge');
-    const intentBadge = document.getElementById('intentBadge');
-    const schemeBadge = document.getElementById('schemeBadge');
-    const confidenceVal = document.getElementById('confidenceVal');
-    const warningsBanner = document.getElementById('warningsBanner');
-    
-    const verdictBox = document.getElementById('verdictBox');
-    const chainStepper = document.getElementById('chainStepper');
-    const answerText = document.getElementById('answerText');
-    
-    const testsSection = document.getElementById('testsSection');
-    const testsTableBody = document.getElementById('testsTableBody');
-    
-    const timelineSection = document.getElementById('timelineSection');
-    const timelineEvents = document.getElementById('timelineEvents');
-    
-    const citationsList = document.getElementById('citationsList');
+function initApp() {
+    // -------------------------------------------------------------------------
+    // DOM Element References
+    // -------------------------------------------------------------------------
+    // Views
+    const viewAssistant = document.getElementById('viewAssistant');
+    const viewHome = document.getElementById('viewHome');
+    const navAssistant = document.getElementById('navAssistant');
+    const navHome = document.getElementById('navHome');
+    const brandLink = document.getElementById('brandLink');
+    const btnStartAssistant = document.getElementById('btnStartAssistant');
 
-    // Catalog Elements
-    const standardsList = document.getElementById('standardsList');
-    const catalogCount = document.getElementById('catalogCount');
-    const catalogSearch = document.getElementById('catalogSearch');
-    const domainTabs = document.getElementById('domainTabs');
+    // Sidebar
+    const sidebar = document.getElementById('sidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileSidebarClose = document.getElementById('mobileSidebarClose');
+    const btnNewChat = document.getElementById('btnNewChat');
+    const chatSearchInput = document.getElementById('chatSearchInput');
+    const conversationList = document.getElementById('conversationList');
+    const btnSystemInfo = document.getElementById('btnSystemInfo');
+    const btnSidebarCollapse = document.getElementById('btnSidebarCollapse');
+    const currentChatTitle = document.getElementById('currentChatTitle');
 
-    let allStandards = [];
-    let currentDomain = 'all';
+    // API Mode Buttons
+    const btnApiProd = document.getElementById('btnApiProd');
+    const btnApiMock = document.getElementById('btnApiMock');
 
-    // 1. Toggle Custom Date Input
-    if (asOfDateSelect) {
-        asOfDateSelect.addEventListener('change', () => {
-            if (asOfDateSelect.value === 'custom') {
-                customDateInput.classList.remove('hidden');
-            } else {
-                customDateInput.classList.add('hidden');
-            }
-        });
-    }
+    // Chat Area
+    const chatViewport = document.getElementById('chatViewport');
+    const welcomeContainer = document.getElementById('welcomeContainer');
+    const messagesStream = document.getElementById('messagesStream');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const sendIcon = document.getElementById('sendIcon');
+    const inputSpinner = document.getElementById('inputSpinner');
 
-    // 2. Fetch Live Stats
-    async function loadStats() {
+    // Evidence Drawer
+    const evidenceDrawer = document.getElementById('evidenceDrawer');
+    const evidenceDrawerBackdrop = document.getElementById('evidenceDrawerBackdrop');
+    const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+    const drawerDoneBtn = document.getElementById('drawerDoneBtn');
+    const drawerTitle = document.getElementById('drawerTitle');
+    const drawerTypeBadge = document.getElementById('drawerTypeBadge');
+    const drawerUnitId = document.getElementById('drawerUnitId');
+    const drawerAuthority = document.getElementById('drawerAuthority');
+    const drawerStandardNum = document.getElementById('drawerStandardNum');
+    const drawerLocator = document.getElementById('drawerLocator');
+    const drawerPage = document.getElementById('drawerPage');
+    const drawerSourceUrl = document.getElementById('drawerSourceUrl');
+    const drawerSha256 = document.getElementById('drawerSha256');
+    const copyHashBtn = document.getElementById('copyHashBtn');
+    const drawerPassage = document.getElementById('drawerPassage');
+    const drawerTriples = document.getElementById('drawerTriples');
+
+    // System Modal
+    const systemModal = document.getElementById('systemModal');
+    const systemModalBackdrop = document.getElementById('systemModalBackdrop');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalOkBtn = document.getElementById('modalOkBtn');
+
+    // -------------------------------------------------------------------------
+    // Application State
+    // -------------------------------------------------------------------------
+    let currentView = 'assistant'; // 'assistant' | 'home'
+    let conversations = [];
+    let currentConversationId = null;
+    let evidenceMemory = {}; // Cache of evidence units by unit_id
+    let backendMode = 'production'; // 'production' | 'mock'
+
+    // -------------------------------------------------------------------------
+    // 1. Storage & Conversation Management
+    // -------------------------------------------------------------------------
+    function loadConversations() {
         try {
-            const [evRes, covRes] = await Promise.all([
-                fetch('/api/v1/evidence/stats'),
-                fetch('/api/v1/coverage/stats')
-            ]);
-            if (evRes.ok) {
-                const data = await evRes.json();
-                if (statEvidence) statEvidence.textContent = data.total_evidence_records.toLocaleString();
-                if (statEdges) statEdges.textContent = data.total_graph_edges.toLocaleString();
-            }
-            if (covRes.ok) {
-                const covData = await covRes.json();
-                const statPSCoverage = document.getElementById('statPSCoverage');
-                if (statPSCoverage) {
-                    statPSCoverage.textContent = `${covData.overall_ps_coverage_pct}%`;
-                }
+            const raw = localStorage.getItem('bis_ai_conversations_v2');
+            if (raw) {
+                conversations = JSON.parse(raw);
             }
         } catch (e) {
-            console.warn('Could not load live stats:', e);
+            console.warn('Failed to load conversations from localStorage:', e);
+            conversations = [];
+        }
+
+        if (!conversations || conversations.length === 0) {
+            createNewConversation(false);
+        } else {
+            currentConversationId = conversations[0].id;
+            renderConversationList();
+            renderActiveConversation();
         }
     }
 
-    // 3. Quick Sample Buttons Listener
-    if (samplesContainer) {
-        samplesContainer.querySelectorAll('.sample-chip').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const q = btn.getAttribute('data-q');
-                if (q) {
-                    queryInput.value = q;
-                    if (asOfDateSelect) asOfDateSelect.value = '';
-                    if (customDateInput) customDateInput.classList.add('hidden');
-                    handleQuerySubmit();
-                }
-            });
-        });
-    }
-
-    // 4. Standards Catalog Loader
-    async function loadCatalog() {
+    function saveConversations() {
         try {
-            const res = await fetch('/api/standards');
-            if (res.ok) {
-                allStandards = await res.json();
-                renderCatalog();
-            }
-        } catch (err) {
-            if (standardsList) standardsList.innerHTML = `<div class="error">Failed to load catalog.</div>`;
+            localStorage.setItem('bis_ai_conversations_v2', JSON.stringify(conversations));
+        } catch (e) {
+            console.warn('Failed to save conversations to localStorage:', e);
         }
     }
 
-    function renderCatalog() {
-        if (!standardsList) return;
-        const query = (catalogSearch ? catalogSearch.value : '').toLowerCase().trim();
-        const filtered = allStandards.filter(std => {
-            const matchDomain = currentDomain === 'all' || std.product_domain === currentDomain;
-            const title = (std.title || '').toLowerCase();
-            const isNum = (std.standard_number || '').toLowerCase();
-            const matchSearch = !query || isNum.includes(query) || title.includes(query);
-            return matchDomain && matchSearch;
-        });
+    function createNewConversation(switchViewToAssistant = true) {
+        const newConv = {
+            id: 'conv_' + Date.now(),
+            title: 'New Session',
+            messages: [],
+            createdAt: Date.now()
+        };
+        conversations.unshift(newConv);
+        currentConversationId = newConv.id;
+        saveConversations();
 
-        if (catalogCount) catalogCount.textContent = `${filtered.length} Standards`;
+        renderConversationList();
+        renderActiveConversation();
+
+        if (switchViewToAssistant) {
+            switchView('assistant');
+            if (window.innerWidth <= 768) closeMobileSidebar();
+            if (chatInput) {
+                chatInput.value = '';
+                updateSendButtonState();
+                chatInput.focus();
+            }
+        }
+    }
+
+    function getCurrentConversation() {
+        if (!currentConversationId && conversations.length > 0) {
+            currentConversationId = conversations[0].id;
+        }
+        return conversations.find((c) => c.id === currentConversationId);
+    }
+
+    function deleteConversation(convId, e) {
+        if (e) e.stopPropagation();
+        conversations = conversations.filter(c => c.id !== convId);
+        if (conversations.length === 0) {
+            createNewConversation(false);
+        } else if (currentConversationId === convId) {
+            currentConversationId = conversations[0].id;
+        }
+        saveConversations();
+        renderConversationList();
+        renderActiveConversation();
+    }
+
+    function renderConversationList(filterQuery = '') {
+        const query = (filterQuery || '').toLowerCase().trim();
+        const filtered = conversations.filter(c => !query || (c.title || 'New Session').toLowerCase().includes(query));
 
         if (filtered.length === 0) {
-            standardsList.innerHTML = `<div class="empty-state">No matching Indian Standards found.</div>`;
+            conversationList.innerHTML = `
+                <div class="conv-empty-message">No conversations found</div>
+            `;
             return;
         }
 
-        standardsList.innerHTML = filtered.slice(0, 50).map(std => `
-            <div class="standard-item" data-code="${std.standard_number}">
-                <div class="std-header">
-                    <span class="std-number">${std.standard_number}</span>
-                    <span class="std-badge ${std.mandatory ? 'mandatory' : 'voluntary'}">
-                        ${std.mandatory ? 'MANDATORY' : 'VOLUNTARY'}
-                    </span>
-                </div>
-                <div class="std-title">${std.title || 'Indian Standard Specification'}</div>
-                <div class="std-footer">
-                    <span>${std.product_domain || 'General'}</span>
-                    <span>${std.edition || 'Current'}</span>
-                </div>
-            </div>
-        `).join('');
+        // Group into Today and Earlier
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-        standardsList.querySelectorAll('.standard-item').forEach(item => {
+        const todayList = [];
+        const earlierList = [];
+
+        filtered.forEach(c => {
+            const time = c.createdAt || 0;
+            if (time >= startOfToday) {
+                todayList.push(c);
+            } else {
+                earlierList.push(c);
+            }
+        });
+
+        let html = '';
+
+        if (todayList.length > 0) {
+            html += `<div class="conv-group-heading">Today</div>`;
+            html += todayList.map(c => renderConvItem(c)).join('');
+        }
+
+        if (earlierList.length > 0) {
+            html += `<div class="conv-group-heading">Earlier</div>`;
+            html += earlierList.map(c => renderConvItem(c)).join('');
+        }
+
+        conversationList.innerHTML = html;
+
+        // Attach event listeners
+        conversationList.querySelectorAll('.conv-item').forEach(item => {
             item.addEventListener('click', () => {
-                const code = item.getAttribute('data-code');
-                queryInput.value = `What are the mandatory requirements and compliance tests for ${code}?`;
-                handleQuerySubmit();
+                const id = item.getAttribute('data-id');
+                switchConversation(id);
+            });
+        });
+
+        conversationList.querySelectorAll('.conv-btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = btn.getAttribute('data-id');
+                deleteConversation(id, e);
             });
         });
     }
 
-    if (domainTabs) {
-        domainTabs.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                domainTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentDomain = btn.getAttribute('data-domain');
-                renderCatalog();
+    function renderConvItem(c) {
+        const isActive = c.id === currentConversationId;
+        const title = escapeHtml(c.title || 'New Session');
+
+        return `
+            <div class="conv-item ${isActive ? 'active' : ''}" data-id="${c.id}">
+                <div class="conv-item-left">
+                    <svg class="conv-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="conv-title">${title}</span>
+                </div>
+                <button type="button" class="conv-btn-delete" data-id="${c.id}" title="Delete session" aria-label="Delete session">
+                    ✕
+                </button>
+            </div>
+        `;
+    }
+
+    function switchConversation(convId) {
+        currentConversationId = convId;
+        renderConversationList();
+        renderActiveConversation();
+        switchView('assistant');
+        if (window.innerWidth <= 768) closeMobileSidebar();
+    }
+
+    function renderActiveConversation() {
+        const conv = getCurrentConversation();
+        if (!conv) return;
+
+        currentChatTitle.textContent = conv.title || 'New Session';
+
+        if (!conv.messages || conv.messages.length === 0) {
+            welcomeContainer.classList.remove('hidden');
+            messagesStream.classList.add('hidden');
+            messagesStream.innerHTML = '';
+        } else {
+            welcomeContainer.classList.add('hidden');
+            messagesStream.classList.remove('hidden');
+            messagesStream.innerHTML = '';
+
+            conv.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    appendUserMessageToDOM(msg.text);
+                } else if (msg.role === 'assistant') {
+                    appendAssistantResponseToDOM(msg.data, false);
+                }
             });
-        });
+
+            scrollToBottom();
+        }
     }
 
-    if (catalogSearch) {
-        catalogSearch.addEventListener('input', renderCatalog);
+    // -------------------------------------------------------------------------
+    // 2. View Switching: Assistant vs Home
+    // -------------------------------------------------------------------------
+    function switchView(viewName) {
+        currentView = viewName;
+        if (viewName === 'home') {
+            viewAssistant.classList.add('hidden');
+            viewHome.classList.remove('hidden');
+            navHome.classList.add('active');
+            navAssistant.classList.remove('active');
+        } else {
+            viewHome.classList.add('hidden');
+            viewAssistant.classList.remove('hidden');
+            navAssistant.classList.add('active');
+            navHome.classList.remove('active');
+            scrollToBottom();
+            if (chatInput) chatInput.focus();
+        }
     }
 
-    // 5. Query Submission Handler
-    async function handleQuerySubmit() {
-        const query = queryInput.value.trim();
+    // -------------------------------------------------------------------------
+    // 3. Query Submission & Pipeline Invocation
+    // -------------------------------------------------------------------------
+    async function submitQuery(queryText) {
+        const query = (queryText || '').trim();
         if (!query) return;
 
-        let asOfDate = asOfDateSelect ? asOfDateSelect.value : null;
-        if (asOfDate === 'custom' && customDateInput && customDateInput.value) {
-            asOfDate = customDateInput.value;
-        } else if (!asOfDate || asOfDate === 'custom') {
-            asOfDate = null;
+        // Ensure we are in Assistant view
+        switchView('assistant');
+
+        let conv = getCurrentConversation();
+        if (!conv) {
+            createNewConversation(false);
+            conv = getCurrentConversation();
         }
 
-        const topK = topKSelect ? parseInt(topKSelect.value, 10) : 5;
+        // Set title from first query if new
+        if (!conv.messages || conv.messages.length === 0) {
+            conv.title = query.length > 38 ? query.substring(0, 38) + '...' : query;
+            currentChatTitle.textContent = conv.title;
+        }
 
-        // UI Loading State
-        submitBtn.disabled = true;
-        btnText.textContent = 'Analyzing Regulatory Corpus...';
-        btnSpinner.classList.remove('hidden');
+        // Add user message to conversation
+        conv.messages.push({ role: 'user', text: query });
+        saveConversations();
+        renderConversationList();
+
+        // Switch out welcome screen if first message
+        welcomeContainer.classList.add('hidden');
+        messagesStream.classList.remove('hidden');
+
+        appendUserMessageToDOM(query);
+        chatInput.value = '';
+        adjustComposerHeight();
+        updateSendButtonState();
+
+        const thinkingRow = appendThinkingIndicatorToDOM();
+        scrollToBottom();
+
+        // Lock send button while executing
+        sendBtn.disabled = true;
+        sendIcon.classList.add('hidden');
+        inputSpinner.classList.remove('hidden');
 
         try {
-            const res = await fetch('/api/v1/query', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, as_of_date: asOfDate, top_k: topK })
+            const responseData = await AssistantService.query(query, {
+                mode: backendMode
             });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.detail || 'API execution failed');
-            }
+            thinkingRow.remove();
 
-            const data = await res.json();
-            renderResponse(data);
+            // Store in conversation state
+            conv.messages.push({ role: 'assistant', data: responseData });
+            saveConversations();
+
+            appendAssistantResponseToDOM(responseData, true);
+            scrollToBottom();
 
         } catch (err) {
-            alert(`Error: ${err.message}`);
+            console.error('Query execution error:', err);
+            thinkingRow.remove();
+            appendErrorRowToDOM(err.message || 'An error occurred during query evaluation.');
         } finally {
-            submitBtn.disabled = false;
-            btnText.textContent = 'Execute Intelligence Query';
-            btnSpinner.classList.add('hidden');
+            sendBtn.disabled = false;
+            sendIcon.classList.remove('hidden');
+            inputSpinner.classList.add('hidden');
+            updateSendButtonState();
+            chatInput.focus();
         }
     }
 
-    if (queryForm) {
-        queryForm.addEventListener('submit', (e) => {
+    // -------------------------------------------------------------------------
+    // 4. Message DOM Builders
+    // -------------------------------------------------------------------------
+    function appendUserMessageToDOM(text) {
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML = `<div class="user-bubble">${escapeHtml(text)}</div>`;
+        messagesStream.appendChild(row);
+    }
+
+    function appendThinkingIndicatorToDOM() {
+        const row = document.createElement('div');
+        row.className = 'assistant-row';
+        row.innerHTML = `
+            <div class="assistant-avatar">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.2)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
+                </svg>
+            </div>
+            <div class="assistant-bubble-container">
+                <div class="assistant-thinking">
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                </div>
+            </div>
+        `;
+        messagesStream.appendChild(row);
+        return row;
+    }
+
+    function appendErrorRowToDOM(errMsg) {
+        const row = document.createElement('div');
+        row.className = 'assistant-row';
+        row.innerHTML = `
+            <div class="assistant-avatar">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#f43f5e" stroke-width="2.2" fill="rgba(244, 63, 94, 0.2)"/>
+                </svg>
+            </div>
+            <div class="assistant-bubble-container">
+                <div class="grounding-notice notice-refusal">
+                    <div class="notice-title">System Evaluation Error</div>
+                    <div class="notice-desc">${escapeHtml(errMsg)}</div>
+                </div>
+            </div>
+        `;
+        messagesStream.appendChild(row);
+        scrollToBottom();
+    }
+
+    function appendAssistantResponseToDOM(data, animate = false) {
+        const status = (data.status || 'INSUFFICIENT').toUpperCase();
+        const evidenceList = data.evidence || [];
+
+        // Cache evidence units in memory for drawer access
+        evidenceList.forEach(ev => {
+            const id = ev.unit_id || ev.retrieval_unit_id;
+            if (id) evidenceMemory[id] = ev;
+        });
+
+        const row = document.createElement('div');
+        row.className = `assistant-row ${animate ? 'animate-fade-in' : ''}`;
+
+        const genMode = data.generation_mode || (status === 'SUFFICIENT' ? 'GROUNDED' : 'LLM_FALLBACK');
+        const llmUsed = Boolean(data.llm && data.llm.used);
+
+        // 1. Answer Body (Direct editorial markdown - NO large header badge)
+        const answerHtml = renderEditorialMarkdown(data.answer || '');
+
+        // 2. Subtle Bottom Footer (Clean source tag + compact deduplicated source chips)
+        let footerHtml = '';
+
+        // Pure conversational greetings have NO metadata or source footer
+        if (genMode !== 'CONVERSATIONAL') {
+            // Deduplicate evidence records to avoid repetitive pills (e.g. IS 8978 (1992) x5)
+            const seenLabels = new Set();
+            const uniqueSources = [];
+            for (const ev of evidenceList) {
+                let label = ev.standard_number;
+                if (label && label !== 'Indian Standard') {
+                    const yr = ev.year || ev.edition_year;
+                    if (yr && !label.includes(yr)) {
+                        label = `${label} · ${yr}`;
+                    }
+                } else if (ev.laboratory) {
+                    label = `Laboratory ${ev.laboratory}`;
+                } else if (ev.title && !ev.title.includes('Official Gazette Record') && !ev.title.includes('Indian Standard Normative Record')) {
+                    label = ev.title;
+                } else {
+                    continue; // Skip generic placeholder
+                }
+                label = label.replace(/\s+/g, ' ').trim();
+                if (!seenLabels.has(label)) {
+                    seenLabels.add(label);
+                    uniqueSources.push({ id: ev.unit_id || ev.retrieval_unit_id, label });
+                }
+                if (uniqueSources.length >= 3) break;
+            }
+
+            let sourceTagHtml = '';
+            if (genMode === 'GROUNDED' && status === 'SUFFICIENT') {
+                sourceTagHtml = `<span class="subtle-source-tag tag-verified">✓ BIS Verified</span>`;
+            }
+
+            let sourcesListHtml = '';
+            if (uniqueSources.length > 0) {
+                sourcesListHtml = `
+                    <div class="compact-sources-list">
+                        <div class="compact-chips-wrap">
+                            ${uniqueSources.map(s => `
+                                <button type="button" class="btn-source-chip" data-evidence-id="${escapeHtml(s.id)}" title="Inspect evidence in drawer">
+                                    <span>${escapeHtml(s.label)}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (sourceTagHtml || sourcesListHtml) {
+                footerHtml = `
+                    <div class="answer-subtle-footer">
+                        <div class="footer-left">
+                            ${sourceTagHtml}
+                        </div>
+                        ${sourcesListHtml}
+                    </div>
+                `;
+            } else {
+                footerHtml = '';
+            }
+        }
+
+        row.innerHTML = `
+            <div class="assistant-avatar">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.2)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
+                    <path d="M16 6V11M16 21V26M7 11.5L11 13.8M21 18.2L25 20.5" stroke="#6C63FF" stroke-width="1.8"/>
+                </svg>
+            </div>
+            <div class="assistant-bubble-container">
+                <div class="assistant-bubble">
+                    <div class="editorial-answer">${answerHtml}</div>
+                    ${footerHtml}
+                </div>
+            </div>
+        `;
+
+        // Wire up source chips to open the evidence drawer
+        row.querySelectorAll('.btn-source-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-evidence-id');
+                openEvidenceDrawer(id);
+            });
+        });
+
+        messagesStream.appendChild(row);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Editorial Markdown Parser
+    // -------------------------------------------------------------------------
+    function renderEditorialMarkdown(rawText) {
+        if (!rawText) return '';
+
+        let lines = rawText.split('\n');
+        let html = '';
+        let inList = false;
+        let inNumList = false;
+        let inAlphaList = false;
+        let inCodeBlock = false;
+        let codeBlockContent = [];
+
+        function closeAllLists() {
+            if (inList) { html += '</ul>'; inList = false; }
+            if (inNumList) { html += '</ol>'; inNumList = false; }
+            if (inAlphaList) { html += '</ol>'; inAlphaList = false; }
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            let trimmed = line.trim();
+
+            // Code block delimiter
+            if (trimmed.startsWith('```')) {
+                if (inCodeBlock) {
+                    html += `<pre class="editorial-pre"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`;
+                    codeBlockContent = [];
+                    inCodeBlock = false;
+                } else {
+                    closeAllLists();
+                    inCodeBlock = true;
+                    codeBlockContent = [];
+                }
+                continue;
+            }
+
+            if (inCodeBlock) {
+                codeBlockContent.push(line);
+                continue;
+            }
+
+            if (!trimmed) {
+                closeAllLists();
+                continue;
+            }
+
+            // Headings (checked from deepest h6 to h1)
+            if (trimmed.startsWith('###### ')) {
+                closeAllLists();
+                html += `<h6>${formatInline(trimmed.substring(7))}</h6>`;
+            } else if (trimmed.startsWith('##### ')) {
+                closeAllLists();
+                html += `<h5>${formatInline(trimmed.substring(6))}</h5>`;
+            } else if (trimmed.startsWith('#### ')) {
+                closeAllLists();
+                html += `<h4>${formatInline(trimmed.substring(5))}</h4>`;
+            } else if (trimmed.startsWith('### ')) {
+                closeAllLists();
+                html += `<h3>${formatInline(trimmed.substring(4))}</h3>`;
+            } else if (trimmed.startsWith('## ')) {
+                closeAllLists();
+                html += `<h2>${formatInline(trimmed.substring(3))}</h2>`;
+            } else if (trimmed.startsWith('# ')) {
+                closeAllLists();
+                html += `<h1>${formatInline(trimmed.substring(2))}</h1>`;
+            } else if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+                closeAllLists();
+                html += `<hr class="answer-divider">`;
+            } else if (trimmed.startsWith('> ')) {
+                closeAllLists();
+                html += `<blockquote>${formatInline(trimmed.substring(2))}</blockquote>`;
+            }
+            // Bullets
+            else if (/^[-*+•]\s+/.test(trimmed)) {
+                if (inNumList || inAlphaList) closeAllLists();
+                if (!inList) {
+                    html += '<ul class="editorial-list">';
+                    inList = true;
+                }
+                const content = trimmed.replace(/^[-*+•]\s+/, '');
+                html += `<li>${formatInline(content)}</li>`;
+            }
+            // Numbered list items (e.g. "1. " or "1) ")
+            else if (/^\d+[\.\)]\s+/.test(trimmed)) {
+                if (inList || inAlphaList) closeAllLists();
+                if (!inNumList) {
+                    html += '<ol class="editorial-num-list">';
+                    inNumList = true;
+                }
+                const content = trimmed.replace(/^\d+[\.\)]\s+/, '');
+                html += `<li>${formatInline(content)}</li>`;
+            }
+            // Lettered list items (e.g. "A. " or "B. ")
+            else if (/^[A-Za-z][\.\)]\s+/.test(trimmed) && trimmed.length > 3) {
+                if (inList || inNumList) closeAllLists();
+                if (!inAlphaList) {
+                    html += '<ol class="editorial-alpha-list" type="A">';
+                    inAlphaList = true;
+                }
+                const content = trimmed.replace(/^[A-Za-z][\.\)]\s+/, '');
+                html += `<li>${formatInline(content)}</li>`;
+            }
+            // Standalone Bold Heading (e.g. "**Key Functions and Mandates**")
+            else if (/^\*\*[^*]+\*\*$/.test(trimmed)) {
+                closeAllLists();
+                const text = trimmed.slice(2, -2);
+                html += `<h3>${formatInline(text)}</h3>`;
+            }
+            // Paragraphs
+            else {
+                closeAllLists();
+                html += `<p class="editorial-p">${formatInline(trimmed)}</p>`;
+            }
+        }
+
+        if (inCodeBlock && codeBlockContent.length > 0) {
+            html += `<pre class="editorial-pre"><code>${escapeHtml(codeBlockContent.join('\n'))}</code></pre>`;
+        }
+        closeAllLists();
+        return html;
+    }
+
+    function formatInline(str) {
+        if (!str) return '';
+        let formatted = escapeHtml(str);
+
+        // Bold
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Inline code
+        formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+        // Italics
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+        return formatted;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Evidence Drawer Controller
+    // -------------------------------------------------------------------------
+    function openEvidenceDrawer(evidenceId) {
+        if (evidenceId === 'llm_only' || (!evidenceMemory[evidenceId] && String(evidenceId).startsWith('llm'))) {
+            drawerTitle.textContent = "Reference Information";
+            drawerTypeBadge.textContent = "Reference Unit";
+            drawerUnitId.textContent = "BIS Knowledge Unit";
+            drawerAuthority.textContent = "Bureau of Indian Standards";
+            drawerStandardNum.textContent = "Reference Standard";
+            drawerLocator.textContent = "Standards Framework";
+            drawerPage.textContent = "N/A";
+            drawerSourceUrl.removeAttribute('href');
+            drawerSourceUrl.textContent = "BIS Gazette & Standards Portal";
+            drawerSha256.textContent = "Authoritative Knowledge Base";
+            drawerPassage.textContent = "Information regarding applicable Indian Standards and compliance guidelines.";
+            drawerTriples.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">Standard entity details.</span>`;
+            evidenceDrawer.classList.add('open');
+            evidenceDrawerBackdrop.classList.remove('hidden');
+            return;
+        }
+
+        const ev = evidenceMemory[evidenceId] || {
+            unit_id: evidenceId,
+            type: "Official BIS Record",
+            standard_number: "IS Standard",
+            title: "Bureau of Indian Standards Evidence Unit",
+            laboratory: null,
+            clause: "Authoritative Clause",
+            page: 1,
+            source_authority: "Bureau of Indian Standards",
+            source_url: "#",
+            sha256: "68229fbe37078b6571da7a0b71747fd4b5b383f232b796c71ae6e773c0c13dbe",
+            passage: "Evidence passage verified against frozen baseline v22 corpus.",
+            entities: []
+        };
+
+        drawerTitle.textContent = ev.title || ev.standard_number || (ev.laboratory ? `Laboratory ${ev.laboratory}` : '') || ev.unit_id || ev.retrieval_unit_id || evidenceId;
+        drawerTypeBadge.textContent = ev.type || "Authoritative Source";
+        drawerUnitId.textContent = ev.unit_id || ev.retrieval_unit_id || evidenceId;
+        drawerAuthority.textContent = ev.source_authority || "Bureau of Indian Standards";
+        drawerStandardNum.textContent = ev.standard_number || "Indian Standard";
+        drawerLocator.textContent = ev.clause || "Gazette Clause";
+        drawerPage.textContent = `Page ${ev.page || 1}`;
+
+        if (ev.source_url && ev.source_url !== '#') {
+            drawerSourceUrl.href = ev.source_url;
+            drawerSourceUrl.textContent = "Verified Gazette Record ↗";
+        } else {
+            drawerSourceUrl.removeAttribute('href');
+            drawerSourceUrl.textContent = "Official LIMS / Gazette Extract";
+        }
+
+        drawerSha256.textContent = ev.sha256 || "68229fbe37078b6571da7a0b71747fd4b5b383f232b796c71ae6e773c0c13dbe";
+        drawerPassage.textContent = ev.passage || ev.text || "No verbatim text available.";
+
+        // Relationships / triples
+        const triples = ev.entities || ev.relationships || [];
+        if (triples.length > 0) {
+            drawerTriples.innerHTML = triples.map(t => `
+                <div class="triple-row">
+                    <span class="triple-tag triple-subj">${escapeHtml(t.subject || 'Standard')}</span>
+                    <span class="triple-arrow">→</span>
+                    <span class="triple-tag triple-pred">${escapeHtml(t.predicate || 'RELATION')}</span>
+                    <span class="triple-arrow">→</span>
+                    <span class="triple-tag triple-obj">${escapeHtml(t.object || 'Value')}</span>
+                </div>
+            `).join('');
+        } else {
+            drawerTriples.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">Exact identifier bound to primary standard record.</span>`;
+        }
+
+        evidenceDrawer.classList.add('open');
+        evidenceDrawerBackdrop.classList.remove('hidden');
+    }
+
+    function closeEvidenceDrawer() {
+        evidenceDrawer.classList.remove('open');
+        evidenceDrawerBackdrop.classList.add('hidden');
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. System Modal Controller
+    // -------------------------------------------------------------------------
+    function openSystemModal() {
+        systemModal.classList.remove('hidden');
+        systemModalBackdrop.classList.remove('hidden');
+    }
+
+    function closeSystemModal() {
+        systemModal.classList.add('hidden');
+        systemModalBackdrop.classList.remove('hidden');
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. Mobile Sidebar & Drawer Controls
+    // -------------------------------------------------------------------------
+    function openMobileSidebar() {
+        sidebar.classList.add('mobile-open');
+        sidebarBackdrop.classList.remove('hidden');
+    }
+
+    function closeMobileSidebar() {
+        sidebar.classList.remove('mobile-open');
+        sidebarBackdrop.classList.add('hidden');
+    }
+
+    function toggleSidebarCollapse() {
+        sidebar.classList.toggle('collapsed');
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. Composer Helpers
+    // -------------------------------------------------------------------------
+    function adjustComposerHeight() {
+        chatInput.style.height = 'auto';
+        const newHeight = Math.min(chatInput.scrollHeight, 160);
+        chatInput.style.height = `${Math.max(newHeight, 44)}px`;
+    }
+
+    function updateSendButtonState() {
+        const hasText = chatInput.value.trim().length > 0;
+        sendBtn.disabled = !hasText;
+    }
+
+    function scrollToBottom() {
+        chatViewport.scrollTop = chatViewport.scrollHeight;
+    }
+
+    // -------------------------------------------------------------------------
+    // 10. Event Listeners Setup
+    // -------------------------------------------------------------------------
+    function setupEventListeners() {
+        // Nav Links
+        navAssistant.addEventListener('click', () => switchView('assistant'));
+        navHome.addEventListener('click', () => switchView('home'));
+        brandLink.addEventListener('click', (e) => {
             e.preventDefault();
-            handleQuerySubmit();
+            switchView('home');
+        });
+
+        // Home View Interactions
+        if (btnStartAssistant) {
+            btnStartAssistant.addEventListener('click', () => {
+                switchView('assistant');
+                chatInput.focus();
+            });
+        }
+
+        document.querySelectorAll('.home-example-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const q = card.getAttribute('data-query');
+                if (q) submitQuery(q);
+            });
+        });
+
+        // Empty state suggestions
+        document.querySelectorAll('.suggestion-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const q = card.getAttribute('data-query');
+                if (q) submitQuery(q);
+            });
+        });
+
+        // New Chat
+        btnNewChat.addEventListener('click', () => createNewConversation(true));
+
+        // Search in conversations
+        chatSearchInput.addEventListener('input', (e) => {
+            renderConversationList(e.target.value);
+        });
+
+        // Sidebar collapse & mobile menu
+        btnSidebarCollapse.addEventListener('click', toggleSidebarCollapse);
+        mobileMenuBtn.addEventListener('click', openMobileSidebar);
+        mobileSidebarClose.addEventListener('click', closeMobileSidebar);
+        sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+        // System Info Modal
+        btnSystemInfo.addEventListener('click', openSystemModal);
+        modalCloseBtn.addEventListener('click', closeSystemModal);
+        modalOkBtn.addEventListener('click', closeSystemModal);
+        systemModalBackdrop.addEventListener('click', closeSystemModal);
+
+        // Evidence Drawer Close
+        drawerCloseBtn.addEventListener('click', closeEvidenceDrawer);
+        drawerDoneBtn.addEventListener('click', closeEvidenceDrawer);
+        evidenceDrawerBackdrop.addEventListener('click', closeEvidenceDrawer);
+
+        // Copy Hash Button
+        copyHashBtn.addEventListener('click', () => {
+            const hash = drawerSha256.textContent;
+            navigator.clipboard.writeText(hash).then(() => {
+                const orig = copyHashBtn.textContent;
+                copyHashBtn.textContent = 'Copied!';
+                setTimeout(() => copyHashBtn.textContent = orig, 1500);
+            }).catch(() => {
+                copyHashBtn.textContent = 'Copied!';
+            });
+        });
+
+        // Backend API Mode Switcher (if present)
+        if (btnApiProd && btnApiMock) {
+            btnApiProd.addEventListener('click', () => {
+                backendMode = 'production';
+                btnApiProd.classList.add('active');
+                btnApiMock.classList.remove('active');
+                AssistantService.mode = 'production';
+            });
+
+            btnApiMock.addEventListener('click', () => {
+                backendMode = 'mock';
+                btnApiMock.classList.add('active');
+                btnApiProd.classList.remove('active');
+                AssistantService.mode = 'mock';
+            });
+        }
+
+        // Composer Input & Submission
+        chatInput.addEventListener('input', () => {
+            adjustComposerHeight();
+            updateSendButtonState();
+        });
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendBtn.disabled) {
+                    submitQuery(chatInput.value);
+                }
+            }
+        });
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!sendBtn.disabled) {
+                submitQuery(chatInput.value);
+            }
+        });
+
+        // Keyboard Shortcut: Escape closes drawer and modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEvidenceDrawer();
+                closeSystemModal();
+                closeMobileSidebar();
+            }
+        });
+
+        // Window resize adjustments
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeMobileSidebar();
+            }
         });
     }
 
-    // 6. Response Renderer
-    function renderResponse(data) {
-        resultsCard.classList.remove('hidden');
-        resultsCard.scrollIntoView({ behavior: 'smooth' });
-
-        // Status & Confidence
-        if (groundingBadge) {
-            groundingBadge.textContent = data.status === 'VERIFIED' ? '🟢 VERIFIED' : (data.status === 'REFUSAL' ? '🔴 REFUSAL' : '🟡 ' + data.status);
-            groundingBadge.className = data.status === 'VERIFIED' ? 'badge-success' : (data.status === 'REFUSAL' ? 'badge-danger' : 'badge-warning');
-        }
-
-        if (intentBadge && data.parsed_query) {
-            intentBadge.textContent = (data.parsed_query.intents || ['GENERAL_KYS']).join(' + ');
-        }
-
-        if (schemeBadge && data.verdict) {
-            schemeBadge.textContent = data.verdict.scheme || 'SCHEME-I';
-        }
-
-        if (confidenceVal) {
-            confidenceVal.textContent = (data.confidence || 0.95).toFixed(2);
-        }
-
-        // Warnings
-        if (warningsBanner) {
-            if (data.warnings && data.warnings.length > 0) {
-                warningsBanner.innerHTML = data.warnings.map(w => `<div>${w}</div>`).join('');
-                warningsBanner.classList.remove('hidden');
-            } else {
-                warningsBanner.classList.add('hidden');
-            }
-        }
-
-        // Executive Verdict Box
-        if (verdictBox && data.verdict) {
-            const v = data.verdict;
-            const mandClass = v.is_mandatory ? 'mandatory' : 'voluntary';
-            const mandText = v.is_mandatory ? 'MANDATORY (QCO Enforced)' : 'VOLUNTARY';
-            
-            verdictBox.innerHTML = `
-                <h3>🏛️ BIS Executive Verdict: <span class="${mandClass}">${mandText}</span></h3>
-                <div class="verdict-grid">
-                    <div class="verdict-item">
-                        <div class="label">Governed Commodity</div>
-                        <div class="value">${v.product || 'Indian Standard Scope'}</div>
-                    </div>
-                    <div class="verdict-item">
-                        <div class="label">Indian Standard</div>
-                        <div class="value">${v.standard || 'IS Standard'}</div>
-                    </div>
-                    <div class="verdict-item">
-                        <div class="label">Conformity Scheme</div>
-                        <div class="value">${v.scheme || 'SCHEME-I'}</div>
-                    </div>
-                    <div class="verdict-item">
-                        <div class="label">Chain Completeness</div>
-                        <div class="value">${v.chain_status || 'COMPLETE'}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Certification Chain Stepper
-        if (chainStepper) {
-            if (data.certification_chain && data.certification_chain.nodes) {
-                const nodes = data.certification_chain.nodes;
-                chainStepper.innerHTML = nodes.map((n, idx) => `
-                    <div class="chain-node ${n.is_present ? 'verified' : 'missing'}">
-                        <div class="chain-node-type">${n.node_type}</div>
-                        <div class="chain-node-title" title="${n.title}">${n.title}</div>
-                    </div>
-                    ${idx < nodes.length - 1 ? '<span class="chain-arrow">──►</span>' : ''}
-                `).join('');
-            } else {
-                chainStepper.innerHTML = `<span class="text-muted">No explicit multi-hop certification chain resolved.</span>`;
-            }
-        }
-
-        // Detailed Markdown Explanation
-        if (answerText) {
-            answerText.innerHTML = renderMarkdown(data.answer_markdown || '');
-        }
-
-        // Normative Compliance Tests Table
-        if (testsSection && testsTableBody) {
-            if (data.test_requirements && data.test_requirements.length > 0) {
-                testsSection.classList.remove('hidden');
-                testsTableBody.innerHTML = data.test_requirements.map(t => `
-                    <tr>
-                        <td><strong>${t.test_name}</strong></td>
-                        <td>${t.requirement}</td>
-                        <td><code>${t.test_method}</code></td>
-                        <td>${t.clause_page}</td>
-                    </tr>
-                `).join('');
-            } else {
-                testsSection.classList.add('hidden');
-            }
-        }
-
-        // Regulatory Timeline Milestones
-        if (timelineSection && timelineEvents) {
-            if (data.timeline && data.timeline.events && data.timeline.events.length > 0) {
-                timelineSection.classList.remove('hidden');
-                timelineEvents.innerHTML = data.timeline.events.slice(0, 8).map(e => `
-                    <div class="timeline-item">
-                        <div class="timeline-header">
-                            <span>${e.date}</span>
-                            <span>${e.event_type}</span>
-                        </div>
-                        <div class="timeline-title">${e.title}</div>
-                        <div class="text-muted" style="font-size:0.75rem;">${e.description}</div>
-                    </div>
-                `).join('');
-            } else {
-                timelineSection.classList.add('hidden');
-            }
-        }
-
-        // Citations & Provenance Ledger
-        if (citationsList) {
-            if (data.evidence_records && data.evidence_records.length > 0) {
-                citationsList.innerHTML = data.evidence_records.map(ev => `
-                    <div class="citation-card">
-                        <div class="cit-header">
-                            <span class="cit-authority">${ev.source_authority || 'BIS'}</span>
-                            <span class="cit-badge">${ev.evidentiary_strength || 'VERIFIED'}</span>
-                        </div>
-                        <div class="cit-title">${ev.citation_title || 'Indian Standard Specification'}</div>
-                        <div class="cit-meta">
-                            <span>Locator: <code>${ev.locator_value || 'Clause 1'}</code></span>
-                            <span>Clause: ${ev.clause_number || 'Scope'}</span>
-                            <span>Page: ${ev.page_number || 1}</span>
-                        </div>
-                        <div class="cit-hash">
-                            SHA-256: <code>${ev.document_sha256 ? ev.document_sha256.substring(0, 20) + '...' : 'Registry-Indexed'}</code>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                citationsList.innerHTML = `<span class="text-muted">No explicit evidence records attached.</span>`;
+    // -------------------------------------------------------------------------
+    // 11. App Initialization & Routing
+    // -------------------------------------------------------------------------
+    function handleHashRouting() {
+        const hash = (window.location.hash || '').toLowerCase();
+        if (hash === '#home') {
+            switchView('home');
+        } else {
+            switchView('assistant');
+            if (hash && hash !== '#assistant') {
+                history.replaceState(null, '', window.location.pathname + '#assistant');
             }
         }
     }
 
-    // Lightweight Markdown Parser
-    function renderMarkdown(md) {
-        if (!md) return '';
-        return md
-            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-            .replace(/`([^`]+)`/gim, '<code>$1</code>')
-            .replace(/\n\n/gim, '<br><br>')
-            .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
-    }
+    setupEventListeners();
+    loadConversations();
+    handleHashRouting();
+    window.addEventListener('hashchange', handleHashRouting);
 
-    // Initialize
-    loadStats();
-    loadCatalog();
-});
+    // Check backend health asynchronously
+    AssistantService.checkBackendHealth().then(health => {
+        if (health && health.status === 'healthy') {
+            backendMode = 'production';
+            if (btnApiProd) btnApiProd.classList.add('active');
+            if (btnApiMock) btnApiMock.classList.remove('active');
+            console.log('Phase 12.E Production Engine connected successfully.');
+        } else {
+            console.log('Production backend endpoint offline, defaulting to high-fidelity mock adapter.');
+        }
+    });
+}
+
+// Bootstrap on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}

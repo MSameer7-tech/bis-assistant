@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-09-06T06:55:41.420701+00:00",
+  "total_raw_laboratories": 28,
+  "unique_laboratories": 24,
+  "lab_duplicates_filtered": 0,
+  "total_raw_scopes": 165,
+  "unique_scopes": 149,
+  "scope_duplicates_filtered": 16,
+  "total_rejected_records": 0,
+  "rejected_records": [],
+  "flagged_conflicts": [],
+  "statistics": {
+    "total_unique_laboratories": 24,
+    "bis_owned_count": 1,
+    "bis_recognized_count": 19,
+    "bis_empanelled_count": 4,
+    "total_scope_records": 149,
+    "total_standards_associated": 133,
+    "total_states_covered": 12
+  }
+}

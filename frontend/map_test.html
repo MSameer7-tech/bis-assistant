@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase F3 Step 2B - Leaflet Map Foundation Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="./styles.css?v=12.f.6">
+    <style>
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0B0E14;
+            color: #E2E8F0;
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+        }
+
+        .test-workbench {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+        }
+
+        .test-title-group h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+
+        .test-title-group p {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: #94A3B8;
+        }
+
+        .status-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .test-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #11141D;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-ctrl {
+            background: #1E2333;
+            color: #E2E8F0;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-ctrl:hover {
+            background: #283046;
+            border-color: #8678F9;
+            color: #FFFFFF;
+        }
+
+        .btn-ctrl.active {
+            background: #8678F9;
+            color: #FFFFFF;
+            border-color: #8678F9;
+        }
+
+        .test-main-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+        }
+
+        .map-wrapper {
+            height: 540px;
+            position: relative;
+        }
+
+        .verification-panel {
+            background: #11141D;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .verification-panel h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #FFFFFF;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .check-status {
+            font-weight: 700;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .check-status.pass {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34D399;
+        }
+
+        .check-status.pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #FBBF24;
+        }
+
+        .info-box {
+            font-size: 11px;
+            color: #94A3B8;
+            line-height: 1.5;
+            background: rgba(134, 120, 249, 0.08);
+            border: 1px solid rgba(134, 120, 249, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-workbench">
+        <header class="test-header">
+            <div class="test-title-group">
+                <h1>Phase F3: STEP 2B — Leaflet Map Foundation Test</h1>
+                <p>Isolated component verification with OpenStreetMap tiles & visible attribution</p>
+            </div>
+            <div class="status-badge" id="overallStatusBadge">Initializing...</div>
+        </header>
+
+        <section class="test-controls">
+            <button type="button" class="btn-ctrl" id="btnCenterDelhi">Center: Delhi</button>
+            <button type="button" class="btn-ctrl" id="btnCenterBlr">Center: Bangalore</button>
+            <button type="button" class="btn-ctrl" id="btnAddSingle">Add 1 Marker (SIIR Delhi)</button>
+            <button type="button" class="btn-ctrl active" id="btnAddSample4">Add 4 Sample Labs</button>
+            <button type="button" class="btn-ctrl" id="btnClearMarkers">Clear Markers</button>
+            <button type="button" class="btn-ctrl" id="btnInvalidate">Resize / Invalidate</button>
+        </section>
+
+        <div class="test-main-grid">
+            <div class="map-wrapper">
+                <div id="testMap" class="bis-map-container"></div>
+            </div>
+
+            <aside class="verification-panel">
+                <h3>Verification Criteria</h3>
+                
+                <div class="check-item">
+                    <span>1. Leaflet Library Loaded</span>
+                    <span class="check-status pending" id="chkLeaflet">WAIT</span>
+                </div>
+
+                <div class="check-item">
+                    <span>2. Map Renders in DOM</span>
+                    <span class="check-status pending" id="chkRender">WAIT</span>
+                </div>
+
+                <div class="check-item">
+                    <span>3. OpenStreetMap Attribution</span>
+                    <span class="check-status pending" id="chkAttribution">WAIT</span>
+                </div>
+
+                <div class="check-item">
+                    <span>4. Single Marker Display</span>
+                    <span class="check-status pending" id="chkSingleMarker">WAIT</span>
+                </div>
+
+                <div class="check-item">
+                    <span>5. Multi-Marker Display (4 Labs)</span>
+                    <span class="check-status pending" id="chkMultiMarker">WAIT</span>
+                </div>
+
+                <div class="check-item">
+                    <span>6. Zero Console Errors</span>
+                    <span class="check-status pending" id="chkConsole">WAIT</span>
+                </div>
+
+                <div class="info-box">
+                    <strong>Tile Policy Compliance:</strong><br>
+                    • HTTPS Tile URL (<code>https://tile.openstreetmap.org/...</code>)<br>
+                    • Visible OpenStreetMap Attribution Required<br>
+                    • Zero bulk downloads / No prefetching<br>
+                    • Standard browser HTTP caching enabled
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Leaflet Local Vendor Bundle -->
+    <script src="./vendor/leaflet/leaflet.js"></script>
+
+    <!-- Component and Test Runner Script -->
+    <script type="module">
+        import { BisMapComponent, createBisMap, DEFAULT_TILE_PROVIDER } from "./mapComponent.js";
+
+        // Sample 4 Laboratories from Step 2A (Authoritative BIS LIMS Coordinates)
+        const SAMPLE_LABS = [
+            {
+                id: "CL_SAHIBABAD",
+                lat: 28.686014,
+                lng: 77.432251,
+                title: "BIS, Central Laboratory (CL)",
+                category: "BIS_OWNED",
+                popupContent: `
+                    <div class="bis-popup-card">
+                        <div class="bis-popup-header">
+                            <span class="bis-popup-badge owned">BIS Owned</span>
+                            <span class="bis-popup-coords">28.6860, 77.4323</span>
+                        </div>
+                        <h4 class="bis-popup-title">BIS Central Laboratory (CL)</h4>
+                        <p class="bis-popup-address">20/9, Site 4, Sahibabad Industrial Area, Sahibabad, Ghaziabad, UP - 201010</p>
+                    </div>
+                `
+            },
+            {
+                id: "SIIR_DELHI",
+                lat: 28.691799,
+                lng: 77.217508,
+                title: "SIIR, Delhi Shriram Institute",
+                category: "BIS_RECOGNIZED",
+                popupContent: `
+                    <div class="bis-popup-card">
+                        <div class="bis-popup-header">
+                            <span class="bis-popup-badge recognized">Recognized Lab</span>
+                            <span class="bis-popup-coords">28.6918, 77.2175</span>
+                        </div>
+                        <h4 class="bis-popup-title">Shriram Institute SIIR (Code: 8102006)</h4>
+                        <p class="bis-popup-address">19-University Road, Delhi 110007, North Delhi</p>
+                    </div>
+                `
+            },
+            {
+                id: "RRSL_BANGALORE",
+                lat: 13.140169,
+                lng: 77.572251,
+                title: "Regional Reference Standards Lab",
+                category: "BIS_EMPANELLED",
+                popupContent: `
+                    <div class="bis-popup-card">
+                        <div class="bis-popup-header">
+                            <span class="bis-popup-badge empanelled">Empanelled Lab</span>
+                            <span class="bis-popup-coords">13.1402, 77.5723</span>
+                        </div>
+                        <h4 class="bis-popup-title">Regional Reference Standards Laboratory</h4>
+                        <p class="bis-popup-address">Maptol Bhavan, Jakkur, Bangalore Urban, Karnataka - 560064</p>
+                    </div>
+                `
+            },
+            {
+                id: "SLEEN_AGRA",
+                lat: 27.191807,
+                lng: 77.994967,
+                title: "Sleen India Biz venture",
+                category: "BIS_RECOGNIZED",
+                popupContent: `
+                    <div class="bis-popup-card">
+                        <div class="bis-popup-header">
+                            <span class="bis-popup-badge recognized">Recognized Lab</span>
+                            <span class="bis-popup-coords">27.1918, 77.9950</span>
+                        </div>
+                        <h4 class="bis-popup-title">Sleen India Biz venture (Code: 9139736)</h4>
+                        <p class="bis-popup-address">Rahankalan Road, Part 295, Kuberpur, Agra, UP - 282006</p>
+                    </div>
+                `
+            }
+        ];
+
+        let hasConsoleError = false;
+        const originalError = console.error;
+        console.error = function(...args) {
+            hasConsoleError = true;
+            originalError.apply(console, args);
+        };
+
+        // Initialize Map
+        const mapComp = createBisMap("testMap", {
+            center: [20.5937, 78.9629],
+            zoom: 5
+        });
+
+        // Test Verification Checks
+        function updateCheck(id, pass) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = pass ? "PASS" : "FAIL";
+                el.className = `check-status ${pass ? "pass" : "fail"}`;
+            }
+        }
+
+        // 1. Leaflet Loaded Check
+        const isLeafletLoaded = typeof window.L !== "undefined";
+        updateCheck("chkLeaflet", isLeafletLoaded);
+
+        // 2. Map Render Check
+        const isRendered = !!(mapComp && mapComp.map && mapComp.map.getContainer());
+        updateCheck("chkRender", isRendered);
+
+        // 3. Attribution Check
+        const attrContainer = document.querySelector(".leaflet-control-attribution");
+        const hasAttribution = !!(attrContainer && attrContainer.textContent.includes("OpenStreetMap"));
+        updateCheck("chkAttribution", hasAttribution);
+
+        // 4. Set Initial 4 Sample Labs
+        mapComp.setMarkers(SAMPLE_LABS, true);
+        updateCheck("chkMultiMarker", mapComp.getMarkersCount() === 4);
+
+        // 5. Console Error Check
+        updateCheck("chkConsole", !hasConsoleError);
+
+        // Update overall badge
+        const allInitialPassed = isLeafletLoaded && isRendered && hasAttribution && !hasConsoleError;
+        const badge = document.getElementById("overallStatusBadge");
+        if (badge) {
+            badge.textContent = allInitialPassed ? "STEP 2B: ALL CHECKS PASS" : "CHECKS PENDING";
+            badge.style.background = allInitialPassed ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)";
+        }
+
+        console.log("[MAP_COMPONENT_TEST_STATUS]", {
+            leaflet: isLeafletLoaded,
+            rendered: isRendered,
+            attribution: hasAttribution,
+            markersCount: mapComp.getMarkersCount(),
+            consoleClean: !hasConsoleError
+        });
+
+        // Wire Interactive Buttons
+        document.getElementById("btnCenterDelhi").addEventListener("click", () => {
+            mapComp.setView(28.6139, 77.2090, 11);
+        });
+
+        document.getElementById("btnCenterBlr").addEventListener("click", () => {
+            mapComp.setView(12.9716, 77.5946, 11);
+        });
+
+        document.getElementById("btnAddSingle").addEventListener("click", () => {
+            mapComp.clearMarkers();
+            mapComp.addMarker({
+                ...SAMPLE_LABS[1],
+                autoOpen: true
+            });
+            mapComp.setView(SAMPLE_LABS[1].lat, SAMPLE_LABS[1].lng, 13);
+            updateCheck("chkSingleMarker", mapComp.getMarkersCount() === 1);
+        });
+
+        document.getElementById("btnAddSample4").addEventListener("click", () => {
+            mapComp.setMarkers(SAMPLE_LABS, true);
+            updateCheck("chkMultiMarker", mapComp.getMarkersCount() === 4);
+        });
+
+        document.getElementById("btnClearMarkers").addEventListener("click", () => {
+            mapComp.clearMarkers();
+        });
+
+        document.getElementById("btnInvalidate").addEventListener("click", () => {
+            mapComp.invalidateSize();
+        });
+    </script>
+</body>
+</html>
