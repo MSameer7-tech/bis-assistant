@@ -120,6 +120,7 @@ def test_deployment_manifests_exist():
     railway_json = ROOT_DIR / "railway.json"
     assert railway_json.exists(), "railway.json must exist"
     railway_data = json.loads(railway_json.read_text(encoding="utf-8"))
+    assert railway_data["build"]["builder"] == "RAILPACK"
     assert railway_data["deploy"]["startCommand"].startswith("uvicorn backend.app:app")
     assert railway_data["deploy"]["healthcheckPath"] == "/api/health"
 
