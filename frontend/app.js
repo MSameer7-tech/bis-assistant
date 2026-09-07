@@ -270,6 +270,17 @@ function initApp() {
             btn.classList.toggle('active', btnLang === lang);
         });
 
+        // Sync collapsed sidebar language badge & tooltip
+        const collapsedCode = document.getElementById('collapsedLangCode');
+        if (collapsedCode) {
+            collapsedCode.textContent = lang === 'hi' ? 'हि' : 'EN';
+        }
+        const btnCollapsed = document.getElementById('btnCollapsedLangToggle');
+        if (btnCollapsed) {
+            btnCollapsed.setAttribute('title', lang === 'hi' ? 'Switch to English' : 'Switch to हिन्दी (भाषा बदलें)');
+            btnCollapsed.setAttribute('aria-label', lang === 'hi' ? 'Switch to English' : 'Switch to हिन्दी (भाषा बदलें)');
+        }
+
         // Notify LabFinder component to re-render active results and dropdowns
         if (labFinder && typeof labFinder.onLanguageChange === 'function') {
             labFinder.onLanguageChange(lang);
@@ -313,7 +324,18 @@ function initApp() {
                 }
             });
         });
+
+        const btnCollapsed = document.getElementById('btnCollapsedLangToggle');
+        if (btnCollapsed) {
+            btnCollapsed.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const nextLang = currentLanguage === 'en' ? 'hi' : 'en';
+                applyLanguage(nextLang);
+            });
+        }
     }
+
 
 
     // -------------------------------------------------------------------------

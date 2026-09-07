@@ -71,13 +71,16 @@
 
             <!-- Sidebar Footer (AI-Hub-2.0 UserProfileFooter style) -->
             <div class="sidebar-footer">
-                <div class="sidebar-lang-row">
+                <div class="sidebar-lang-row" id="sidebarLangRow">
                     <span class="sidebar-lang-label" data-i18n="nav.language">Language</span>
                     <div class="lang-selector-group" id="sidebarLangSelectorGroup" role="group" aria-label="Language selector">
                         <button type="button" class="btn-lang-toggle active" data-lang="en">EN</button>
                         <span class="lang-divider">|</span>
                         <button type="button" class="btn-lang-toggle" data-lang="hi">हिन्दी</button>
                     </div>
+                    <button type="button" class="btn-lang-collapsed" id="btnCollapsedLangToggle" title="Switch language to हिन्दी / भाषा बदलें" aria-label="Switch language">
+                        <span class="collapsed-lang-code" id="collapsedLangCode">EN</span>
+                    </button>
                 </div>
                 <div class="sidebar-profile-card">
                     <div class="profile-avatar-group" id="btnSystemInfo" role="button" tabindex="0" title="System Status">
