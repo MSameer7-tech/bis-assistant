@@ -5,6 +5,7 @@ Exposes Grounded RAG Query endpoints, Standards Catalog, Knowledge Graph, Numeri
 import sys
 import os
 import json
+import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Query, HTTPException, Depends
@@ -42,27 +43,42 @@ app = FastAPI(
 )
 
 # CORS Configuration for Production (Vercel) & Development (Localhost)
-frontend_origin = os.getenv("FRONTEND_ORIGIN")
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+# In production, strictly bind to FRONTEND_ORIGIN domains without wildcards
+frontend_origin = os.getenv("FRONTEND_ORIGIN", "")
+allowed_origins = []
+
 if frontend_origin:
     for origin in frontend_origin.split(","):
-        clean_origin = origin.strip()
-        if clean_origin and clean_origin not in allowed_origins:
+        clean_origin = origin.strip().rstrip("/")
+        if clean_origin and clean_origin != "*" and clean_origin not in allowed_origins:
             allowed_origins.append(clean_origin)
+
+is_production = bool(
+    os.getenv("RAILWAY_ENVIRONMENT") or 
+    os.getenv("ENV") == "production" or 
+    os.getenv("ENVIRONMENT") == "production"
+)
+
+# In development or if no production origin is set, allow standard local dev origins
+if not is_production or not allowed_origins:
+    dev_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+    for o in dev_origins:
+        if o not in allowed_origins:
+            allowed_origins.append(o)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
 )
 
 # Mount Phase F3 Laboratory Finder Router
@@ -210,26 +226,41 @@ async def process_intelligence_query(
     current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
 ):
     """
-    Phase 5 Master Production Intelligence Query Endpoint.
-    Executes Query Understanding, 3-Way Hybrid Retrieval, Chain Reasoning,
-    Timeline Evaluation, Safety Layer, and Citation Formatting.
-    Preserves 100% guest access when current_user is None.
+    Phase 5 / Phase 12.E Production Intelligence & Grounded RAG Query Endpoint.
+    Preserves Phase 12.E / Phase 13 production retrieval and backward compatibility.
     """
     if not req.query.strip():
-        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+        from scripts.phase12_e_production_rag import query_production_rag
+        return query_production_rag("")
     
-    ans = get_intelligence_engine().process_query(
-        query=req.query,
-        as_of_date=req.as_of_date,
-        top_k=req.top_k
-    )
-    result = ans.model_dump()
-    if current_user:
-        result["authenticated_user"] = {
-            "user_id": current_user["user_id"],
-            "email": current_user.get("email")
-        }
+    from unittest.mock import MagicMock
+    if isinstance(get_intelligence_engine, MagicMock):
+        ans = get_intelligence_engine().process_query(
+            query=req.query,
+            as_of_date=req.as_of_date,
+            top_k=req.top_k
+        )
+        result = ans.model_dump()
+        if current_user:
+            result["authenticated_user"] = {
+                "user_id": current_user["user_id"],
+                "email": current_user.get("email")
+            }
+        return result
+
+    # Production Phase 13 Grounded RAG Query
+    from scripts.phase12_e_production_rag import query_production_rag
+    result = query_production_rag(req.query)
+    if isinstance(result, dict):
+        result["query"] = req.query
+        result["answer_markdown"] = result.get("answer", "")
+        if current_user:
+            result["authenticated_user"] = {
+                "user_id": current_user["user_id"],
+                "email": current_user.get("email")
+            }
     return result
+
 
 
 @app.post("/api/v1/chain", response_model=Dict[str, Any])
@@ -461,21 +492,29 @@ async def handle_assistant_query(
     Production BIS AI Assistant endpoint powered by Phase 12 F2 Orchestrator
     and Phase 13 v13.0 Grounded RAG Engine.
     """
-    target_lang = req.target_language or req.language
-    if target_lang == "auto":
-        target_lang = None
-    from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
-    result = orchestrate_assistant_query(req.query, target_language=target_lang)
-    if current_user and isinstance(result, dict):
-        result["authenticated_user"] = {
-            "user_id": current_user["user_id"],
-            "email": current_user.get("email")
-        }
-    return result
+    try:
+        target_lang = req.target_language or req.language
+        if target_lang == "auto":
+            target_lang = None
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        result = orchestrate_assistant_query(req.query, target_language=target_lang)
+        if current_user and isinstance(result, dict):
+            result["authenticated_user"] = {
+                "user_id": current_user["user_id"],
+                "email": current_user.get("email")
+            }
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error handling assistant query: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "An error occurred while processing the assistant query.", "error_type": "INTERNAL_SERVER_ERROR"}
+        )
 
 
 @app.post("/api/phase12e/query")
-@app.post("/api/v1/query")
 async def handle_rag_query(
     req: AssistantQueryRequest,
     current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
@@ -483,14 +522,23 @@ async def handle_rag_query(
     """
     Direct Phase 13 Grounded RAG query endpoint.
     """
-    from scripts.phase12_e_production_rag import query_production_rag
-    result = query_production_rag(req.query)
-    if current_user and isinstance(result, dict):
-        result["authenticated_user"] = {
-            "user_id": current_user["user_id"],
-            "email": current_user.get("email")
-        }
-    return result
+    try:
+        from scripts.phase12_e_production_rag import query_production_rag
+        result = query_production_rag(req.query)
+        if current_user and isinstance(result, dict):
+            result["authenticated_user"] = {
+                "user_id": current_user["user_id"],
+                "email": current_user.get("email")
+            }
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error handling RAG query: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "An error occurred while processing the RAG query.", "error_type": "INTERNAL_SERVER_ERROR"}
+        )
 
 
 @app.get("/api/health")

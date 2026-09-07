@@ -195,15 +195,20 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
         frontend_origin = os.getenv("FRONTEND_ORIGIN")
         if frontend_origin:
             origin = self.headers.get("Origin", "")
-            allowed = [o.strip() for o in frontend_origin.split(",") if o.strip()]
+            allowed = [o.strip() for o in frontend_origin.split(",") if o.strip() and o.strip() != "*"]
             if origin in allowed:
                 self.send_header("Access-Control-Allow-Origin", origin)
             elif allowed:
                 self.send_header("Access-Control-Allow-Origin", allowed[0])
             else:
-                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Access-Control-Allow-Origin", "http://localhost:3000")
         else:
-            self.send_header("Access-Control-Allow-Origin", "*")
+            origin = self.headers.get("Origin", "")
+            dev_allowed = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+            if origin in dev_allowed:
+                self.send_header("Access-Control-Allow-Origin", origin)
+            else:
+                self.send_header("Access-Control-Allow-Origin", "http://localhost:3000")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Allow-Credentials", "true")

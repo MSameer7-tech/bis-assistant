@@ -1,5 +1,60 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional, List, Dict, Any
+
+
+class AHCStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    SUSPENDED = "SUSPENDED"
+    CANCELLED = "CANCELLED"
+
+
+class MetalType(str, Enum):
+    GOLD = "GOLD"
+    SILVER = "SILVER"
+
+
+import re
+from pydantic import BaseModel
+
+
+@dataclass
+class GoldPurityFineness:
+    karat: str
+    fineness_ppt: int
+    description: str
+
+
+class HallmarkRecord(BaseModel):
+    ahc_id: str
+    ahc_name: str
+    recognition_number: str
+    status: AHCStatus
+    address: str
+    city: str
+    district: str
+    state: str
+    pincode: str
+    is_mandatory_district: bool
+    metals_handled: List[MetalType]
+    standards_covered: List[str]
+    testing_methods: List[str]
+    huid_supported: bool
+    daily_capacity_pieces: int
+    valid_from: str
+    valid_until: str
+    evidence_backed: bool
+
+    @staticmethod
+    def validate_huid(huid: Optional[str]) -> bool:
+        if not huid or not isinstance(huid, str):
+            return False
+        clean = huid.strip()
+        if len(clean) != 6:
+            return False
+        return bool(re.match(r"^[A-Za-z0-9]{6}$", clean))
+
+
 
 @dataclass
 class HallmarkingRecord:
