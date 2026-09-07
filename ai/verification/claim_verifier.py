@@ -4,11 +4,9 @@ Decomposes generated answers into atomic claims and verifies grounding against r
 """
 import re
 import logging
-from typing import List, Dict, Any, Tuple, Optional, TYPE_CHECKING
+from typing import List, Dict, Any, Tuple, Optional
 from ai.rag.schema import AtomicClaim, EvidenceRef
-
-if TYPE_CHECKING:
-    from ai.rag.models import RetrievedChunk
+from ai.rag.models import RetrievedChunk
 
 logger = logging.getLogger(__name__)
 

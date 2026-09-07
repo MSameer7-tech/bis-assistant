@@ -5,12 +5,10 @@ verifies them against retrieved authoritative BIS evidence chunks.
 """
 import re
 import logging
-from typing import List, Dict, Any, Tuple, Optional, Set, TYPE_CHECKING
+from typing import List, Dict, Any, Tuple, Optional, Set
 from pydantic import BaseModel, Field
 from ai.verification.models import NumericalVerification
-
-if TYPE_CHECKING:
-    from ai.rag.models import RetrievedChunk
+from ai.rag.models import RetrievedChunk
 
 logger = logging.getLogger(__name__)
 
