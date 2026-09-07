@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     embedding_api_key: str | None = None
     database_url: str | None = None
     log_level: str = "INFO"
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_jwt_secret: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

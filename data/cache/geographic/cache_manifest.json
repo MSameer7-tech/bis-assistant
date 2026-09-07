@@ -1,10 +1,10 @@
 {
   "cache_version": "Phase F3 Step 5A",
-  "total_cached_records": 75,
-  "successful_coordinates_count": 70,
-  "zero_results_count": 1,
-  "failed_count": 4,
+  "total_cached_records": 580,
+  "successful_coordinates_count": 577,
+  "zero_results_count": 3,
+  "failed_count": 0,
   "provider": "GEOAPIFY",
   "authority_boundary": "Geoapify provides supplementary geographic metadata only. BIS LIMS remains the sole authority for laboratory identity and capability.",
-  "last_updated": "2026-09-06T08:16:53.492024+00:00"
+  "last_updated": "2026-09-06T08:55:20.601838+00:00"
 }

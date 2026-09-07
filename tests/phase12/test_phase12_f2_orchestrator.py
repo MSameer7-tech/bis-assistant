@@ -59,9 +59,9 @@ class TestPhase12F2Orchestrator(unittest.TestCase):
 
     def test_01_sufficient_rag_calls_groq_in_structuring_only_mode(self):
         """SUFFICIENT query runs RAG first, Groq second in STRUCTURING_ONLY mode."""
-        groq_mock = MockGroqClient(response_text="### IS 8978 Specification\nStandard IS 8978 specifies Electric Instantaneous Water Heaters.")
+        groq_mock = MockGroqClient(response_text="### IS 4985 Specification\nStandard IS 4985 specifies UPVC Pipes for Potable Water Supplies.")
         
-        result = orchestrate_assistant_query("What is IS 8978?", groq_client=groq_mock)
+        result = orchestrate_assistant_query("What is IS 4985?", groq_client=groq_mock)
 
         # 1. RAG executed first and returned SUFFICIENT
         self.assertEqual(result["status"], "SUFFICIENT")
@@ -178,21 +178,21 @@ class TestPhase12F2Orchestrator(unittest.TestCase):
         """If Groq throws an HTTP or network error, original RAG response is preserved without crashing."""
         failing_groq = MockGroqClient(should_fail=True)
 
-        result = orchestrate_assistant_query("What is IS 8978?", groq_client=failing_groq)
+        result = orchestrate_assistant_query("What is IS 4985?", groq_client=failing_groq)
 
         # Invariant: Application does not crash
         self.assertEqual(result["status"], "SUFFICIENT")
         self.assertFalse(result["llm"]["used"])
         self.assertIsNotNone(result["llm"]["error"])
         # Fallback to original RAG answer
-        self.assertIn("IS 8978", result["answer"])
+        self.assertIn("IS 4985", result["answer"])
         self.assertEqual(result["generation_mode"], "GROUNDED")
 
     def test_08_missing_groq_api_key_does_not_crash(self):
         """If GROQ_API_KEY is not set in the environment, returns RAG-only result safely."""
         with patch.dict(os.environ, {"GROQ_API_KEY": ""}, clear=False):
             unconfigured_groq = GroqClient(api_key="")
-            result = orchestrate_assistant_query("What is IS 8978?", groq_client=unconfigured_groq)
+            result = orchestrate_assistant_query("What is IS 4985?", groq_client=unconfigured_groq)
 
             self.assertEqual(result["status"], "SUFFICIENT")
             self.assertFalse(result["llm"]["used"])
@@ -201,8 +201,8 @@ class TestPhase12F2Orchestrator(unittest.TestCase):
 
     def test_09_rag_status_is_never_upgraded_by_groq(self):
         """Groq answering an INSUFFICIENT query can never convert status to SUFFICIENT."""
-        groq_mock = MockGroqClient(response_text="Detailed model essay on toys regulation.")
-        result = orchestrate_assistant_query("Is BIS certification mandatory for toys?", groq_client=groq_mock)
+        groq_mock = MockGroqClient(response_text="Detailed model essay on unindexed products.")
+        result = orchestrate_assistant_query("What is IS 999999?", groq_client=groq_mock)
 
         # Invariant: Status remains INSUFFICIENT
         self.assertEqual(result["status"], "INSUFFICIENT")
@@ -212,7 +212,7 @@ class TestPhase12F2Orchestrator(unittest.TestCase):
     def test_10_provenance_contract_structure(self):
         """Every response must contain complete, accurate provenance fields."""
         groq_mock = MockGroqClient(response_text="Clean answer.")
-        result = orchestrate_assistant_query("What is IS 8978?", groq_client=groq_mock)
+        result = orchestrate_assistant_query("What is IS 4985?", groq_client=groq_mock)
 
         prov = result["provenance"]
         self.assertIn("rag_executed_first", prov)

@@ -1,0 +1,20 @@
+{
+  "index_version": "v13.0",
+  "phase": "13",
+  "created_at": "2026-09-06T18:07:21Z",
+  "total_units": 20745,
+  "bm25_document_count": 20745,
+  "bm25_vocabulary_size": 26585,
+  "vector_count": 20745,
+  "vector_dimension": 384,
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_local_path": "data/models/embeddings/all-MiniLM-L6-v2",
+  "distance_metric": "cosine (inner product on L2-normalized vectors)",
+  "offline_enforced": true,
+  "artifacts": {
+    "retrieval_units": "data/derived/phase13/retrieval_index_full_v1/retrieval_units.jsonl",
+    "bm25_index": "data/derived/phase13/retrieval_index_full_v1/bm25_index.pkl",
+    "vector_matrix": "data/derived/phase13/retrieval_index_full_v1/vector/vectors.npy",
+    "vector_metadata": "data/derived/phase13/retrieval_index_full_v1/vector/vector_metadata.jsonl"
+  }
+}

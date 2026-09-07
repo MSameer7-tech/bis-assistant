@@ -234,7 +234,7 @@ class ControlledBulkGeocoder:
         self.catalog_path = catalog_path or DEFAULT_CATALOG_FILE
         self.cache_file = cache_file or DEFAULT_CACHE_FILE
         self.checkpoint_file = checkpoint_file or DEFAULT_CHECKPOINT_FILE
-        self.service = geocoding_service or get_geocoding_service()
+        self.service = geocoding_service or GeoapifyGeocodingService(timeout=20.0)
         self.delay_seconds = delay_seconds
         self.batch_save_interval = batch_save_interval
         self.on_progress = on_progress
@@ -262,6 +262,7 @@ class ControlledBulkGeocoder:
     def run_batch(
         self,
         force_refresh: bool = False,
+        retry_transient: bool = False,
         max_records: Optional[int] = None,
         dry_run: bool = False
     ) -> BatchAccountingSummary:
@@ -299,7 +300,8 @@ class ControlledBulkGeocoder:
 
             # Step 1: Check existing cache
             cached_entry = self.cache.get_for_laboratory(internal_id, original_address)
-            is_cached = (cached_entry is not None) and not force_refresh
+            is_transient = cached_entry is not None and cached_entry.status in ("NETWORK_ERROR", "RATE_LIMITED")
+            is_cached = (cached_entry is not None) and not force_refresh and not (retry_transient and is_transient)
 
             if is_cached:
                 # CACHE HIT

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | BIS AI Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css?v=14.0.1">
+    <style>
+        .login-page-wrap {
+            min-height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-base);
+            padding: 24px 16px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .login-ambient-glow {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 110, 230, 0.12) 0%, transparent 70%);
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .login-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 440px;
+            padding: 36px 32px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+            position: relative;
+            z-index: 2;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .login-brand-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .login-brand-emblem {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(124, 110, 230, 0.12);
+            border: 1px solid rgba(124, 110, 230, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .login-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+
+        .login-subtitle {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .login-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 22px;
+        }
+
+        .login-tab-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .login-tab-btn.active {
+            background: rgba(124, 110, 230, 0.18);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .login-social-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-login-social {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            color: var(--text-body);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-login-social:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-login-social:active {
+            transform: translateY(0);
+        }
+
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        .login-divider span {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 500;
+        }
+
+        .login-alert {
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.45;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .login-alert.error {
+            background: rgba(244, 63, 94, 0.12);
+            border: 1px solid rgba(244, 63, 94, 0.35);
+            color: #fecdd3;
+        }
+
+        .login-alert.success {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #a7f3d0;
+        }
+
+        .login-form-group {
+            margin-bottom: 16px;
+        }
+
+        .login-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .login-label {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .btn-login-forgot {
+            background: none;
+            border: none;
+            color: var(--accent-purple);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .login-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .login-input {
+            width: 100%;
+            height: 42px;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--border-card);
+            border-radius: 9px;
+            padding: 0 14px;
+            color: var(--text-primary);
+            font-size: 13.5px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .login-input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(124, 110, 230, 0.18);
+        }
+
+        .btn-pwd-toggle {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+
+        .btn-pwd-toggle:hover {
+            color: var(--text-secondary);
+        }
+
+        .btn-login-submit {
+            width: 100%;
+            height: 44px;
+            background: var(--grad-primary);
+            border: none;
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(124, 110, 230, 0.35);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+
+        .btn-login-submit:hover:not(:disabled) {
+            opacity: 0.94;
+            transform: translateY(-1px);
+        }
+
+        .btn-login-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-footer {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+        }
+
+        .btn-switch-link {
+            background: none;
+            border: none;
+            color: var(--accent-purple);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 6px;
+        }
+
+        .btn-guest-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: color 0.15s ease, background 0.15s ease;
+            margin: 0 auto;
+        }
+
+        .btn-guest-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .already-signed-in-box {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .active-user-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--grad-primary);
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+        }
+
+        .active-user-email {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .active-user-status {
+            font-size: 12.5px;
+            color: var(--color-sufficient);
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page-wrap">
+        <div class="login-ambient-glow" aria-hidden="true"></div>
+
+        <div class="login-card" id="loginCard">
+            <!-- Active Session View (shown if already logged in) -->
+            <div id="activeSessionView" class="already-signed-in-box hidden">
+                <div class="active-user-avatar" id="activeUserAvatar">U</div>
+                <div class="active-user-email" id="activeUserEmail">user@example.com</div>
+                <div class="active-user-status">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+                    Authenticated via Supabase
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <a href="/" class="btn-login-submit" style="text-decoration: none;">Go to Research Workspace &rarr;</a>
+                    <button type="button" id="btnActiveSignOut" class="btn-login-social">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- Login / Signup Form View -->
+            <div id="authFormView">
+                <!-- Brand Header -->
+                <div class="login-brand-header">
+                    <a href="/" class="login-brand-emblem" title="Return to Home">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <polygon points="12,2 22,12 12,22 2,12" stroke="#7C6EE6" stroke-width="2" fill="rgba(124, 110, 230, 0.18)"/>
+                            <circle cx="12" cy="12" r="3.5" fill="#7C6EE6"/>
+                        </svg>
+                    </a>
+                    <h1 id="pageTitle" class="login-title">Sign in to BIS Assistant</h1>
+                    <p id="pageSubtitle" class="login-subtitle">Access verified Indian Standards & research history</p>
+                </div>
+
+                <!-- Tabs: Sign In / Create Account -->
+                <div class="login-tabs" id="pageTabs" role="tablist">
+                    <button type="button" class="login-tab-btn active" id="tabSignIn" role="tab" aria-selected="true">Sign In</button>
+                    <button type="button" class="login-tab-btn" id="tabSignUp" role="tab" aria-selected="false">Create Account</button>
+                </div>
+
+                <!-- Social OAuth Providers (Google & GitHub) -->
+                <div class="login-social-group" id="pageSocialGroup">
+                    <button type="button" class="btn-login-social" id="btnGoogleLogin" aria-label="Sign in with Google">
+                        <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+                    <button type="button" class="btn-login-social" id="btnGitHubLogin" aria-label="Sign in with GitHub">
+                        <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                        <span>Continue with GitHub</span>
+                    </button>
+                </div>
+
+                <!-- Divider -->
+                <div class="login-divider" id="pageDivider">
+                    <span>or continue with email</span>
+                </div>
+
+                <!-- Alert Message -->
+                <div id="pageAlert" class="login-alert hidden" role="alert" aria-live="polite">
+                    <span id="pageAlertIcon">⚠️</span>
+                    <span id="pageAlertMsg"></span>
+                </div>
+
+                <!-- Email / Password Form -->
+                <form id="pageAuthForm" novalidate>
+                    <!-- Email -->
+                    <div class="login-form-group">
+                        <label for="emailInput" class="login-label">Work Email</label>
+                        <div class="login-input-wrap">
+                            <input type="email" id="emailInput" class="login-input" placeholder="name@organization.com" autocomplete="email" required>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="login-form-group" id="passwordGroup">
+                        <div class="login-label-row">
+                            <label for="passwordInput" class="login-label" id="passwordLabel">Password</label>
+                            <button type="button" class="btn-login-forgot" id="btnForgotPwd">Forgot?</button>
+                        </div>
+                        <div class="login-input-wrap">
+                            <input type="password" id="passwordInput" class="login-input" placeholder="••••••••" autocomplete="current-password" required minlength="6">
+                            <button type="button" class="btn-pwd-toggle" id="btnTogglePwd" aria-label="Toggle password visibility">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="login-form-group hidden" id="confirmPasswordGroup">
+                        <div class="login-label-row">
+                            <label for="confirmPasswordInput" class="login-label">Confirm Password</label>
+                        </div>
+                        <div class="login-input-wrap">
+                            <input type="password" id="confirmPasswordInput" class="login-input" placeholder="••••••••" autocomplete="new-password" minlength="6">
+                            <button type="button" class="btn-pwd-toggle" id="btnToggleConfirmPwd" aria-label="Toggle confirm password visibility">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitBtn" class="btn-login-submit">
+                        <span id="submitBtnText">Sign In</span>
+                        <div id="submitSpinner" class="auth-spinner hidden" aria-hidden="true"></div>
+                    </button>
+                </form>
+
+                <!-- Footer & Navigation Links -->
+                <div class="login-footer">
+                    <div>
+                        <span id="footerPromptText">Don't have an account?</span>
+                        <button type="button" id="btnSwitchMode" class="btn-switch-link">Create an account</button>
+                    </div>
+                    <a href="/" class="btn-guest-link" title="Continue using BIS Assistant without signing in">
+                        Continue as Guest &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Page Application Script -->
+    <script type="module">
+        import {
+            initializeAuth,
+            onAuthStateChange,
+            signInWithEmail,
+            signUpWithEmail,
+            signInWithGoogle,
+            signInWithGitHub,
+            signOut,
+            sendPasswordReset,
+            updatePassword
+        } from './auth.js';
+
+        // DOM elements
+        const authFormView = document.getElementById('authFormView');
+        const activeSessionView = document.getElementById('activeSessionView');
+        const activeUserAvatar = document.getElementById('activeUserAvatar');
+        const activeUserEmail = document.getElementById('activeUserEmail');
+        const btnActiveSignOut = document.getElementById('btnActiveSignOut');
+
+        const pageTitle = document.getElementById('pageTitle');
+        const pageSubtitle = document.getElementById('pageSubtitle');
+        const pageTabs = document.getElementById('pageTabs');
+        const tabSignIn = document.getElementById('tabSignIn');
+        const tabSignUp = document.getElementById('tabSignUp');
+        const pageSocialGroup = document.getElementById('pageSocialGroup');
+        const pageDivider = document.getElementById('pageDivider');
+        const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+        const btnGitHubLogin = document.getElementById('btnGitHubLogin');
+
+        const pageAlert = document.getElementById('pageAlert');
+        const pageAlertIcon = document.getElementById('pageAlertIcon');
+        const pageAlertMsg = document.getElementById('pageAlertMsg');
+
+        const pageAuthForm = document.getElementById('pageAuthForm');
+        const emailInput = document.getElementById('emailInput');
+        const passwordGroup = document.getElementById('passwordGroup');
+        const passwordLabel = document.getElementById('passwordLabel');
+        const passwordInput = document.getElementById('passwordInput');
+        const btnForgotPwd = document.getElementById('btnForgotPwd');
+        const btnTogglePwd = document.getElementById('btnTogglePwd');
+
+        const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+        const btnToggleConfirmPwd = document.getElementById('btnToggleConfirmPwd');
+
+        const submitBtn = document.getElementById('submitBtn');
+        const submitBtnText = document.getElementById('submitBtnText');
+        const submitSpinner = document.getElementById('submitSpinner');
+        const footerPromptText = document.getElementById('footerPromptText');
+        const btnSwitchMode = document.getElementById('btnSwitchMode');
+
+        let mode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'reset'
+
+        function showAlert(type, msg) {
+            pageAlert.className = `login-alert ${type}`;
+            pageAlertIcon.textContent = type === 'success' ? '✓' : '⚠️';
+            pageAlertMsg.textContent = msg;
+            pageAlert.classList.remove('hidden');
+        }
+
+        function clearAlert() {
+            pageAlert.classList.add('hidden');
+            pageAlertMsg.textContent = '';
+        }
+
+        function setSubmitting(loading) {
+            submitBtn.disabled = loading;
+            if (loading) {
+                submitSpinner.classList.remove('hidden');
+                submitBtnText.style.opacity = '0.4';
+            } else {
+                submitSpinner.classList.add('hidden');
+                submitBtnText.style.opacity = '1';
+            }
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            clearAlert();
+
+            if (mode === 'signin') {
+                pageTitle.textContent = 'Sign in to BIS Assistant';
+                pageSubtitle.textContent = 'Access verified Indian Standards & research history';
+                tabSignIn.classList.add('active'); tabSignIn.setAttribute('aria-selected', 'true');
+                tabSignUp.classList.remove('active'); tabSignUp.setAttribute('aria-selected', 'false');
+                pageTabs.classList.remove('hidden');
+                pageSocialGroup.classList.remove('hidden');
+                pageDivider.classList.remove('hidden');
+                passwordGroup.classList.remove('hidden');
+                passwordLabel.textContent = 'Password';
+                btnForgotPwd.classList.remove('hidden');
+                confirmPasswordGroup.classList.add('hidden');
+                submitBtnText.textContent = 'Sign In';
+                footerPromptText.textContent = "Don't have an account?";
+                btnSwitchMode.textContent = 'Create an account';
+                btnSwitchMode.classList.remove('hidden');
+            } else if (mode === 'signup') {
+                pageTitle.textContent = 'Create Your Account';
+                pageSubtitle.textContent = 'Join the BIS compliance & standards research workspace';
+                tabSignIn.classList.remove('active'); tabSignIn.setAttribute('aria-selected', 'false');
+                tabSignUp.classList.add('active'); tabSignUp.setAttribute('aria-selected', 'true');
+                pageTabs.classList.remove('hidden');
+                pageSocialGroup.classList.remove('hidden');
+                pageDivider.classList.remove('hidden');
+                passwordGroup.classList.remove('hidden');
+                passwordLabel.textContent = 'Password (min. 6 chars)';
+                btnForgotPwd.classList.add('hidden');
+                confirmPasswordGroup.classList.remove('hidden');
+                submitBtnText.textContent = 'Create Account';
+                footerPromptText.textContent = 'Already have an account?';
+                btnSwitchMode.textContent = 'Sign In';
+                btnSwitchMode.classList.remove('hidden');
+            } else if (mode === 'forgot') {
+                pageTitle.textContent = 'Reset Password';
+                pageSubtitle.textContent = 'Enter your email to receive a password reset link';
+                pageTabs.classList.add('hidden');
+                pageSocialGroup.classList.add('hidden');
+                pageDivider.classList.add('hidden');
+                passwordGroup.classList.add('hidden');
+                confirmPasswordGroup.classList.add('hidden');
+                submitBtnText.textContent = 'Send Reset Link';
+                footerPromptText.textContent = 'Remembered your password?';
+                btnSwitchMode.textContent = 'Back to Sign In';
+                btnSwitchMode.classList.remove('hidden');
+            } else if (mode === 'reset') {
+                pageTitle.textContent = 'Set New Password';
+                pageSubtitle.textContent = 'Enter and confirm your new secure password';
+                pageTabs.classList.add('hidden');
+                pageSocialGroup.classList.add('hidden');
+                pageDivider.classList.add('hidden');
+                passwordGroup.classList.remove('hidden');
+                passwordLabel.textContent = 'New Password';
+                btnForgotPwd.classList.add('hidden');
+                confirmPasswordGroup.classList.remove('hidden');
+                submitBtnText.textContent = 'Update Password';
+                footerPromptText.textContent = '';
+                btnSwitchMode.classList.add('hidden');
+            }
+        }
+
+        function togglePassword(inputEl) {
+            if (inputEl.type === 'password') {
+                inputEl.type = 'text';
+            } else {
+                inputEl.type = 'password';
+            }
+        }
+
+        // Event listeners
+        tabSignIn.addEventListener('click', () => setMode('signin'));
+        tabSignUp.addEventListener('click', () => setMode('signup'));
+        btnForgotPwd.addEventListener('click', () => setMode('forgot'));
+        btnSwitchMode.addEventListener('click', () => {
+            if (mode === 'signin' || mode === 'forgot') setMode('signup');
+            else setMode('signin');
+        });
+
+        btnTogglePwd.addEventListener('click', () => togglePassword(passwordInput));
+        btnToggleConfirmPwd.addEventListener('click', () => togglePassword(confirmPasswordInput));
+
+        btnGoogleLogin.addEventListener('click', async () => {
+            try {
+                await signInWithGoogle();
+            } catch (err) {
+                showAlert('error', err.message || 'Google sign-in failed.');
+            }
+        });
+
+        btnGitHubLogin.addEventListener('click', async () => {
+            try {
+                await signInWithGitHub();
+            } catch (err) {
+                showAlert('error', err.message || 'GitHub sign-in failed.');
+            }
+        });
+
+        btnActiveSignOut.addEventListener('click', async () => {
+            try {
+                await signOut();
+                activeSessionView.classList.add('hidden');
+                authFormView.classList.remove('hidden');
+                setMode('signin');
+            } catch (err) {
+                console.warn('SignOut error:', err);
+            }
+        });
+
+        pageAuthForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearAlert();
+
+            const email = (emailInput.value || '').trim();
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            if (!email) {
+                showAlert('error', 'Please enter your work email address.');
+                emailInput.focus();
+                return;
+            }
+
+            if (mode !== 'forgot') {
+                if (!password || password.length < 6) {
+                    showAlert('error', 'Password must be at least 6 characters long.');
+                    passwordInput.focus();
+                    return;
+                }
+            }
+
+            if (mode === 'signup' || mode === 'reset') {
+                if (password !== confirmPassword) {
+                    showAlert('error', 'Passwords do not match. Please verify.');
+                    confirmPasswordInput.focus();
+                    return;
+                }
+            }
+
+            setSubmitting(true);
+            try {
+                if (mode === 'signin') {
+                    const data = await signInWithEmail(email, password);
+                    showAlert('success', 'Sign in successful! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 800);
+                } else if (mode === 'signup') {
+                    const data = await signUpWithEmail(email, password);
+                    if (data?.session) {
+                        showAlert('success', 'Account created successfully! Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 800);
+                    } else {
+                        showAlert('success', 'Account created! Please check your email inbox to confirm your registration.');
+                    }
+                } else if (mode === 'forgot') {
+                    await sendPasswordReset(email);
+                    showAlert('success', 'A password reset link has been sent to your email.');
+                } else if (mode === 'reset') {
+                    await updatePassword(password);
+                    showAlert('success', 'Your password has been successfully updated! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                }
+            } catch (err) {
+                console.error('[BIS Auth Form Error]', err);
+                showAlert('error', err.message || 'Authentication operation failed.');
+            } finally {
+                setSubmitting(false);
+            }
+        });
+
+        // Parse URL params for mode
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'signup') {
+            setMode('signup');
+        } else if (params.get('mode') === 'reset-password' || params.get('type') === 'recovery') {
+            setMode('reset');
+        } else if (params.get('mode') === 'forgot') {
+            setMode('forgot');
+        } else {
+            setMode('signin');
+        }
+
+        // Sync auth state
+        onAuthStateChange((event, session, user) => {
+            if (user && mode !== 'reset') {
+                authFormView.classList.add('hidden');
+                activeSessionView.classList.remove('hidden');
+                const displayEmail = user.email || user.user_metadata?.email || 'Authenticated User';
+                activeUserEmail.textContent = displayEmail;
+                activeUserAvatar.textContent = (displayEmail[0] || 'U').toUpperCase();
+            } else if (!user) {
+                activeSessionView.classList.add('hidden');
+                authFormView.classList.remove('hidden');
+            }
+        });
+
+        initializeAuth();
+    </script>
+</body>
+</html>

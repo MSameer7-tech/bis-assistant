@@ -1,0 +1,40 @@
+{
+  "corpus_version": "v13.0",
+  "phase": "13",
+  "description": "Phase 13 BIS Canonical Authoritative RAG Corpus",
+  "creation_timestamp": "2026-09-06T23:30:00Z",
+  "canonical_corpus_path": "data/derived/phase13/canonical_corpus_v1.jsonl",
+  "canonical_corpus_sha256": "56b671da0e3017537dd814b5ee4a5977f405397c624784f9303337176d21a8d3",
+  "total_evidence_units": 20745,
+  "total_standards_represented": 942,
+  "source_contributions": {
+    "tier1_normative_units": 1897,
+    "normative_duplicates_skipped": 64,
+    "tier2_operational_pm_units": 14296,
+    "pm_duplicates_skipped": 2871,
+    "regulatory_testing_registry_units": 2166,
+    "v22_foundation_units": 1131,
+    "catalog_metadata_units": 295,
+    "catalog_duplicates_skipped": 351,
+    "product_relationship_units": 960
+  },
+  "authority_tier_distribution": {
+    "TIER_1_NORMATIVE": 2224,
+    "TIER_2_OPERATIONAL": 16180,
+    "TIER_1_REGULATORY": 238,
+    "TIER_2_TESTING": 120,
+    "TIER_2_LIMS": 728,
+    "TIER_3_CATALOG": 1255
+  },
+  "evidence_depth_distribution": {
+    "FULL_NORMATIVE_CLAUSE": 2129,
+    "PRODUCT_MANUAL_OPERATIONAL": 14296,
+    "OPERATIONAL_RECORD": 1576,
+    "REGULATORY_MANDATE": 238,
+    "TESTING_SCHEDULE": 120,
+    "PROCEDURE_GUIDE": 403,
+    "LIMS_SCOPE_FEE_ONLY": 728,
+    "METADATA_ONLY": 295,
+    "PRODUCT_RELATIONSHIP_METADATA": 960
+  }
+}

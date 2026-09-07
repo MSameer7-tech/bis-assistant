@@ -19,6 +19,7 @@ Invariants:
 """
 
 import json
+import re
 from pathlib import Path
 from typing import List, Dict, Optional, Union, Any, Set
 from collections import defaultdict
@@ -74,10 +75,28 @@ class LimsRetrievalLayer:
     @staticmethod
     def _normalize_std_key(std_text: str) -> str:
         base, _, _, _ = normalize_standard(std_text or "")
-        cleaned = base.strip().upper()
+        cleaned = re.sub(r'[:\/\s\-\.]+$', '', base).strip()
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip().upper()
         if not cleaned.startswith("IS"):
             cleaned = f"IS {cleaned}"
-        return " ".join(cleaned.split())
+        return cleaned
+
+    def search_scopes_by_text(self, text: str) -> List[NormalizedLimsScope]:
+        """
+        Deterministic, case-insensitive search across scopes by standard number,
+        standard title, or product description. Uses verified scope fields.
+        """
+        text_lower = text.strip().lower()
+        if not text_lower:
+            return []
+        matches: List[NormalizedLimsScope] = []
+        for scope in self._scopes.values():
+            std_num = (scope.standard_number or "").lower()
+            std_title = (scope.standard_title or "").lower()
+            prod = (scope.product or "").lower()
+            if text_lower in std_num or text_lower in std_title or text_lower in prod:
+                matches.append(scope)
+        return matches
 
     def get_laboratory_by_id(self, internal_id: int) -> Optional[NormalizedLimsLab]:
         return self._labs.get(internal_id)

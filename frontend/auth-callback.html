@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating | BIS AI Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=14.0.2">
+    <style>
+        .callback-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 100vw;
+            padding: 20px;
+            background-color: var(--bg-base);
+            position: relative;
+        }
+        .callback-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 36px 32px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+            position: relative;
+            z-index: 2;
+        }
+        .callback-spinner-wrap {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .callback-glow {
+            position: absolute;
+            inset: -8px;
+            background: radial-gradient(circle, rgba(134, 120, 249, 0.35) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .callback-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(134, 120, 249, 0.2);
+            border-top-color: var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 0.85s linear infinite;
+        }
+        .callback-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .callback-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .callback-error {
+            background: rgba(244, 63, 94, 0.12);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #fecdd3;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .btn-callback-home {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 11px 18px;
+            background: var(--grad-primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .btn-callback-home:hover {
+            opacity: 0.92;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.15); }
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-wrapper">
+        <div class="callback-card" id="callbackCard">
+            <div class="callback-spinner-wrap">
+                <div class="callback-glow"></div>
+                <div class="callback-spinner" id="callbackSpinner"></div>
+            </div>
+            <h2 class="callback-title" id="callbackTitle">Completing Authentication</h2>
+            <p class="callback-desc" id="callbackDesc">
+                Verifying your credentials and establishing your research session...
+            </p>
+            <div id="errorContainer" class="hidden"></div>
+            <a href="/" class="btn-callback-home hidden" id="btnReturnHome">Continue to Workspace &rarr;</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeAuth } from '/auth.js';
+
+        async function handleCallback() {
+            const titleEl = document.getElementById('callbackTitle');
+            const descEl = document.getElementById('callbackDesc');
+            const spinnerEl = document.getElementById('callbackSpinner');
+            const errorContainer = document.getElementById('errorContainer');
+            const btnReturnHome = document.getElementById('btnReturnHome');
+
+            try {
+                // Parse hash and search params
+                const searchParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+                // Check for errors returned by provider
+                const error = searchParams.get('error') || hashParams.get('error');
+                const errorDesc = searchParams.get('error_description') || hashParams.get('error_description');
+
+                if (error) {
+                    titleEl.textContent = 'Authentication Failed';
+                    descEl.textContent = 'The authentication request was declined or encountered an issue.';
+                    spinnerEl.classList.add('hidden');
+                    errorContainer.className = 'callback-error';
+                    errorContainer.textContent = errorDesc || error || 'Unknown authentication error.';
+                    btnReturnHome.classList.remove('hidden');
+                    return;
+                }
+
+                // Check for password recovery flow
+                const isRecovery = searchParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
+
+                // Initialize client to allow PKCE exchange / session persistence
+                const { supabase, configured } = await initializeAuth();
+
+                if (!configured || !supabase) {
+                    titleEl.textContent = 'Setup Required';
+                    descEl.textContent = 'Supabase client could not be initialized.';
+                    spinnerEl.classList.add('hidden');
+                    btnReturnHome.classList.remove('hidden');
+                    return;
+                }
+
+                // 1. Handle PKCE code exchange if present in query string
+                const code = searchParams.get('code');
+                if (code) {
+                    try {
+                        const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+                        if (exchangeErr) console.warn('[BIS Auth Callback] Code exchange warning:', exchangeErr);
+                    } catch (e) {
+                        console.warn('[BIS Auth Callback] Code exchange failed:', e);
+                    }
+                }
+
+                // 2. Handle Implicit token exchange if present in hash fragment
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                if (accessToken) {
+                    try {
+                        const { error: sessionErr } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken || ''
+                        });
+                        if (sessionErr) console.warn('[BIS Auth Callback] setSession warning:', sessionErr);
+                    } catch (e) {
+                        console.warn('[BIS Auth Callback] setSession failed:', e);
+                    }
+                }
+
+                // 3. Confirm active session
+                try {
+                    const { data: sessionData } = await supabase.auth.getSession();
+                    if (sessionData?.session) {
+                        console.log('[BIS Auth Callback] Session active for user:', sessionData.session.user?.email);
+                    }
+                } catch (e) {
+                    console.warn('[BIS Auth Callback] getSession check:', e);
+                }
+
+                // 4. Redirect based on flow type
+                if (isRecovery) {
+                    titleEl.textContent = 'Identity Verified';
+                    descEl.textContent = 'Redirecting to password update...';
+                    setTimeout(() => {
+                        window.location.replace('/?mode=reset-password');
+                    }, 400);
+                    return;
+                }
+
+                // Successful login redirect
+                titleEl.textContent = 'Session Established';
+                descEl.textContent = 'Welcome back! Redirecting to workspace...';
+                spinnerEl.classList.add('hidden');
+                btnReturnHome.classList.remove('hidden');
+
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 500);
+
+            } catch (err) {
+                console.error('[BIS Auth Callback Error]', err);
+                titleEl.textContent = 'Authentication Error';
+                descEl.textContent = 'An unexpected error occurred during session establishment.';
+                spinnerEl.classList.add('hidden');
+                errorContainer.className = 'callback-error';
+                errorContainer.textContent = err.message || 'Verification failed.';
+                btnReturnHome.classList.remove('hidden');
+            }
+        }
+
+        handleCallback();
+    </script>
+</body>
+</html>

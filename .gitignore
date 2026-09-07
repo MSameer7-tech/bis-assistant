@@ -71,3 +71,19 @@ htmlcov/
 node_modules/
 .next/
 dist/
+
+# Exclude reports, audits, benchmark results, and rollback backups
+docs/phase12/production_rag_corpus_integration_audit.md
+docs/phase13/
+docs/phase_f3/phase_f3_controlled_bulk_geocoding.md
+docs/phase_f3/phase_f3_distance_ranking_engine.md
+docs/phase_f3/phase_f3_geographic_cache_audit.md
+docs/phase_f3/phase_f3_lab_finder_api.md
+docs/phase_f3/phase_f3_lab_finder_frontend_integration.md
+data/derived/phase13/*_results.json
+data/derived/phase13/rollback_v22/
+data/derived/phase12/retrieval_index_foundation_v1/
+data/derived/phase12/entity_relationship_index_v1/entity_relationship_index_v1_manifest.json
+
+# Exclude temporary UI demo components
+components/

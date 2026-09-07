@@ -72,6 +72,11 @@ def parse_args():
         action="store_true",
         help="Force re-geocoding even if valid cached entry exists."
     )
+    parser.add_argument(
+        "--retry-transient",
+        action="store_true",
+        help="Retry entries that previously failed due to network or rate limit errors."
+    )
     return parser.parse_args()
 
 
@@ -123,6 +128,7 @@ def main():
 
     summary = geocoder.run_batch(
         force_refresh=args.force_refresh,
+        retry_transient=args.retry_transient,
         max_records=args.max_records,
         dry_run=args.dry_run
     )

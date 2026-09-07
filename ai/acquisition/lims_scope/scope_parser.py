@@ -34,7 +34,8 @@ def normalize_standard(raw: str) -> Tuple[str, Optional[str], Optional[str], Opt
     base = re.sub(r'\(?Sec\w*\s*\d+\)?', '', base, flags=re.IGNORECASE)
     base = re.sub(r':\s*\d{4}', '', base)
     
-    base = base.strip()
+    # Strip any trailing colons, slashes, dashes, dots, and whitespace from scraped text
+    base = re.sub(r'[:\/\s\-\.]+$', '', base).strip()
     
     return base, part, section, year
 

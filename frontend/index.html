@@ -3,34 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIS AI Assistant | Indian Standards Research Workspace</title>
+    <title>BIS Assistant | Standards Research Workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=12.f.5">
     <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png?v=12.f.5">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=12.f.5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=12.f.5" id="appStyles">
+    <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="./styles.css?v=aihub-2.1" id="appStyles">
 </head>
 <body>
-    <div class="app-shell">
+    <div class="app-shell bg-cosmic-grid">
         <!-- ======================================================= -->
-        <!-- LEFT SIDEBAR: Persistent AI Hub Style Navigation       -->
+        <!-- LEFT SIDEBAR: AI-Hub Style Workspace Navigation         -->
         <!-- ======================================================= -->
         <aside class="sidebar" id="sidebar" aria-label="Sidebar Navigation">
-            <!-- Brand -->
+            <!-- Brand (AI-Hub-2.0 Proportions) -->
             <div class="sidebar-brand">
                 <a href="#assistant" class="brand-left" id="brandLink">
                     <div class="brand-emblem-wrap">
-                        <div class="brand-emblem-glow"></div>
-                        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.16)"/>
-                            <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
-                            <path d="M16 6V11M16 21V26M7 11.5L11 13.8M21 18.2L25 20.5" stroke="#6C63FF" stroke-width="1.8"/>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <polygon points="12,2 22,12 12,22 2,12" stroke="#8678F9" stroke-width="2" fill="rgba(134, 120, 249, 0.15)"/>
+                            <circle cx="12" cy="12" r="3" fill="#8678F9"/>
                         </svg>
                     </div>
                     <div class="brand-titles">
                         <h1 class="brand-name">BIS Assistant</h1>
-                        <span class="brand-sub">RESEARCH WORKSPACE</span>
+                        <span class="brand-sub">WORKSPACE</span>
                     </div>
                 </a>
                 <button type="button" class="mobile-sidebar-close" id="mobileSidebarClose" aria-label="Close sidebar">✕</button>
@@ -38,12 +37,16 @@
 
             <!-- Primary Nav Links -->
             <nav class="sidebar-nav">
-                <button type="button" class="nav-link active" id="navAssistant" title="AI Assistant Workspace">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <button type="button" class="nav-link active" id="navAssistant" title="Assistant Workspace">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
                     <span>Assistant</span>
                 </button>
-                <button type="button" class="nav-link" id="navHome" title="Product Overview & Standards Hub">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <button type="button" class="nav-link" id="navLabFinder" title="BIS Laboratory Finder">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>Lab Finder</span>
+                </button>
+                <button type="button" class="nav-link" id="navHome" title="Standards Overview">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     <span>Home</span>
                 </button>
             </nav>
@@ -52,15 +55,15 @@
             <div class="sidebar-conversations-wrap">
                 <div class="conv-section-header">
                     <span class="conv-section-label">CONVERSATIONS</span>
-                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new chat">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new session" aria-label="Start new session">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                 </div>
 
                 <!-- Search Input -->
                 <div class="sidebar-search-box">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search..." aria-label="Search conversations">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search conversations" aria-label="Search conversations">
                 </div>
 
                 <!-- Scrollable Conversation History (Grouped: Today, Earlier) -->
@@ -69,20 +72,27 @@
                 </div>
             </div>
 
-            <!-- Sidebar Footer -->
+            <!-- Sidebar Footer (AI-Hub-2.0 UserProfileFooter style) -->
             <div class="sidebar-footer">
-                <div class="sidebar-profile-card" id="btnSystemInfo" role="button" tabindex="0" title="View BIS Baseline & Architecture">
-                    <div class="profile-avatar-group">
-                        <div class="profile-dot-wrap"></div>
+                <div class="sidebar-profile-card">
+                    <div class="profile-avatar-group" id="btnSystemInfo" role="button" tabindex="0" title="System Status">
+                        <div class="profile-avatar-circle" id="sidebarAvatar">
+                            <img id="sidebarAvatarImg" class="avatar-img hidden" alt="Profile" referrerpolicy="no-referrer" />
+                            <span id="sidebarAvatarInitial">U</span>
+                        </div>
                         <div class="profile-info">
-                            <span class="profile-name">BIS Evidence Gate</span>
-                            <span class="profile-role">Phase 12.E Verified</span>
+                            <span class="profile-name" id="sidebarUserName">Workspace User</span>
+                            <span class="profile-role" id="sidebarUserRole"><span class="status-indicator-dot"></span><span id="sidebarUserSubText">Operational</span></span>
                         </div>
                     </div>
-                    <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" title="Toggle sidebar collapse" aria-label="Toggle sidebar collapse">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" title="Collapse sidebar" aria-label="Collapse sidebar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                     </button>
                 </div>
+                <button type="button" class="btn-sidebar-signout" id="btnSidebarSignOut" title="Sign in to your account">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    <span>Sign in</span>
+                </button>
             </div>
         </aside>
 
@@ -90,18 +100,21 @@
         <!-- WORKSPACE CONTAINER                                     -->
         <!-- ======================================================= -->
         <div class="workspace-container">
-            <!-- 1. VIEW: ASSISTANT (AI Hub Style Conversation Workspace) -->
-            <main class="main-workspace ambient-glow-chat" id="viewAssistant" role="main">
+            <!-- 1. VIEW: ASSISTANT (Standards Research Workspace) -->
+            <main class="main-workspace" id="viewAssistant" role="main">
                 <!-- Topbar -->
                 <header class="workspace-topbar" id="workspaceTopbar">
                     <div class="topbar-left">
                         <button type="button" class="mobile-menu-trigger" id="mobileMenuBtn" aria-label="Open navigation sidebar">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                         </button>
                         <span class="topbar-title" id="currentChatTitle">New Session</span>
                     </div>
 
-                    <div class="topbar-right">
+                    <div class="topbar-right" id="topbarRight">
+                        <button type="button" class="btn-auth-signin" id="btnOpenAuthModal" aria-label="Sign in to your account">
+                            <span>Sign in</span>
+                        </button>
                     </div>
                 </header>
 
@@ -109,41 +122,66 @@
                 <div class="chat-viewport no-scrollbar" id="chatViewport">
                     <!-- Empty State (AI Hub 2.0 Style) -->
                     <div class="welcome-container" id="welcomeContainer">
-                        <div class="welcome-inner">
-                            <div class="welcome-emblem-wrap">
-                                <div class="welcome-emblem-blur"></div>
-                                <div class="welcome-emblem">
-                                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                        <polygon points="16,4 28,10 28,22 16,28 4,22 4,10" stroke="#8678F9" stroke-width="2.2" fill="rgba(134, 120, 249, 0.16)"/>
-                                        <circle cx="16" cy="16" r="4.5" fill="#8678F9"/>
-                                        <path d="M16 6V11M16 21V26M7 11.5L11 13.8M21 18.2L25 20.5" stroke="#6C63FF" stroke-width="1.8"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="welcome-header-text">
-                                <h1 class="welcome-title">BIS AI Assistant</h1>
-                                <p class="welcome-subtitle">
-                                    Ask about Indian Standards, certification, laboratory scope, testing evidence, or BIS procedures.
-                                </p>
+                        <!-- Volumetric Gradient Rays (HextaAI style) -->
+                        <div class="hero-rays-container" aria-hidden="true">
+                            <div class="hero-ray"></div>
+                            <div class="hero-ray"></div>
+                            <div class="hero-ray"></div>
+                        </div>
+
+                        <div class="hero-inner">
+                            <!-- Badge Pill -->
+                            <div class="hero-badge-pill">
+                                <span class="hero-badge-icon">✨</span>
+                                <span class="hero-badge-text">Introducing BIS AI Assistant</span>
                             </div>
 
-                            <!-- Suggestions Grid (Clean, unobtrusive) -->
-                            <div class="suggestions-grid">
-                                <button type="button" class="suggestion-card" data-query="What is IS 8978?">
-                                    <span class="suggestion-text">What is IS 8978?</span>
-                                    <span class="suggestion-tag">Standard Specification</span>
+                            <!-- Headline -->
+                            <h1 class="hero-headline">Research Indian Standards Effortlessly</h1>
+
+                            <!-- Subtitle -->
+                            <p class="hero-subtitle">
+                                Ask questions, research Indian standards, accredited laboratory scopes, and testing parameters with a few lines of prompt.
+                            </p>
+
+                            <!-- Central Search Pill Input Bar (Voice mic + Send matching media_1788694281150.png) -->
+                            <form id="heroSearchForm" class="hero-search-pill" autocomplete="off">
+                                <input 
+                                    type="text" 
+                                    id="heroSearchInput" 
+                                    class="hero-search-input" 
+                                    placeholder="Ask anything..." 
+                                    aria-label="Ask anything..." 
+                                    autocomplete="off"
+                                />
+                                <button type="button" class="btn-hero-mic" id="btnHeroMic" title="Voice input" aria-label="Voice input">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                        <line x1="12" y1="19" x2="12" y2="22"/>
+                                    </svg>
                                 </button>
-                                <button type="button" class="suggestion-card" data-query="Which laboratories have scope for IS 8978?">
-                                    <span class="suggestion-text">Which laboratories have scope for IS 8978?</span>
-                                    <span class="suggestion-tag">Accredited Testing Scope</span>
+                                <button type="submit" class="btn-hero-send" id="heroSendBtn" title="Send message" aria-label="Send message">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <line x1="12" y1="19" x2="12" y2="5"/>
+                                        <polyline points="5 12 12 5 19 12"/>
+                                    </svg>
                                 </button>
-                                <button type="button" class="suggestion-card" data-query="What is the testing fee for IS 8978?">
-                                    <span class="suggestion-text">What is the testing fee for IS 8978?</span>
-                                    <span class="suggestion-tag">LIMS Fee Boundaries</span>
+                            </form>
+
+                            <!-- Suggestion Pills (AI Hub 2.0 Style) -->
+                            <div class="hero-suggestions-wrap">
+                                <button type="button" class="hero-suggestion-pill" data-query="What is IS 8978?">
+                                    What is IS 8978?
                                 </button>
-                                <button type="button" class="suggestion-card" data-query="Is there authoritative evidence for this requirement?">
-                                    <span class="suggestion-text">Is there authoritative evidence for this requirement?</span>
-                                    <span class="suggestion-tag">Evidence Verification</span>
+                                <button type="button" class="hero-suggestion-pill" data-query="Which laboratories have scope for IS 8978?">
+                                    Which laboratories have scope for IS 8978?
+                                </button>
+                                <button type="button" class="hero-suggestion-pill" data-query="What is the testing fee for IS 8978?">
+                                    What is the testing fee for IS 8978?
+                                </button>
+                                <button type="button" class="hero-suggestion-pill" data-query="Is there authoritative evidence for this requirement?">
+                                    Is there authoritative evidence for this requirement?
                                 </button>
                             </div>
                         </div>
@@ -153,21 +191,24 @@
                     <div class="messages-stream hidden" id="messagesStream"></div>
                 </div>
 
-                <!-- Floating Bottom Composer -->
-                <div class="chat-dock-wrapper">
+                <!-- Floating Bottom Composer (AI-Hub Floating Dock Style) -->
+                <div class="chat-dock-wrapper" id="chatDockWrapper">
                     <div class="chat-dock-container">
                         <form id="chatForm" class="composer-box">
                             <textarea 
                                 id="chatInput" 
                                 class="composer-textarea no-scrollbar" 
-                                placeholder="Ask anything about BIS evidence..." 
+                                placeholder="Ask anything..." 
                                 rows="1"
-                                aria-label="Ask about BIS evidence"
+                                aria-label="Ask a question"
                                 required
                             ></textarea>
                             <div class="composer-actions">
+                                <button type="button" class="btn-composer-mic" id="btnComposerMic" title="Voice input" aria-label="Voice input">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                                </button>
                                 <button type="submit" id="sendBtn" class="btn-composer-send" title="Send message" aria-label="Send message" disabled>
-                                    <svg id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                                    <svg id="sendIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
                                     <div id="inputSpinner" class="thinking-dot hidden" aria-hidden="true"></div>
                                 </button>
                             </div>
@@ -176,95 +217,184 @@
                 </div>
             </main>
 
-            <!-- 2. VIEW: HOME (Concise Product Landing Page) -->
-            <section class="home-view hidden" id="viewHome">
+            <!-- 2. VIEW: LAB FINDER (Authoritative BIS LIMS Laboratory Discovery & Proximity Workbench) -->
+            <section class="lab-finder-workspace hidden" id="viewLabFinder" role="region" aria-label="BIS Laboratory Finder"></section>
+
+            <!-- 3. VIEW: HOME (Professional BIS Research Workspace Landing) -->
+            <section class="home-view hidden" id="viewHome" role="region" aria-label="BIS Research Workspace Home">
                 <div class="home-content-container">
-                    <div class="home-hero">
-                        <div class="home-badge">
-                            <span class="badge-dot"></span>
-                            <span>Authoritative Normative Intelligence</span>
+                    
+                    <!-- 1. Hero / Introduction -->
+                    <header class="home-hero">
+                        <div class="home-eyebrow">
+                            <span class="home-eyebrow-dot" aria-hidden="true"></span>
+                            <span>BIS RESEARCH WORKSPACE</span>
                         </div>
-                        <h1 class="home-title">Bureau of Indian Standards <br><span class="gradient-text">AI Technical Assistant</span></h1>
+                        <h1 class="home-title">Research Indian Standards with confidence.</h1>
                         <p class="home-description">
-                            A zero-hallucination research workspace designed for Indian Standards compliance, accredited laboratory scopes, and testing parameters. Every factual assertion is bounded by cryptographic primary sources.
+                            BIS-AI-Assistant helps you research Indian Standards, understand requirements, find relevant testing laboratories, and review available supporting evidence from a single workspace.
                         </p>
-                        <div class="home-principle-card">
-                            <div class="principle-label">CORE SYSTEM PRINCIPLE</div>
-                            <div class="principle-quote">"Never invent an answer when authoritative BIS evidence is insufficient."</div>
-                        </div>
-                        <div class="home-cta-group">
-                            <button type="button" class="btn-primary-cta" id="btnStartAssistant">
-                                <span>Start / Ask Assistant</span>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                            </button>
-                        </div>
-                    </div>
+                    </header>
 
-                    <!-- Example Questions -->
-                    <div class="home-section">
-                        <h2 class="home-section-title">Explore by Example</h2>
-                        <div class="home-examples-grid">
-                            <button type="button" class="home-example-card" data-query="What is IS 8978?">
-                                <span class="card-icon">📖</span>
-                                <div>
-                                    <span class="example-q">What is IS 8978?</span>
-                                    <span class="example-desc">Inspect standard specification, scope, and product title</span>
+                    <!-- 2. Primary Search -->
+                    <section class="home-search-section" aria-label="Search Workspace">
+                        <form id="homeSearchForm" class="home-search-box" autocomplete="off">
+                            <div class="home-search-icon-wrap" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                            </div>
+                            <textarea 
+                                id="homeSearchInput" 
+                                class="home-search-textarea no-scrollbar" 
+                                placeholder="Search Indian Standards, requirements, laboratories, or testing..." 
+                                rows="1"
+                                aria-label="Search Indian Standards, requirements, laboratories, or testing"
+                                required
+                            ></textarea>
+                            <div class="home-search-actions">
+                                <button type="button" class="btn-home-mic" id="btnHomeMic" title="Voice input" aria-label="Voice input">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                        <line x1="12" y1="19" x2="12" y2="22"/>
+                                    </svg>
+                                </button>
+                                <button type="submit" id="homeSendBtn" class="home-search-submit" title="Search" aria-label="Search" disabled>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="19" x2="12" y2="5"/>
+                                        <polyline points="5 12 12 5 19 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                        <div class="home-search-caption">
+                            <span class="home-search-hint-text">Ask about a standard, requirement, test, or laboratory</span>
+                            <span class="home-search-kbd-hint"><kbd>Enter</kbd> to search &nbsp;·&nbsp; <kbd>Shift + Enter</kbd> for new line</span>
+                        </div>
+                    </section>
+
+                    <!-- 3. What You Can Do -->
+                    <section class="home-section home-capabilities-section" aria-labelledby="homeCapabilitiesHeading">
+                        <h2 id="homeCapabilitiesHeading" class="home-section-eyebrow">WHAT YOU CAN DO</h2>
+                        <div class="home-capabilities-grid">
+                            
+                            <!-- Standards -->
+                            <button type="button" class="home-explore-card" data-query="What are the requirements in IS 8978?">
+                                <div class="home-card-header">
+                                    <div class="home-card-icon-wrap" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                            <line x1="16" y1="13" x2="8" y2="13"/>
+                                            <line x1="16" y1="17" x2="8" y2="17"/>
+                                            <polyline points="10 9 9 9 8 9"/>
+                                        </svg>
+                                    </div>
+                                    <span class="home-card-title">Standards</span>
+                                    <div class="home-card-arrow" aria-hidden="true">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                            <polyline points="12 5 19 12 12 19"/>
+                                        </svg>
+                                    </div>
                                 </div>
+                                <p class="home-card-desc">Find requirements and information related to Indian Standards.</p>
                             </button>
-                            <button type="button" class="home-example-card" data-query="Which laboratories have scope for IS 8978?">
-                                <span class="card-icon">🔬</span>
-                                <div>
-                                    <span class="example-q">Which laboratories have scope for IS 8978?</span>
-                                    <span class="example-desc">Verify accredited testing scope across official BIS laboratories</span>
+
+                            <!-- Laboratories -->
+                            <button type="button" class="home-explore-card" data-query="Which laboratories have scope for IS 8978?">
+                                <div class="home-card-header">
+                                    <div class="home-card-icon-wrap" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M10 2v7.31a2 2 0 0 1-.37 1.17L4.22 18.4A2 2 0 0 0 5.86 21h12.28a2 2 0 0 0 1.64-2.6l-5.41-7.92A2 2 0 0 1 14 9.31V2"/>
+                                            <line x1="8" y1="2" x2="16" y2="2"/>
+                                            <line x1="7" y1="16" x2="17" y2="16"/>
+                                        </svg>
+                                    </div>
+                                    <span class="home-card-title">Laboratories</span>
+                                    <div class="home-card-arrow" aria-hidden="true">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                            <polyline points="12 5 19 12 12 19"/>
+                                        </svg>
+                                    </div>
                                 </div>
+                                <p class="home-card-desc">Find relevant BIS-recognized/accredited testing laboratories.</p>
                             </button>
-                            <button type="button" class="home-example-card" data-query="What is the testing fee for IS 8978?">
-                                <span class="card-icon">💳</span>
-                                <div>
-                                    <span class="example-q">What is the testing fee for IS 8978?</span>
-                                    <span class="example-desc">Analyze LIMS fee records and evidentiary boundaries</span>
+
+                            <!-- Testing -->
+                            <button type="button" class="home-explore-card" data-query="What is the testing fee for IS 8978?">
+                                <div class="home-card-header">
+                                    <div class="home-card-icon-wrap" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m9 11 3 3L22 4"/>
+                                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                                        </svg>
+                                    </div>
+                                    <span class="home-card-title">Testing</span>
+                                    <div class="home-card-arrow" aria-hidden="true">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                            <polyline points="12 5 19 12 12 19"/>
+                                        </svg>
+                                    </div>
                                 </div>
+                                <p class="home-card-desc">Explore available testing requirements and related information.</p>
                             </button>
-                            <button type="button" class="home-example-card" data-query="What is IS 999999?">
-                                <span class="card-icon">🛡️</span>
-                                <div>
-                                    <span class="example-q">What is IS 999999?</span>
-                                    <span class="example-desc">Observe strict refusal behavior for non-existent entities</span>
+
+                            <!-- Evidence -->
+                            <button type="button" class="home-explore-card" data-query="Is there authoritative evidence for this requirement?">
+                                <div class="home-card-header">
+                                    <div class="home-card-icon-wrap" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                                            <path d="m9 12 2 2 4-4"/>
+                                        </svg>
+                                    </div>
+                                    <span class="home-card-title">Evidence</span>
+                                    <div class="home-card-arrow" aria-hidden="true">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                            <polyline points="12 5 19 12 12 19"/>
+                                        </svg>
+                                    </div>
                                 </div>
+                                <p class="home-card-desc">Review available supporting evidence and source context.</p>
                             </button>
                         </div>
-                    </div>
+                    </section>
 
-                    <!-- What the Assistant Does -->
-                    <div class="home-section">
-                        <h2 class="home-section-title">Architectural Guarantees</h2>
-                        <div class="home-features-grid">
-                            <div class="feature-card">
-                                <div class="feature-icon">🛡️</div>
-                                <h3>Zero-Tolerance Grounding</h3>
-                                <p>All synthesized claims pass through a deterministic ClaimValidator before reaching the user. Unsupported claims are rejected.</p>
+                    <!-- 4. How The Workspace Works -->
+                    <section class="home-section home-workflow-section" aria-labelledby="homeWorkflowHeading">
+                        <h2 id="homeWorkflowHeading" class="home-section-title">How the workspace works</h2>
+                        <div class="home-workflow-grid">
+                            
+                            <div class="home-step-item">
+                                <div class="home-step-header">
+                                    <span class="home-step-badge">01 — Ask</span>
+                                </div>
+                                <p class="home-step-desc">Ask about an Indian Standard, requirement, test, or laboratory.</p>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon">⚡</div>
-                                <h3>Hybrid 3-Way Fusion</h3>
-                                <p>Combines structured attribute search, exact identifier boosting, BM25 keyword matching, and dense semantic embeddings.</p>
+
+                            <div class="home-step-item">
+                                <div class="home-step-header">
+                                    <span class="home-step-badge">02 — Research</span>
+                                </div>
+                                <p class="home-step-desc">The assistant searches the available BIS knowledge and evidence sources.</p>
                             </div>
-                            <div class="feature-card">
-                                <div class="feature-icon">🔍</div>
-                                <h3>Cryptographic Traceability</h3>
-                                <p>Every piece of supporting evidence includes exact clause locators, document page numbers, and SHA-256 integrity hashes.</p>
+
+                            <div class="home-step-item">
+                                <div class="home-step-header">
+                                    <span class="home-step-badge">03 — Review</span>
+                                </div>
+                                <p class="home-step-desc">Review the answer together with available supporting evidence and source context.</p>
                             </div>
+
                         </div>
-                    </div>
+                    </section>
 
-                    <!-- Subtle Technical Baseline Footer Card -->
-                    <div class="home-tech-footer">
-                        <span>Phase 12.E Technical Retrieval Baseline:</span>
-                        <span class="tech-tag">RRF k: 20</span>
-                        <span class="tech-tag">Identifier Boost: 2.5×</span>
-                        <span class="tech-tag">Top-K Depth: 10</span>
-                        <span class="tech-tag">Precision@10: 0.5963</span>
-                    </div>
                 </div>
             </section>
         </div>
@@ -333,7 +463,7 @@
         </div>
 
         <div class="drawer-footer">
-            <span class="provenance-label">✓ Phase 12.E Frozen Immutability Verified</span>
+            <span class="provenance-label">● Authoritative BIS Evidence Verified</span>
             <button type="button" id="drawerDoneBtn" class="btn-drawer-done">Close Inspector</button>
         </div>
     </aside>
@@ -344,7 +474,7 @@
     <div id="systemModalBackdrop" class="modal-overlay hidden" aria-hidden="true">
         <div id="systemModal" class="system-modal-card" role="dialog" aria-labelledby="sysModalTitle">
             <div class="modal-header">
-                <h3 id="sysModalTitle">BIS AI Assistant - System Information</h3>
+                <h3 id="sysModalTitle">BIS Research Workspace - System Overview</h3>
                 <button type="button" id="modalCloseBtn" class="drawer-close-icon" aria-label="Close modal">✕</button>
             </div>
             <div class="modal-body">
@@ -353,7 +483,7 @@
                     <div class="quote-body">"Never invent an answer when authoritative BIS evidence is insufficient."</div>
                 </div>
                 <div class="modal-config-block">
-                    <h4>Phase 12.E Technical Retrieval Baseline</h4>
+                    <h4>Normative Retrieval &amp; Verification Baseline</h4>
                     <div class="modal-grid-3">
                         <div class="modal-grid-item">
                             <span class="m-label">RRF k</span>
@@ -382,7 +512,117 @@
         </div>
     </div>
 
+    <!-- ======================================================= -->
+    <!-- AUTHENTICATION MODAL                                    -->
+    <!-- ======================================================= -->
+    <div id="authModalBackdrop" class="modal-overlay hidden" aria-hidden="true">
+        <div id="authModal" class="auth-modal-card" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
+            <div class="auth-modal-header">
+                <div class="auth-brand-emblem">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <polygon points="12,2 22,12 12,22 2,12" stroke="#7C6EE6" stroke-width="2" fill="rgba(124, 110, 230, 0.12)"/>
+                        <circle cx="12" cy="12" r="3" fill="#7C6EE6"/>
+                    </svg>
+                </div>
+                <div class="auth-header-text">
+                    <h3 id="authModalTitle" class="auth-title">Sign in to BIS Assistant</h3>
+                    <p id="authModalSubtitle" class="auth-subtitle">Access verified compliance records & research history</p>
+                </div>
+                <button type="button" id="authModalCloseBtn" class="drawer-close-icon" aria-label="Close authentication modal">✕</button>
+            </div>
+
+            <!-- Auth Mode Tabs -->
+            <div class="auth-tabs" id="authTabs" role="tablist">
+                <button type="button" class="auth-tab-btn active" id="tabSignIn" role="tab" aria-selected="true">Sign In</button>
+                <button type="button" class="auth-tab-btn" id="tabSignUp" role="tab" aria-selected="false">Create Account</button>
+            </div>
+
+            <!-- Social Logins (Google & GitHub) -->
+            <div class="auth-social-group" id="authSocialGroup">
+                <button type="button" class="btn-auth-social" id="btnGoogleAuth" aria-label="Sign in with Google">
+                    <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
+                <button type="button" class="btn-auth-social" id="btnGitHubAuth" aria-label="Sign in with GitHub">
+                    <svg class="social-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                    </svg>
+                    <span>Continue with GitHub</span>
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="auth-divider" id="authDivider">
+                <span>or continue with email</span>
+            </div>
+
+            <!-- Alert Notice (Error / Success) -->
+            <div id="authAlert" class="auth-alert hidden" role="alert" aria-live="polite">
+                <span class="auth-alert-icon" id="authAlertIcon">⚠️</span>
+                <span class="auth-alert-msg" id="authAlertMsg"></span>
+            </div>
+
+            <!-- Email & Password Form -->
+            <form id="authForm" class="auth-form" novalidate>
+                <!-- Email Field -->
+                <div class="auth-form-group">
+                    <label for="authEmailInput" class="auth-label">Work Email</label>
+                    <div class="auth-input-wrap">
+                        <input type="email" id="authEmailInput" class="auth-input" placeholder="name@organization.com" autocomplete="email" required>
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="auth-form-group" id="authPasswordGroup">
+                    <div class="auth-label-row">
+                        <label for="authPasswordInput" class="auth-label" id="authPasswordLabel">Password</label>
+                        <button type="button" class="btn-forgot-password" id="btnForgotPassword">Forgot?</button>
+                    </div>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="authPasswordInput" class="auth-input" placeholder="••••••••" autocomplete="current-password" required minlength="6">
+                        <button type="button" class="auth-pwd-toggle" id="btnTogglePassword" aria-label="Toggle password visibility">
+                            <svg class="pwd-eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="pwd-eye-closed hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirm Password Field (Sign Up & Reset Mode) -->
+                <div class="auth-form-group hidden" id="authConfirmPasswordGroup">
+                    <label for="authConfirmPasswordInput" class="auth-label">Confirm Password</label>
+                    <div class="auth-input-wrap">
+                        <input type="password" id="authConfirmPasswordInput" class="auth-input" placeholder="••••••••" autocomplete="new-password" minlength="6">
+                        <button type="button" class="auth-pwd-toggle" id="btnToggleConfirmPassword" aria-label="Toggle confirm password visibility">
+                            <svg class="pwd-eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="pwd-eye-closed hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="authSubmitBtn" class="btn-auth-submit">
+                    <span id="authSubmitText">Sign In</span>
+                    <div id="authSubmitSpinner" class="auth-spinner hidden" aria-hidden="true"></div>
+                </button>
+            </form>
+
+            <!-- Modal Footer Links -->
+            <div class="auth-modal-footer">
+                <span id="authFooterText">Don't have an account?</span>
+                <button type="button" id="authFooterSwitchBtn" class="btn-auth-switch">Create an account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet Vendor Bundle -->
+    <script src="./vendor/leaflet/leaflet.js"></script>
+
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=12.f.6"></script>
+    <script type="module" src="./app.js?v=12.f.8"></script>
 </body>
 </html>

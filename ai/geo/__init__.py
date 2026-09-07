@@ -19,6 +19,22 @@ from ai.geo.bulk_geocoder import (
     BatchAccountingSummary,
     GeocodingCheckpointManager,
 )
+from ai.geo.audit import (
+    GeographicCacheAuditor,
+    GeographicCacheAuditReport,
+    QualityClassificationCounts,
+    classify_record,
+)
+from ai.geo.distance import (
+    haversine_distance_km,
+    safe_haversine_distance_km,
+    validate_coordinates,
+    EARTH_RADIUS_KM,
+)
+from ai.geo.ranking import (
+    GeographicDistanceMetadata,
+    GeographicRankingEngine,
+)
 
 __all__ = [
     "LabGeographicMetadata",
@@ -32,4 +48,14 @@ __all__ = [
     "ControlledBulkGeocoder",
     "BatchAccountingSummary",
     "GeocodingCheckpointManager",
+    "GeographicCacheAuditor",
+    "GeographicCacheAuditReport",
+    "QualityClassificationCounts",
+    "classify_record",
+    "haversine_distance_km",
+    "safe_haversine_distance_km",
+    "validate_coordinates",
+    "EARTH_RADIUS_KM",
+    "GeographicDistanceMetadata",
+    "GeographicRankingEngine",
 ]

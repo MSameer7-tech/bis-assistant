@@ -6,7 +6,7 @@ import sys
 import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
@@ -19,9 +19,6 @@ from ai.rag.pipeline import RAGPipeline
 from ai.rag.models import RAGAnswer
 from ai.rag.schema import ProductionAnswerPayload
 from ai.verification.numerical_verifier import NumericalVerifier
-from ai.intelligence.answer_generator import ProductionIntelligenceEngine
-from ai.intelligence.chain_reasoner import CertificationChainReasoner
-from ai.intelligence.timeline_engine import RegulatoryTimelineEngine
 from ai.acquisition.provenance.registry import EvidenceRegistry
 from backend.schemas_v5 import (
     IntelligenceQueryRequest,
@@ -29,6 +26,12 @@ from backend.schemas_v5 import (
     ChainResolveRequest,
     EvidenceStatsResponse
 )
+from backend.auth import (
+    get_supabase_public_config,
+    get_current_user_optional,
+    get_current_user_required
+)
+from backend.lab_finder_api import router as lab_finder_router
 
 app = FastAPI(
     title="BIS AI Technical Assistant API",
@@ -36,12 +39,37 @@ app = FastAPI(
     version="5.0.0"
 )
 
-# Initialize singletons
+# Mount Phase F3 Laboratory Finder Router
+app.include_router(lab_finder_router)
+
+# Initialize lightweight singletons
 pipeline = RAGPipeline()
-intelligence_engine = ProductionIntelligenceEngine()
-chain_reasoner = CertificationChainReasoner()
-timeline_engine = RegulatoryTimelineEngine()
 evidence_reg = EvidenceRegistry()
+
+# Lazy getters for heavier engines to prevent import side-effects on app startup
+_intelligence_engine = None
+def get_intelligence_engine():
+    global _intelligence_engine
+    if _intelligence_engine is None:
+        from ai.intelligence.answer_generator import ProductionIntelligenceEngine
+        _intelligence_engine = ProductionIntelligenceEngine()
+    return _intelligence_engine
+
+_chain_reasoner = None
+def get_chain_reasoner():
+    global _chain_reasoner
+    if _chain_reasoner is None:
+        from ai.intelligence.chain_reasoner import CertificationChainReasoner
+        _chain_reasoner = CertificationChainReasoner()
+    return _chain_reasoner
+
+_timeline_engine = None
+def get_timeline_engine():
+    global _timeline_engine
+    if _timeline_engine is None:
+        from ai.intelligence.timeline_engine import RegulatoryTimelineEngine
+        _timeline_engine = RegulatoryTimelineEngine()
+    return _timeline_engine
 
 # Paths
 FRONTEND_DIR = ROOT_DIR / "frontend"
@@ -77,22 +105,96 @@ async def serve_index():
     return HTMLResponse("<h1>BIS AI Assistant API is Running</h1><p>Visit <a href='/docs'>/docs</a> for Swagger UI.</p>")
 
 
+@app.get("/login", response_class=HTMLResponse)
+@app.get("/signin", response_class=HTMLResponse)
+@app.get("/auth/login", response_class=HTMLResponse)
+@app.get("/login.html", response_class=HTMLResponse)
+async def serve_login_page():
+    """Serves the dedicated login and registration page."""
+    login_path = FRONTEND_DIR / "login.html"
+    if login_path.exists():
+        return FileResponse(str(login_path))
+    return HTMLResponse("<h1>Login</h1>")
+
+
+@app.get("/auth/callback", response_class=HTMLResponse)
+async def serve_auth_callback():
+    """Serves the static OAuth and recovery callback handler."""
+    callback_path = FRONTEND_DIR / "auth-callback.html"
+    if callback_path.exists():
+        return FileResponse(str(callback_path))
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    return HTMLResponse("<h1>Auth Callback</h1>")
+
+
+@app.get("/{filename}.js")
+@app.get("/auth/{filename}.js")
+async def serve_js(filename: str):
+    file_path = FRONTEND_DIR / f"{filename}.js"
+    if file_path.exists():
+        return FileResponse(str(file_path), media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/{filename}.css")
+@app.get("/auth/{filename}.css")
+async def serve_css(filename: str):
+    file_path = FRONTEND_DIR / f"{filename}.css"
+    if file_path.exists():
+        return FileResponse(str(file_path), media_type="text/css")
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/api/auth/config", response_model=Dict[str, str])
+async def get_auth_config():
+    """
+    Returns public non-sensitive Supabase client configuration.
+    Never exposes service-role keys, database passwords, or JWT secrets.
+    """
+    return get_supabase_public_config()
+
+
+@app.get("/api/v1/auth/me", response_model=Dict[str, Any])
+async def get_current_user_profile(user: Dict[str, Any] = Depends(get_current_user_required)):
+    """
+    Returns verified user identity derived directly from Supabase JWT.
+    """
+    return {
+        "authenticated": True,
+        "user_id": user["user_id"],
+        "email": user.get("email"),
+        "role": user.get("role", "authenticated")
+    }
+
+
 @app.post("/api/v1/query", response_model=Dict[str, Any])
-async def process_intelligence_query(req: IntelligenceQueryRequest):
+async def process_intelligence_query(
+    req: IntelligenceQueryRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
     """
     Phase 5 Master Production Intelligence Query Endpoint.
     Executes Query Understanding, 3-Way Hybrid Retrieval, Chain Reasoning,
     Timeline Evaluation, Safety Layer, and Citation Formatting.
+    Preserves 100% guest access when current_user is None.
     """
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     
-    ans = intelligence_engine.process_query(
+    ans = get_intelligence_engine().process_query(
         query=req.query,
         as_of_date=req.as_of_date,
         top_k=req.top_k
     )
-    return ans.model_dump()
+    result = ans.model_dump()
+    if current_user:
+        result["authenticated_user"] = {
+            "user_id": current_user["user_id"],
+            "email": current_user.get("email")
+        }
+    return result
 
 
 @app.post("/api/v1/chain", response_model=Dict[str, Any])
@@ -103,7 +205,7 @@ async def resolve_certification_chain(req: ChainResolveRequest):
     if not req.product_or_standard.strip():
         raise HTTPException(status_code=400, detail="Product or Standard cannot be empty.")
     
-    chain_res = chain_reasoner.resolve_chain(
+    chain_res = get_chain_reasoner().resolve_chain(
         product_or_standard=req.product_or_standard,
         as_of_date=req.as_of_date
     )
@@ -115,7 +217,7 @@ async def get_regulatory_timeline(std_or_prod: str, as_of_date: Optional[str] = 
     """
     Returns chronological timeline and active edition status as of as_of_date.
     """
-    timeline_res = timeline_engine.resolve_timeline(
+    timeline_res = get_timeline_engine().resolve_timeline(
         standard_or_product=std_or_prod,
         as_of_date=as_of_date
     )
@@ -150,7 +252,10 @@ async def get_evidence_stats():
 
 
 @app.post("/api/query", response_model=Dict[str, Any])
-async def answer_question(req: QueryRequest):
+async def answer_question(
+    req: QueryRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
     
@@ -165,6 +270,11 @@ async def answer_question(req: QueryRequest):
     # Merge top-level production payload fields if available
     if answer.production_payload:
         res["production_payload"] = answer.production_payload
+    if current_user:
+        res["authenticated_user"] = {
+            "user_id": current_user["user_id"],
+            "email": current_user.get("email")
+        }
     return res
 
 
