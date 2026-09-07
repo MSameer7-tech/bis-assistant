@@ -18,7 +18,7 @@
  */
 
 import { AssistantService } from './mockData.js';
-import { LabFinderComponent } from './labFinderComponent.js?v=12.f.10';
+import { LabFinderComponent } from './labFinderComponent.js';
 import {
     initializeAuth,
     onAuthStateChange,
@@ -177,7 +177,7 @@ function initApp() {
     // -------------------------------------------------------------------------
     // Application State
     // -------------------------------------------------------------------------
-    let currentView = 'assistant'; // 'assistant' | 'home'
+    let currentView = 'home'; // 'home' | 'assistant' | 'labfinder'
     let conversations = [];
     let currentConversationId = null;
     let evidenceMemory = {}; // Cache of evidence units by unit_id
@@ -2083,21 +2083,22 @@ function initApp() {
     // -------------------------------------------------------------------------
     function handleHashRouting() {
         const hash = (window.location.hash || '').toLowerCase();
-        if (hash === '#home') {
-            switchView('home');
+        if (hash === '#assistant' || hash === '#chat') {
+            switchView('assistant');
         } else if (hash === '#labs' || hash === '#labfinder') {
             switchView('labfinder');
         } else if (hash === '#login' || hash === '#signin') {
-            switchView('assistant');
+            switchView('home');
             openAuthModal('signin');
         } else if (hash === '#signup') {
-            switchView('assistant');
+            switchView('home');
             openAuthModal('signup');
         } else {
-            switchView('assistant');
-            if (hash && hash !== '#assistant') {
+            // Direct page or #home defaults to the homepage
+            switchView('home');
+            if (hash && hash !== '#home') {
                 const search = window.location.search || '';
-                history.replaceState(null, '', window.location.pathname + search + '#assistant');
+                history.replaceState(null, '', window.location.pathname + search);
             }
         }
     }

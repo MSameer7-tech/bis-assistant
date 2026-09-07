@@ -653,7 +653,7 @@
                     Authenticated via Supabase
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <a href="/" class="btn-login-submit" style="text-decoration: none;">Go to Research Workspace &rarr;</a>
+                    <a href="/#home" class="btn-login-submit" style="text-decoration: none;">Go to Home &rarr;</a>
                     <button type="button" id="btnActiveSignOut" class="btn-login-social">Sign Out</button>
                 </div>
             </div>
@@ -988,14 +988,14 @@
                     const data = await signInWithEmail(email, password);
                     showAlert('success', 'Sign in successful! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = '/#home';
                     }, 800);
                 } else if (mode === 'signup') {
                     const data = await signUpWithEmail(email, password);
                     if (data?.session) {
                         showAlert('success', 'Account created successfully! Redirecting...');
                         setTimeout(() => {
-                            window.location.href = '/';
+                            window.location.href = '/#home';
                         }, 800);
                     } else {
                         showAlert('success', 'Account created! Please check your email inbox to confirm your registration.');
@@ -1007,7 +1007,7 @@
                     await updatePassword(password);
                     showAlert('success', 'Your password has been successfully updated! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = '/#home';
                     }, 1000);
                 }
             } catch (err) {
