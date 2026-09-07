@@ -14,6 +14,7 @@
  */
 
 import { BisMapComponent, createPinIcon } from './mapComponent.js';
+import { apiUrl } from './config.js';
 
 export class LabFinderComponent {
     /**
@@ -32,8 +33,12 @@ export class LabFinderComponent {
             ? config.mapContainer
             : (config.mapContainer ? config.mapContainer.id : 'labFinderMap');
 
-        this.apiEndpoint = config.apiEndpoint || '/api/labs/search';
+        this.apiEndpoint = config.apiEndpoint || apiUrl('/api/labs/search');
         this.onLabSelect = config.onLabSelect || null;
+
+        // i18n helpers
+        this.t = config.t || ((k, fb) => (window.bisI18n ? window.bisI18n.t(k, fb) : (fb || k)));
+        this.getLanguage = config.getLanguage || (() => (window.bisI18n ? window.bisI18n.getLanguage() : (document.documentElement && document.documentElement.lang ? document.documentElement.lang : 'en')));
 
         // State
         this.mapComponent = null;
@@ -41,6 +46,7 @@ export class LabFinderComponent {
         this.selectedCandidate = null;
         this.isLoading = false;
         this.lastQuery = null;
+        this.lastParsedSummary = null;
 
         // User coordinates (if geolocation enabled or entered)
         this.userLocation = null; // { latitude, longitude, name }
@@ -71,7 +77,7 @@ export class LabFinderComponent {
                 <!-- Topbar / Search Control Deck -->
                 <header class="lab-finder-topbar">
                     <div class="topbar-title-group">
-                        <h2 class="lab-finder-heading">Accredited Laboratory Finder</h2>
+                        <h2 class="lab-finder-heading" data-i18n="lab_finder.title">Accredited Laboratory Finder</h2>
                     </div>
 
                     <!-- Search Form Deck -->
@@ -81,13 +87,13 @@ export class LabFinderComponent {
                             <div class="search-field field-query">
                                 <div class="search-input-wrap">
                                     <svg class="input-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                    <input type="text" id="labInputQuery" class="search-input" placeholder="Search by Indian Standard (e.g. IS 4985, IS 10500), product, or city..." autocomplete="off" spellcheck="false" aria-label="Search laboratories">
+                                    <input type="text" id="labInputQuery" class="search-input" placeholder="Search by Indian Standard (e.g. IS 4985, IS 10500), product, or city..." data-i18n-placeholder="lab_finder.input_placeholder" autocomplete="off" spellcheck="false" aria-label="Search laboratories">
                                     <input type="hidden" id="labInputStandard" value="">
                                     <input type="hidden" id="labInputLocation" value="">
                                     <button type="button" id="btnGeolocate" class="btn-input-action btn-gps-highlight" title="Use current GPS coordinates to locate nearest laboratories" aria-label="Use current location">
                                         <span class="gps-pulse-beacon"></span>
                                         <svg class="gps-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-                                        <span class="gps-btn-text">Near Me (GPS)</span>
+                                        <span class="gps-btn-text" data-i18n="lab_finder.near_me_gps">Near Me (GPS)</span>
                                     </button>
                                 </div>
                             </div>
@@ -96,7 +102,7 @@ export class LabFinderComponent {
                             <div class="search-actions">
                                 <button type="submit" id="btnLabSearch" class="btn-lab-search">
                                     <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                    <span>Find Labs</span>
+                                    <span data-i18n="lab_finder.search_btn">Find Labs</span>
                                 </button>
                             </div>
                         </div>
@@ -105,25 +111,25 @@ export class LabFinderComponent {
                         <div class="search-filters-row">
                             <!-- Category Filter -->
                             <div class="filter-chip-group">
-                                <span class="filter-label">Category:</span>
+                                <span class="filter-label" data-i18n="lab_finder.filter_category">Category:</span>
                                 <select id="labFilterCategory" class="filter-select" aria-label="Filter by Laboratory Category">
-                                    <option value="">All Categories (580 Labs)</option>
-                                    <option value="BIS_OWNED">BIS Owned (10 Labs)</option>
-                                    <option value="BIS_RECOGNIZED">BIS Recognized (430 Labs)</option>
-                                    <option value="BIS_EMPANELLED">BIS Empanelled (140 Labs)</option>
+                                    <option value="" data-i18n="lab_finder.category_all">All Categories (580 Labs)</option>
+                                    <option value="BIS_OWNED" data-i18n="lab_finder.category_bis_owned">BIS Owned (10 Labs)</option>
+                                    <option value="BIS_RECOGNIZED" data-i18n="lab_finder.category_bis_recognized">BIS Recognized (430 Labs)</option>
+                                    <option value="BIS_EMPANELLED" data-i18n="lab_finder.category_bis_empanelled">BIS Empanelled (140 Labs)</option>
                                 </select>
                             </div>
 
                             <!-- Radius Limit (Only active when coordinates available) -->
                             <div class="filter-chip-group" id="radiusFilterGroup">
-                                <span class="filter-label">Max Distance:</span>
+                                <span class="filter-label" data-i18n="lab_finder.max_distance">Max Distance:</span>
                                 <select id="labFilterRadius" class="filter-select" aria-label="Filter by Maximum Distance">
-                                    <option value="">Any Distance</option>
-                                    <option value="25">Within 25 km</option>
-                                    <option value="50">Within 50 km</option>
-                                    <option value="100">Within 100 km</option>
-                                    <option value="250">Within 250 km</option>
-                                    <option value="500">Within 500 km</option>
+                                    <option value="" data-i18n="lab_finder.any_distance">Any Distance</option>
+                                    <option value="25" data-i18n="lab_finder.within_25">Within 25 km</option>
+                                    <option value="50" data-i18n="lab_finder.within_50">Within 50 km</option>
+                                    <option value="100" data-i18n="lab_finder.within_100">Within 100 km</option>
+                                    <option value="250" data-i18n="lab_finder.within_250">Within 250 km</option>
+                                    <option value="500" data-i18n="lab_finder.within_500">Within 500 km</option>
                                 </select>
                             </div>
 
@@ -131,29 +137,29 @@ export class LabFinderComponent {
                             <label class="filter-checkbox-label" for="labFilterCompleteScope">
                                 <input type="checkbox" id="labFilterCompleteScope">
                                 <span class="filter-switch-slider"></span>
-                                <span>Complete Scope Only</span>
+                                <span data-i18n="lab_finder.complete_scope_only">Complete Scope Only</span>
                             </label>
 
                             <!-- Results Limit -->
                             <div class="filter-chip-group filter-limit-group">
-                                <span class="filter-label">Limit:</span>
+                                <span class="filter-label" data-i18n="lab_finder.limit">Limit:</span>
                                 <select id="labFilterLimit" class="filter-select" aria-label="Results Limit">
-                                    <option value="25">Top 25</option>
-                                    <option value="50">Top 50</option>
-                                    <option value="100" selected>Top 100</option>
-                                    <option value="580">All Matches</option>
+                                    <option value="25" data-i18n="lab_finder.limit_25">Top 25</option>
+                                    <option value="50" data-i18n="lab_finder.limit_50">Top 50</option>
+                                    <option value="100" selected data-i18n="lab_finder.limit_100">Top 100</option>
+                                    <option value="580" data-i18n="lab_finder.limit_all">All Matches</option>
                                 </select>
                             </div>
 
                             <!-- Preset Quick Locations -->
                             <div class="quick-locations-wrap">
-                                <span class="filter-label quick-anchor-label">Popular cities</span>
+                                <span class="filter-label quick-anchor-label" data-i18n="lab_finder.popular_cities">Popular cities</span>
                                 <div class="quick-presets-list">
-                                    <button type="button" class="btn-location-preset" data-name="Delhi" data-lat="28.6139" data-lon="77.2090">Delhi</button>
-                                    <button type="button" class="btn-location-preset" data-name="Mumbai" data-lat="19.0760" data-lon="72.8777">Mumbai</button>
-                                    <button type="button" class="btn-location-preset" data-name="Bengaluru" data-lat="12.9716" data-lon="77.5946">Bengaluru</button>
-                                    <button type="button" class="btn-location-preset" data-name="Chennai" data-lat="13.0827" data-lon="80.2707">Chennai</button>
-                                    <button type="button" class="btn-location-preset" data-name="Kolkata" data-lat="22.5726" data-lon="88.3639">Kolkata</button>
+                                    <button type="button" class="btn-location-preset" data-name="Delhi" data-lat="28.6139" data-lon="77.2090" data-i18n="lab_finder.city_delhi">Delhi</button>
+                                    <button type="button" class="btn-location-preset" data-name="Mumbai" data-lat="19.0760" data-lon="72.8777" data-i18n="lab_finder.city_mumbai">Mumbai</button>
+                                    <button type="button" class="btn-location-preset" data-name="Bengaluru" data-lat="12.9716" data-lon="77.5946" data-i18n="lab_finder.city_bengaluru">Bengaluru</button>
+                                    <button type="button" class="btn-location-preset" data-name="Chennai" data-lat="13.0827" data-lon="80.2707" data-i18n="lab_finder.city_chennai">Chennai</button>
+                                    <button type="button" class="btn-location-preset" data-name="Kolkata" data-lat="22.5726" data-lon="88.3639" data-i18n="lab_finder.city_kolkata">Kolkata</button>
                                 </div>
                             </div>
                         </div>
@@ -165,7 +171,7 @@ export class LabFinderComponent {
                                 <svg class="location-banner-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                                 <span id="activeLocationText" class="location-banner-text">Reference Location: 28.6139° N, 77.2090° E</span>
                             </div>
-                            <button type="button" id="btnClearLocation" class="btn-clear-location" title="Remove geographic reference location">✕ Clear</button>
+                            <button type="button" id="btnClearLocation" class="btn-clear-location" title="Remove geographic reference location" data-i18n="lab_finder.clear_location">✕ Clear</button>
                         </div>
                     </form>
                 </header>
@@ -203,19 +209,19 @@ export class LabFinderComponent {
                     <section class="lab-map-panel" aria-label="Geographic Map View">
                         <div class="map-deck-header">
                             <div class="map-deck-legend">
-                                <span class="legend-chip owned"><span class="chip-dot"></span>BIS Owned</span>
-                                <span class="legend-chip recognized"><span class="chip-dot"></span>BIS Recognized</span>
-                                <span class="legend-chip empanelled"><span class="chip-dot"></span>BIS Empanelled</span>
+                                <span class="legend-chip owned"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_owned">BIS Owned</span></span>
+                                <span class="legend-chip recognized"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_recognized">BIS Recognized</span></span>
+                                <span class="legend-chip empanelled"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_empanelled">BIS Empanelled</span></span>
                             </div>
                             <div class="map-deck-controls">
                                 <span id="mapMarkerCounter" class="map-counter-tag">0 on map</span>
                                 <button type="button" id="btnFitMapBounds" class="btn-map-control" title="Fit all mapped laboratories">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                                    <span>Fit View</span>
+                                    <span data-i18n="lab_finder.fit_view">Fit View</span>
                                 </button>
                                 <button type="button" id="btnResetMapCenter" class="btn-map-control" title="Reset map to India centroid">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
-                                    <span>India</span>
+                                    <span data-i18n="lab_finder.india">India</span>
                                 </button>
                             </div>
                         </div>
@@ -585,7 +591,7 @@ export class LabFinderComponent {
         }
 
         try {
-            const resp = await fetch('/api/labs/natural-search', {
+            const resp = await fetch(apiUrl('/api/labs/natural-search'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -613,7 +619,17 @@ export class LabFinderComponent {
 
             // Show factual interpretation notice (e.g. 'Searching for: IS 4985 · Delhi' or 'Interpreted as: LED lamps · IS 16102')
             if (noticeElem && data.parsed_query && data.parsed_query.factual_summary) {
-                noticeElem.textContent = data.parsed_query.factual_summary;
+                this.lastParsedSummary = data.parsed_query.factual_summary;
+                const summary = data.parsed_query.factual_summary;
+                if (this.getLanguage() === 'hi') {
+                    const interpLabel = this.t('lab_finder.interpreted_as', 'व्याख्या:');
+                    const searchLabel = this.t('lab_finder.searching_for', 'खोज रहे हैं:');
+                    noticeElem.textContent = summary
+                        .replace(/^Interpreted as:\s*/i, `${interpLabel} `)
+                        .replace(/^Searching for:\s*/i, `${searchLabel} `);
+                } else {
+                    noticeElem.textContent = summary;
+                }
                 noticeElem.classList.remove('hidden');
             }
 
@@ -673,7 +689,8 @@ export class LabFinderComponent {
         this.renderLoadingState(options.standard);
 
         try {
-            const resp = await fetch(this.apiEndpoint, {
+            const targetEndpoint = this.apiEndpoint.startsWith('http') ? this.apiEndpoint : apiUrl(this.apiEndpoint);
+            const resp = await fetch(targetEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(options)
@@ -750,7 +767,7 @@ export class LabFinderComponent {
             if (data.query_criteria.user_coordinates) {
                 const tag = document.createElement('span');
                 tag.className = 'meta-pill';
-                tag.textContent = 'Proximity: Near Anchor';
+                tag.textContent = this.t('lab_finder.proximity_near', 'Proximity: Near Anchor');
                 metaTags.appendChild(tag);
             }
             if (data.query_criteria.max_distance_km) {
@@ -762,13 +779,16 @@ export class LabFinderComponent {
             if (data.query_criteria.category) {
                 const tag = document.createElement('span');
                 tag.className = 'meta-pill';
-                tag.textContent = data.query_criteria.category.replace('_', ' ');
+                const catKey = data.query_criteria.category === 'BIS_OWNED' ? 'lab_finder.legend_owned'
+                    : data.query_criteria.category === 'BIS_RECOGNIZED' ? 'lab_finder.legend_recognized'
+                    : 'lab_finder.legend_empanelled';
+                tag.textContent = this.t(catKey, data.query_criteria.category.replace('_', ' '));
                 metaTags.appendChild(tag);
             }
             if (data.query_criteria.require_complete_scope) {
                 const tag = document.createElement('span');
                 tag.className = 'meta-pill';
-                tag.textContent = 'Complete Scope';
+                tag.textContent = this.t('lab_finder.complete_scope', 'Complete Scope');
                 metaTags.appendChild(tag);
             }
         }
@@ -784,7 +804,7 @@ export class LabFinderComponent {
             } else {
                 this.renderEmptyState('NO_CAPABILITY_MATCH', { standard: data.standard });
             }
-            if (countElem) countElem.textContent = '0 laboratories';
+            if (countElem) countElem.textContent = this.getLanguage() === 'hi' ? '0 प्रयोगशालाएं' : '0 laboratories';
             this.updateMapMarkers([]);
             return;
         }
@@ -792,9 +812,16 @@ export class LabFinderComponent {
         if (countElem) {
             const returned = data.returned_candidates;
             const total = data.total_matching;
-            countElem.textContent = returned < total
-                ? `Showing ${returned} of ${total} qualified laboratories`
-                : `${total} qualified ${total === 1 ? 'laboratory' : 'laboratories'}`;
+            const isHi = this.getLanguage() === 'hi';
+            if (returned < total) {
+                countElem.textContent = isHi
+                    ? `${total} योग्य प्रयोगशालाओं में से ${returned} दिखाई जा रही हैं`
+                    : `Showing ${returned} of ${total} qualified laboratories`;
+            } else {
+                countElem.textContent = isHi
+                    ? `${total} योग्य ${total === 1 ? 'प्रयोगशाला' : 'प्रयोगशालाएं'}`
+                    : `${total} qualified ${total === 1 ? 'laboratory' : 'laboratories'}`;
+            }
         }
 
         // Render Candidate Cards
@@ -829,27 +856,32 @@ export class LabFinderComponent {
         // Category Tag Class
         const catLower = (cand.category || '').toLowerCase();
         let catClass = 'recognized';
-        let catLabel = 'BIS Recognized';
+        let catLabel = this.t('lab_finder.legend_recognized', 'BIS Recognized');
         if (catLower.includes('owned')) {
             catClass = 'owned';
-            catLabel = 'BIS Owned';
+            catLabel = this.t('lab_finder.legend_owned', 'BIS Owned');
         } else if (catLower.includes('empanelled')) {
             catClass = 'empanelled';
-            catLabel = 'BIS Empanelled';
+            catLabel = this.t('lab_finder.legend_empanelled', 'BIS Empanelled');
         }
 
         // Distance or Location Unavailable Badge
         let distanceHtml = '';
         if (geo.has_coordinates && typeof geo.distance_km === 'number') {
-            distanceHtml = `<span class="card-distance-badge">${geo.distance_km.toFixed(1)} km away</span>`;
+            const distStr = this.getLanguage() === 'hi'
+                ? `${geo.distance_km.toFixed(1)} किमी दूर`
+                : `${geo.distance_km.toFixed(1)} km away`;
+            distanceHtml = `<span class="card-distance-badge">${distStr}</span>`;
         } else if (!geo.has_coordinates) {
-            distanceHtml = `<span class="card-distance-badge unavailable" title="No validated geographic coordinates in metadata cache">Location unavailable</span>`;
+            distanceHtml = `<span class="card-distance-badge unavailable" title="No validated geographic coordinates in metadata cache">${this.t('lab_finder.location_unavailable', 'Location unavailable')}</span>`;
         }
 
         // Scope Completeness Badge
         const isComplete = cap.scope_completeness === 'COMPLETE_SCOPE';
         const scopeBadgeClass = isComplete ? 'scope-complete' : 'scope-partial';
-        const scopeLabel = isComplete ? 'Complete Scope' : 'Partial Scope';
+        const scopeLabel = isComplete
+            ? this.t('lab_finder.complete_scope', 'Complete Scope')
+            : this.t('lab_finder.partial_scope', 'Partial Scope');
 
         // Testing Fee
         let feeHtml = '';
@@ -860,9 +892,15 @@ export class LabFinderComponent {
         // Matched Clauses Pill
         let clausesHtml = '';
         if (cap.matched_clauses && cap.matched_clauses.length > 0) {
-            clausesHtml = `<span class="card-clauses-info">${cap.matched_clauses.length} clauses in scope</span>`;
+            const cStr = this.getLanguage() === 'hi'
+                ? `कार्यक्षेत्र में ${cap.matched_clauses.length} खंड`
+                : `${cap.matched_clauses.length} clauses in scope`;
+            clausesHtml = `<span class="card-clauses-info">${cStr}</span>`;
         } else if (cap.excluded_clauses && cap.excluded_clauses.length > 0) {
-            clausesHtml = `<span class="card-clauses-info excluded">${cap.excluded_clauses.length} clauses excluded</span>`;
+            const cStr = this.getLanguage() === 'hi'
+                ? `${cap.excluded_clauses.length} खंड बाहर रखे गए`
+                : `${cap.excluded_clauses.length} clauses excluded`;
+            clausesHtml = `<span class="card-clauses-info excluded">${cStr}</span>`;
         }
 
         card.innerHTML = `
@@ -889,7 +927,7 @@ export class LabFinderComponent {
 
             <div class="card-footer-actions">
                 <button type="button" class="btn-card-detail" data-id="${cand.internal_id}">
-                    <span>Inspect Scope &amp; Evidence</span>
+                    <span>${this.t('lab_finder.inspect_scope_evidence', 'Inspect Scope & Evidence')}</span>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </div>
@@ -957,8 +995,8 @@ export class LabFinderComponent {
                         <h4 class="bis-popup-title">${this.escapeHtml(cand.laboratory_name)}</h4>
                         <p class="bis-popup-address">${this.escapeHtml(cand.address.original_address)}</p>
                         <div class="bis-popup-footer">
-                            <span class="popup-scope-tag">${cand.capability_evidence.scope_completeness === 'COMPLETE_SCOPE' ? 'Complete Scope' : 'Partial Scope'}</span>
-                            <button type="button" class="btn-popup-inspect" data-id="${cand.internal_id}">Inspect Scope</button>
+                            <span class="popup-scope-tag">${cand.capability_evidence.scope_completeness === 'COMPLETE_SCOPE' ? this.t('lab_finder.complete_scope', 'Complete Scope') : this.t('lab_finder.partial_scope', 'Partial Scope')}</span>
+                            <button type="button" class="btn-popup-inspect" data-id="${cand.internal_id}">${this.t('lab_finder.inspect_scope_evidence', 'Inspect Scope')}</button>
                         </div>
                     </div>
                 `;
@@ -975,7 +1013,16 @@ export class LabFinderComponent {
         });
 
         if (counter) {
-            counter.textContent = `${mappedCount} of ${candidates.length} on map`;
+            const isHi = this.getLanguage() === 'hi';
+            if (mappedCount < candidates.length) {
+                counter.textContent = isHi
+                    ? `${candidates.length} में से ${mappedCount} मानचित्र पर`
+                    : `${mappedCount} of ${candidates.length} on map`;
+            } else {
+                counter.textContent = isHi
+                    ? `${mappedCount} मानचित्र पर`
+                    : `${mappedCount} on map`;
+            }
         }
 
         // Add markers and fit bounds
@@ -1078,66 +1125,66 @@ export class LabFinderComponent {
             <div class="drawer-authority-header">
                 <span class="auth-icon">🏛️</span>
                 <div>
-                    <h4>Authoritative BIS LIMS Capability Evidence</h4>
-                    <p>Statutory testing scope and accreditation verified by Bureau of Indian Standards.</p>
+                    <h4>${this.t('lab_finder.drawer_title', 'Authoritative BIS LIMS Capability Evidence')}</h4>
+                    <p>${this.t('lab_finder.drawer_subtitle', 'Statutory testing scope and accreditation verified by Bureau of Indian Standards.')}</p>
                 </div>
             </div>
 
             <div class="drawer-meta-table">
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Public Lab Code</span>
+                    <span class="cell-label">${this.t('lab_finder.public_lab_code', 'Public Lab Code')}</span>
                     <span class="cell-value mono highlight">${cand.public_lab_code}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Internal LIMS ID</span>
+                    <span class="cell-label">${this.t('lab_finder.internal_lims_id', 'Internal LIMS ID')}</span>
                     <span class="cell-value mono">${cand.internal_id}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Governing Standard</span>
+                    <span class="cell-label">${this.t('lab_finder.governing_standard', 'Governing Standard')}</span>
                     <span class="cell-value highlight">${this.escapeHtml(cap.matching_standard)}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Scope ID</span>
+                    <span class="cell-label">${this.t('lab_finder.scope_id', 'Scope ID')}</span>
                     <span class="cell-value mono">${this.escapeHtml(cap.matching_scope_id)}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Scope Completeness</span>
-                    <span class="cell-value ${cap.scope_completeness === 'COMPLETE_SCOPE' ? 'highlight' : ''}">${cap.scope_completeness}</span>
+                    <span class="cell-label">${this.t('lab_finder.scope_completeness', 'Scope Completeness')}</span>
+                    <span class="cell-value ${cap.scope_completeness === 'COMPLETE_SCOPE' ? 'highlight' : ''}">${cap.scope_completeness === 'COMPLETE_SCOPE' ? this.t('lab_finder.complete_scope', 'Complete Scope') : this.t('lab_finder.partial_scope', 'Partial Scope')}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Testing Fee</span>
-                    <span class="cell-value">${typeof cap.base_testing_fee === 'number' ? `₹${cap.base_testing_fee.toLocaleString('en-IN')}` : 'Fee on Application'}</span>
+                    <span class="cell-label">${this.t('lab_finder.testing_fee', 'Testing Fee')}</span>
+                    <span class="cell-value">${typeof cap.base_testing_fee === 'number' ? `₹${cap.base_testing_fee.toLocaleString('en-IN')}` : (this.getLanguage() === 'hi' ? 'आवेदन पर शुल्क' : 'Fee on Application')}</span>
                 </div>
             </div>
 
             <!-- Authoritative BIS Address -->
             <div class="drawer-section-card">
-                <h4>Official Registered BIS Address</h4>
+                <h4>${this.t('lab_finder.official_address', 'Official Registered BIS Address')}</h4>
                 <p class="drawer-address-verbatim">${this.escapeHtml(addr.original_address)}</p>
                 <div class="drawer-address-details">
-                    <span><strong>State:</strong> ${this.escapeHtml(addr.state || 'N/A')}</span>
-                    <span><strong>District:</strong> ${this.escapeHtml(addr.district || 'N/A')}</span>
-                    <span><strong>City:</strong> ${this.escapeHtml(addr.city || 'N/A')}</span>
-                    <span><strong>Pincode:</strong> ${this.escapeHtml(addr.pincode || 'N/A')}</span>
+                    <span><strong>${this.getLanguage() === 'hi' ? 'राज्य:' : 'State:'}</strong> ${this.escapeHtml(addr.state || 'N/A')}</span>
+                    <span><strong>${this.getLanguage() === 'hi' ? 'ज़िला:' : 'District:'}</strong> ${this.escapeHtml(addr.district || 'N/A')}</span>
+                    <span><strong>${this.getLanguage() === 'hi' ? 'शहर:' : 'City:'}</strong> ${this.escapeHtml(addr.city || 'N/A')}</span>
+                    <span><strong>${this.getLanguage() === 'hi' ? 'पिनकोड:' : 'Pincode:'}</strong> ${this.escapeHtml(addr.pincode || 'N/A')}</span>
                 </div>
             </div>
 
             <!-- Clauses Breakdown -->
             <div class="drawer-section-card">
-                <h4>Clause Capabilities Breakdown</h4>
+                <h4>${this.t('lab_finder.clauses_breakdown', 'Clause Capabilities Breakdown')}</h4>
                 <div class="clauses-breakdown-list">
                     <div class="clause-item">
-                        <span class="clause-label">Matched Clauses (${cap.matched_clauses ? cap.matched_clauses.length : 0})</span>
-                        <span class="clause-content">${cap.matched_clauses && cap.matched_clauses.length > 0 ? cap.matched_clauses.join(', ') : 'All applicable normative clauses included under complete scope.'}</span>
+                        <span class="clause-label">${this.getLanguage() === 'hi' ? `संबद्ध खंड (${cap.matched_clauses ? cap.matched_clauses.length : 0})` : `Matched Clauses (${cap.matched_clauses ? cap.matched_clauses.length : 0})`}</span>
+                        <span class="clause-content">${cap.matched_clauses && cap.matched_clauses.length > 0 ? cap.matched_clauses.join(', ') : (this.getLanguage() === 'hi' ? 'पूर्ण कार्यक्षेत्र के तहत सभी लागू मानक खंड शामिल हैं।' : 'All applicable normative clauses included under complete scope.')}</span>
                     </div>
                     ${cap.excluded_clauses && cap.excluded_clauses.length > 0 ? `
                         <div class="clause-item excluded">
-                            <span class="clause-label">Excluded Clauses (${cap.excluded_clauses.length})</span>
+                            <span class="clause-label">${this.getLanguage() === 'hi' ? `अपवर्जित खंड (${cap.excluded_clauses.length})` : `Excluded Clauses (${cap.excluded_clauses.length})`}</span>
                             <span class="clause-content">${cap.excluded_clauses.join(', ')}</span>
                         </div>
                     ` : ''}
                     <div class="clause-item">
-                        <span class="clause-label">Capability Match Score</span>
+                        <span class="clause-label">${this.getLanguage() === 'hi' ? 'क्षमता मिलान स्कोर' : 'Capability Match Score'}</span>
                         <span class="clause-content mono">${cap.match_score} / 150.0</span>
                     </div>
                 </div>
@@ -1146,13 +1193,13 @@ export class LabFinderComponent {
             <!-- BIS Provenance Hashes -->
             <div class="drawer-checksum-card">
                 <div class="checksum-header">
-                    <span>BIS Scope SHA-256 Checksum:</span>
+                    <span>${this.t('lab_finder.provenance_hashes', 'BIS Scope SHA-256 Checksum:')}</span>
                     <span class="checksum-authority-tag">LIMS Immutable Source</span>
                 </div>
                 <code class="checksum-code">${cap.provenance_sha256 || 'N/A'}</code>
                 ${cap.provenance_url ? `
                     <div class="provenance-link-wrap">
-                        <a href="${cap.provenance_url}" target="_blank" rel="noopener noreferrer" class="cell-value highlight">View Official BIS LIMS Record ↗</a>
+                        <a href="${cap.provenance_url}" target="_blank" rel="noopener noreferrer" class="cell-value highlight">${this.t('lab_finder.view_lims_record', 'View Official BIS LIMS Record ↗')}</a>
                     </div>
                 ` : ''}
             </div>
@@ -1161,26 +1208,26 @@ export class LabFinderComponent {
             <div class="drawer-authority-header geo-header">
                 <span class="auth-icon">🌐</span>
                 <div>
-                    <h4>Supplementary Geographic Metadata</h4>
+                    <h4>${this.t('lab_finder.geo_metadata_title', 'Supplementary Geographic Metadata')}</h4>
                     <p class="geo-disclaimer-quote">"${geo.authority_disclaimer || 'Geographic distance is supplementary spatial metadata. It does not constitute normative evidence of BIS recognition.'}"</p>
                 </div>
             </div>
 
             <div class="drawer-meta-table">
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Geocoding Status</span>
+                    <span class="cell-label">${this.t('lab_finder.geocoding_status', 'Geocoding Status')}</span>
                     <span class="cell-value ${geo.geocoding_status === 'SUCCESS' ? 'highlight' : ''}">${geo.geocoding_status}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Proximity Distance</span>
-                    <span class="cell-value">${typeof geo.distance_km === 'number' ? `${geo.distance_km.toFixed(2)} km` : 'No Reference Distance'}</span>
+                    <span class="cell-label">${this.t('lab_finder.proximity_distance', 'Proximity Distance')}</span>
+                    <span class="cell-value">${typeof geo.distance_km === 'number' ? `${geo.distance_km.toFixed(2)} km` : (this.getLanguage() === 'hi' ? 'कोई संदर्भ दूरी नहीं' : 'No Reference Distance')}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Latitude</span>
+                    <span class="cell-label">${this.t('lab_finder.latitude', 'Latitude')}</span>
                     <span class="cell-value mono">${geo.latitude !== null ? geo.latitude : 'Unavailable'}</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Longitude</span>
+                    <span class="cell-label">${this.t('lab_finder.longitude', 'Longitude')}</span>
                     <span class="cell-value mono">${geo.longitude !== null ? geo.longitude : 'Unavailable'}</span>
                 </div>
                 <div class="drawer-meta-cell">
@@ -1195,7 +1242,7 @@ export class LabFinderComponent {
 
             ${geo.formatted_address ? `
                 <div class="drawer-section-card">
-                    <h4>Resolved Geographic Address</h4>
+                    <h4>${this.getLanguage() === 'hi' ? 'हल किया गया भौगोलिक पता' : 'Resolved Geographic Address'}</h4>
                     <p class="drawer-address-verbatim">${this.escapeHtml(geo.formatted_address)}</p>
                 </div>
             ` : ''}
@@ -1300,5 +1347,60 @@ export class LabFinderComponent {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * Updates all presentation strings dynamically when UI language toggles.
+     * Preserves active candidates, map markers, user location, and filters.
+     */
+    onLanguageChange(lang) {
+        if (this.container) {
+            this.container.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (key) {
+                    const translated = this.t(key);
+                    if (translated) el.textContent = translated;
+                }
+            });
+            this.container.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (key) {
+                    const translated = this.t(key);
+                    if (translated) el.placeholder = translated;
+                }
+            });
+            this.container.querySelectorAll('option[data-i18n]').forEach(opt => {
+                const key = opt.getAttribute('data-i18n');
+                if (key) {
+                    const translated = this.t(key);
+                    if (translated) opt.textContent = translated;
+                }
+            });
+        }
+
+        // Re-render active search results without API call or map reset
+        if (this.currentResults && this.currentResults.candidates) {
+            this.renderResults(this.currentResults);
+        }
+
+        // Re-format interpretation notice
+        const noticeElem = this.container ? this.container.querySelector('#searchInterpretationNotice') : null;
+        if (noticeElem && !noticeElem.classList.contains('hidden') && this.lastParsedSummary) {
+            if (lang === 'hi') {
+                const interpLabel = this.t('lab_finder.interpreted_as', 'व्याख्या:');
+                const searchLabel = this.t('lab_finder.searching_for', 'खोज रहे हैं:');
+                noticeElem.textContent = this.lastParsedSummary
+                    .replace(/^Interpreted as:\s*/i, `${interpLabel} `)
+                    .replace(/^Searching for:\s*/i, `${searchLabel} `);
+            } else {
+                noticeElem.textContent = this.lastParsedSummary;
+            }
+        }
+
+        // Re-render open detail drawer if present
+        const drawer = this.container ? this.container.querySelector('#labDetailDrawer') : null;
+        if (drawer && drawer.classList.contains('open') && this.selectedCandidate) {
+            this.openDetailInspector(this.selectedCandidate);
+        }
     }
 }

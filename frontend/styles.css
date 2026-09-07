@@ -5474,15 +5474,6 @@ html, body {
     letter-spacing: -0.5px;
 }
 
-.lab-finder-heading::after {
-    content: ' / Official BIS scope discovery';
-    color: rgba(255, 255, 255, 0.34);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0;
-    margin-left: 9px;
-    vertical-align: middle;
-}
 
 .lab-search-form { gap: 12px; }
 
@@ -6055,3 +6046,82 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
     .main-workspace::before { animation: none; }
 }
+
+/* ========================================================================= */
+/* PHASE M1: MULTILINGUAL UI LANGUAGE SELECTOR (EN / HI)                     */
+/* ========================================================================= */
+.lang-selector-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-btn, 8px);
+    padding: 2px 4px;
+    font-size: 12px;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.btn-lang-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #94a3b8);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-lang-toggle:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-lang-toggle.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.lang-divider {
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 10px;
+    margin: 0 1px;
+}
+
+.sidebar-lang-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-card, 8px);
+}
+
+.sidebar-lang-label {
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Devanagari typography enhancements */
+:lang(hi) body,
+:lang(hi) .hero-headline,
+:lang(hi) .home-title,
+:lang(hi) .msg-bubble {
+    letter-spacing: 0.01em;
+    line-height: 1.55;
+}
+

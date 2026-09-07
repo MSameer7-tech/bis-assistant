@@ -6,6 +6,8 @@
  * Key Principle: "Never invent an answer when authoritative BIS evidence is insufficient."
  */
 
+import { apiUrl } from './config.js';
+
 export const MOCK_RESPONSES = {
     // 1. Known standard query -> SUFFICIENT
     "what is is 8978?": {
@@ -660,9 +662,9 @@ export class AssistantService {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 1500);
-            let res = await fetch('/api/assistant/health', { signal: controller.signal });
+            let res = await fetch(apiUrl('/api/assistant/health'), { signal: controller.signal });
             if (!res.ok) {
-                res = await fetch('/api/phase12e/health', { signal: controller.signal });
+                res = await fetch(apiUrl('/api/phase12e/health'), { signal: controller.signal });
             }
             clearTimeout(timeoutId);
             if (res.ok) {
@@ -697,19 +699,19 @@ export class AssistantService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 12000);
             const extraHeaders = options.headers || {};
-            let res = await fetch('/api/assistant/query', {
+            let res = await fetch(apiUrl('/api/assistant/query'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...extraHeaders },
-                body: JSON.stringify({ query: cleanQuery }),
+                body: JSON.stringify({ query: cleanQuery, language: options.language || 'auto' }),
                 signal: controller.signal
             });
 
             // Fallback to direct Phase 12.E endpoint if 404
             if (res.status === 404) {
-                res = await fetch('/api/phase12e/query', {
+                res = await fetch(apiUrl('/api/phase12e/query'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...extraHeaders },
-                    body: JSON.stringify({ query: cleanQuery }),
+                    body: JSON.stringify({ query: cleanQuery, language: options.language || 'auto' }),
                     signal: controller.signal
                 });
             }

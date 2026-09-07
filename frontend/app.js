@@ -19,6 +19,7 @@
 
 import { AssistantService } from './mockData.js';
 import { LabFinderComponent } from './labFinderComponent.js';
+import { apiUrl } from './config.js';
 import {
     initializeAuth,
     onAuthStateChange,
@@ -55,7 +56,9 @@ function initApp() {
             labFinder = new LabFinderComponent({
                 container: viewLabFinder,
                 mapContainer: 'labFinderMap',
-                apiEndpoint: '/api/labs/search'
+                apiEndpoint: apiUrl('/api/labs/search'),
+                t: (k, fb) => t(k, fb),
+                getLanguage: () => currentLanguage
             });
             labFinder.init();
         } catch (labErr) {
@@ -183,6 +186,135 @@ function initApp() {
     let evidenceMemory = {}; // Cache of evidence units by unit_id
     let backendMode = 'production'; // 'production' | 'mock'
     let authMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'reset'
+
+    // -------------------------------------------------------------------------
+    // Phase M1: Internationalization (i18n) Engine
+    // -------------------------------------------------------------------------
+    let currentLanguage = 'en';
+    try {
+        currentLanguage = localStorage.getItem('bis_ui_language') || 'en';
+    } catch (e) {
+        currentLanguage = 'en';
+    }
+
+    const i18nCache = {
+        en: null,
+        hi: null
+    };
+
+    function t(keyPath, fallback = '') {
+        const dict = i18nCache[currentLanguage];
+        const enDict = i18nCache.en;
+        
+        const resolve = (obj, path) => {
+            if (!obj || !path) return undefined;
+            return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+        };
+
+        if (dict) {
+            const val = resolve(dict, keyPath);
+            if (val !== undefined && val !== null) return val;
+        }
+        if (enDict) {
+            const enVal = resolve(enDict, keyPath);
+            if (enVal !== undefined && enVal !== null) return enVal;
+        }
+        return fallback;
+    }
+
+    function applyLanguage(lang) {
+        currentLanguage = lang;
+        try {
+            localStorage.setItem('bis_ui_language', lang);
+        } catch (e) {
+            // localStorage not accessible
+        }
+        document.documentElement.lang = lang;
+
+        // Update all elements with data-i18n
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (key) {
+                const translated = t(key);
+                if (translated) {
+                    el.textContent = translated;
+                }
+            }
+        });
+
+        // Update all elements with data-i18n-placeholder
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (key) {
+                const translated = t(key);
+                if (translated) {
+                    el.placeholder = translated;
+                }
+            }
+        });
+
+        // Update all elements with data-i18n-title
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (key) {
+                const translated = t(key);
+                if (translated) {
+                    el.title = translated;
+                }
+            }
+        });
+
+        // Update active class on all language toggle buttons
+        document.querySelectorAll('.btn-lang-toggle').forEach(btn => {
+            const btnLang = btn.getAttribute('data-lang');
+            btn.classList.toggle('active', btnLang === lang);
+        });
+
+        // Notify LabFinder component to re-render active results and dropdowns
+        if (labFinder && typeof labFinder.onLanguageChange === 'function') {
+            labFinder.onLanguageChange(lang);
+        }
+
+        // Re-sync auth UI so dynamic user profile/status is not regressed by translation sweep
+        if (typeof updateAuthStateUI === 'function') {
+            const cached = typeof getCachedUser === 'function' ? getCachedUser() : null;
+            updateAuthStateUI('LANG_CHANGE', null, cached);
+        }
+    }
+
+    // Expose globally for modular component access
+    window.bisI18n = {
+        t: (k, fb) => t(k, fb),
+        getLanguage: () => currentLanguage,
+        setLanguage: applyLanguage
+    };
+
+    async function loadI18n() {
+        try {
+            const [resEn, resHi] = await Promise.all([
+                fetch('./i18n/en.json'),
+                fetch('./i18n/hi.json')
+            ]);
+            if (resEn.ok) i18nCache.en = await resEn.json();
+            if (resHi.ok) i18nCache.hi = await resHi.json();
+        } catch (e) {
+            console.warn('[i18n] Network fetch failed, relying on DOM defaults:', e);
+        }
+        applyLanguage(currentLanguage);
+    }
+
+    function initLanguageSelectors() {
+        document.querySelectorAll('.btn-lang-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetLang = btn.getAttribute('data-lang');
+                if (targetLang && targetLang !== currentLanguage) {
+                    applyLanguage(targetLang);
+                }
+            });
+        });
+    }
+
 
     // -------------------------------------------------------------------------
     // 1. Storage & Conversation Management
@@ -523,7 +655,8 @@ function initApp() {
         try {
             const responseData = await AssistantService.query(query, {
                 mode: backendMode,
-                headers: getAuthHeaders()
+                headers: getAuthHeaders(),
+                language: currentLanguage
             });
 
             thinkingRow.remove();
@@ -844,9 +977,11 @@ function initApp() {
         if (genMode !== 'CONVERSATIONAL') {
             let sourceTagHtml = '';
             if (genMode === 'GROUNDED' && status === 'SUFFICIENT') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-verified">&bull; Verified</span>`;
+                sourceTagHtml = `<span class="subtle-source-tag tag-verified" data-i18n="assistant.status.sufficient">&bull; ${t('assistant.status.sufficient', 'Verified BIS Grounded')}</span>`;
             } else if (status === 'PARTIAL') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-partial">&bull; Partial Evidence</span>`;
+                sourceTagHtml = `<span class="subtle-source-tag tag-partial" data-i18n="assistant.status.partial">&bull; ${t('assistant.status.partial', 'Partial Evidence')}</span>`;
+            } else if (status === 'INSUFFICIENT') {
+                sourceTagHtml = `<span class="subtle-source-tag tag-insufficient" data-i18n="assistant.status.insufficient">&bull; ${t('assistant.status.insufficient', 'Insufficient Evidence')}</span>`;
             }
 
             if (sourceTagHtml) {
@@ -1969,8 +2104,14 @@ function initApp() {
                 const subtext = githubUsername ? `@${githubUsername}` : (loginEmail || 'Authenticated');
 
                 if (userEmailText) userEmailText.textContent = subtext;
-                if (sidebarUserName) sidebarUserName.textContent = displayName;
-                if (sidebarUserSubText) sidebarUserSubText.textContent = subtext;
+                if (sidebarUserName) {
+                    sidebarUserName.removeAttribute('data-i18n');
+                    sidebarUserName.textContent = displayName;
+                }
+                if (sidebarUserSubText) {
+                    sidebarUserSubText.removeAttribute('data-i18n');
+                    sidebarUserSubText.textContent = subtext;
+                }
 
                 const avatarUrl = meta.avatar_url || meta.picture || meta.avatar || '';
                 const initial = (displayName[0] || loginEmail[0] || 'U').toUpperCase();
@@ -2015,8 +2156,11 @@ function initApp() {
 
                 if (btnSidebarSignOut) {
                     const span = btnSidebarSignOut.querySelector('span');
-                    if (span) span.textContent = 'Sign out';
-                    btnSidebarSignOut.setAttribute('title', 'Sign out of your account');
+                    if (span) {
+                        span.setAttribute('data-i18n', 'nav.sign_out');
+                        span.textContent = t('nav.sign_out', 'Sign out');
+                    }
+                    btnSidebarSignOut.setAttribute('title', t('nav.sign_out', 'Sign out of your account'));
                     const svg = btnSidebarSignOut.querySelector('svg');
                     if (svg) {
                         svg.innerHTML = '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>';
@@ -2025,8 +2169,14 @@ function initApp() {
             } else {
                 if (btnOpenAuthModal) btnOpenAuthModal.classList.remove('hidden');
                 if (userProfilePill) userProfilePill.classList.add('hidden');
-                if (sidebarUserName) sidebarUserName.textContent = 'Workspace User';
-                if (sidebarUserSubText) sidebarUserSubText.textContent = 'Operational';
+                if (sidebarUserName) {
+                    sidebarUserName.setAttribute('data-i18n', 'nav.user_default');
+                    sidebarUserName.textContent = t('nav.user_default', 'Workspace User');
+                }
+                if (sidebarUserSubText) {
+                    sidebarUserSubText.setAttribute('data-i18n', 'nav.status_operational');
+                    sidebarUserSubText.textContent = t('nav.status_operational', 'Operational');
+                }
 
                 if (sidebarAvatarImg) sidebarAvatarImg.classList.add('hidden');
                 if (sidebarAvatarInitial) {
@@ -2042,8 +2192,11 @@ function initApp() {
 
                 if (btnSidebarSignOut) {
                     const span = btnSidebarSignOut.querySelector('span');
-                    if (span) span.textContent = 'Sign in';
-                    btnSidebarSignOut.setAttribute('title', 'Sign in to your account');
+                    if (span) {
+                        span.setAttribute('data-i18n', 'nav.sign_in');
+                        span.textContent = t('nav.sign_in', 'Sign in');
+                    }
+                    btnSidebarSignOut.setAttribute('title', t('nav.sign_in', 'Sign in to your account'));
                     const svg = btnSidebarSignOut.querySelector('svg');
                     if (svg) {
                         svg.innerHTML = '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>';
@@ -2101,6 +2254,13 @@ function initApp() {
                 history.replaceState(null, '', window.location.pathname + search);
             }
         }
+    }
+
+    try {
+        initLanguageSelectors();
+        loadI18n();
+    } catch (err) {
+        console.error('[BIS Init] i18n initialization error:', err);
     }
 
     try {

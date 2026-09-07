@@ -25,8 +25,8 @@
                         <img src="/static/favicon.svg" alt="" aria-hidden="true">
                     </div>
                     <div class="brand-titles">
-                        <h1 class="brand-name">BIS Assistant</h1>
-                        <span class="brand-sub">WORKSPACE</span>
+                        <h1 class="brand-name" data-i18n="brand.title">BIS Assistant</h1>
+                        <span class="brand-sub" data-i18n="brand.sub">WORKSPACE</span>
                     </div>
                 </a>
                 <button type="button" class="mobile-sidebar-close" id="mobileSidebarClose" aria-label="Close sidebar">✕</button>
@@ -36,23 +36,23 @@
             <nav class="sidebar-nav">
                 <button type="button" class="nav-link" id="navAssistant" title="Assistant Workspace">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-                    <span>Assistant</span>
+                    <span data-i18n="nav.assistant">Assistant</span>
                 </button>
                 <button type="button" class="nav-link" id="navLabFinder" title="BIS Laboratory Finder">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <span>Lab Finder</span>
+                    <span data-i18n="nav.lab_finder">Lab Finder</span>
                 </button>
                 <button type="button" class="nav-link active" id="navHome" title="Standards Overview">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                    <span>Home</span>
+                    <span data-i18n="nav.home">Home</span>
                 </button>
             </nav>
 
             <!-- Conversations Section -->
             <div class="sidebar-conversations-wrap">
                 <div class="conv-section-header">
-                    <span class="conv-section-label">CONVERSATIONS</span>
-                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new session" aria-label="Start new session">
+                    <span class="conv-section-label" data-i18n="nav.conversations">CONVERSATIONS</span>
+                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new session" aria-label="Start new session" data-i18n-title="nav.new_chat">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                 </div>
@@ -60,7 +60,7 @@
                 <!-- Search Input -->
                 <div class="sidebar-search-box">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search conversations" aria-label="Search conversations">
+                    <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search conversations" aria-label="Search conversations" data-i18n-placeholder="nav.search_placeholder">
                 </div>
 
                 <!-- Scrollable Conversation History (Grouped: Today, Earlier) -->
@@ -71,6 +71,14 @@
 
             <!-- Sidebar Footer (AI-Hub-2.0 UserProfileFooter style) -->
             <div class="sidebar-footer">
+                <div class="sidebar-lang-row">
+                    <span class="sidebar-lang-label" data-i18n="nav.language">Language</span>
+                    <div class="lang-selector-group" id="sidebarLangSelectorGroup" role="group" aria-label="Language selector">
+                        <button type="button" class="btn-lang-toggle active" data-lang="en">EN</button>
+                        <span class="lang-divider">|</span>
+                        <button type="button" class="btn-lang-toggle" data-lang="hi">हिन्दी</button>
+                    </div>
+                </div>
                 <div class="sidebar-profile-card">
                     <div class="profile-avatar-group" id="btnSystemInfo" role="button" tabindex="0" title="System Status">
                         <div class="profile-avatar-circle" id="sidebarAvatar">
@@ -78,8 +86,8 @@
                             <span id="sidebarAvatarInitial">U</span>
                         </div>
                         <div class="profile-info">
-                            <span class="profile-name" id="sidebarUserName">Workspace User</span>
-                            <span class="profile-role" id="sidebarUserRole"><span class="status-indicator-dot"></span><span id="sidebarUserSubText">Operational</span></span>
+                            <span class="profile-name" id="sidebarUserName" data-i18n="nav.user_default">Workspace User</span>
+                            <span class="profile-role" id="sidebarUserRole"><span class="status-indicator-dot"></span><span id="sidebarUserSubText" data-i18n="nav.status_operational">Operational</span></span>
                         </div>
                     </div>
                     <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" title="Collapse sidebar" aria-label="Collapse sidebar">
@@ -88,7 +96,7 @@
                 </div>
                 <button type="button" class="btn-sidebar-signout" id="btnSidebarSignOut" title="Sign in to your account">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    <span>Sign in</span>
+                    <span data-i18n="nav.sign_in">Sign in</span>
                 </button>
             </div>
         </aside>
@@ -109,8 +117,13 @@
                     </div>
 
                     <div class="topbar-right" id="topbarRight">
+                        <div class="lang-selector-group" id="topbarLangSelectorGroup" role="group" aria-label="Language selector">
+                            <button type="button" class="btn-lang-toggle active" data-lang="en">EN</button>
+                            <span class="lang-divider">|</span>
+                            <button type="button" class="btn-lang-toggle" data-lang="hi">हिन्दी</button>
+                        </div>
                         <button type="button" class="btn-auth-signin" id="btnOpenAuthModal" aria-label="Sign in to your account">
-                            <span>Sign in</span>
+                            <span data-i18n="nav.sign_in">Sign in</span>
                         </button>
                     </div>
                 </header>
@@ -128,16 +141,16 @@
 
                         <div class="hero-inner">
                             <!-- Badge Pill -->
-                        <div class="hero-badge-pill">
+                            <div class="hero-badge-pill">
                                 <span class="hero-badge-icon" aria-hidden="true"><i></i></span>
-                                <span class="hero-badge-text">BIS research assistant</span>
+                                <span class="hero-badge-text" data-i18n="assistant.badge">BIS research assistant</span>
                             </div>
 
                             <!-- Headline -->
-                            <h1 class="hero-headline">What would you like to research?</h1>
+                            <h1 class="hero-headline" data-i18n="assistant.headline">What would you like to research?</h1>
 
                             <!-- Subtitle -->
-                            <p class="hero-subtitle">
+                            <p class="hero-subtitle" data-i18n="assistant.subtitle">
                                 Search Indian Standards, testing requirements, laboratory scopes, and evidence from one focused workspace.
                             </p>
 
@@ -147,18 +160,19 @@
                                     type="text" 
                                     id="heroSearchInput" 
                                     class="hero-search-input" 
-                                    placeholder="Ask about a standard, test, or laboratory..."
+                                    placeholder="Ask about a standard, test, or laboratory..." 
                                     aria-label="Ask about a standard, test, or laboratory"
+                                    data-i18n-placeholder="assistant.search_placeholder"
                                     autocomplete="off"
                                 />
-                                <button type="button" class="btn-hero-mic" id="btnHeroMic" title="Voice input" aria-label="Voice input">
+                                <button type="button" class="btn-hero-mic" id="btnHeroMic" title="Voice input" aria-label="Voice input" data-i18n-title="assistant.voice_input">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
                                         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                                         <line x1="12" y1="19" x2="12" y2="22"/>
                                     </svg>
                                 </button>
-                                <button type="submit" class="btn-hero-send" id="heroSendBtn" title="Send message" aria-label="Send message">
+                                <button type="submit" class="btn-hero-send" id="heroSendBtn" title="Send message" aria-label="Send message" data-i18n-title="assistant.send_message">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                         <line x1="12" y1="19" x2="12" y2="5"/>
                                         <polyline points="5 12 12 5 19 12"/>
@@ -168,16 +182,16 @@
 
                             <!-- Suggestion Pills (AI Hub 2.0 Style) -->
                             <div class="hero-suggestions-wrap">
-                                <button type="button" class="hero-suggestion-pill" data-query="What is IS 8978?">
+                                <button type="button" class="hero-suggestion-pill" data-query="What is IS 8978?" data-i18n="assistant.suggestions.is8978_req">
                                     IS 8978 requirements
                                 </button>
-                                <button type="button" class="hero-suggestion-pill" data-query="Which laboratories have scope for IS 8978?">
+                                <button type="button" class="hero-suggestion-pill" data-query="Which laboratories have scope for IS 8978?" data-i18n="assistant.suggestions.is8978_labs">
                                     Laboratories for IS 8978
                                 </button>
-                                <button type="button" class="hero-suggestion-pill" data-query="What is the testing fee for IS 8978?">
+                                <button type="button" class="hero-suggestion-pill" data-query="What is the testing fee for IS 8978?" data-i18n="assistant.suggestions.is8978_fees">
                                     Testing fees for IS 8978
                                 </button>
-                                <button type="button" class="hero-suggestion-pill" data-query="Is there authoritative evidence for this requirement?">
+                                <button type="button" class="hero-suggestion-pill" data-query="Is there authoritative evidence for this requirement?" data-i18n="assistant.suggestions.show_evidence">
                                     Show authoritative evidence
                                 </button>
                             </div>
@@ -198,13 +212,14 @@
                                 placeholder="Ask anything..." 
                                 rows="1"
                                 aria-label="Ask a question"
+                                data-i18n-placeholder="assistant.composer_placeholder"
                                 required
                             ></textarea>
                             <div class="composer-actions">
-                                <button type="button" class="btn-composer-mic" id="btnComposerMic" title="Voice input" aria-label="Voice input">
+                                <button type="button" class="btn-composer-mic" id="btnComposerMic" title="Voice input" aria-label="Voice input" data-i18n-title="assistant.voice_input">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                                 </button>
-                                <button type="submit" id="sendBtn" class="btn-composer-send" title="Send message" aria-label="Send message" disabled>
+                                <button type="submit" id="sendBtn" class="btn-composer-send" title="Send message" aria-label="Send message" data-i18n-title="assistant.send_message" disabled>
                                     <svg id="sendIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
                                     <div id="inputSpinner" class="thinking-dot hidden" aria-hidden="true"></div>
                                 </button>
@@ -224,23 +239,23 @@
                         <header class="home-hero">
                             <div class="home-eyebrow">
                                 <span class="home-eyebrow-dot" aria-hidden="true"></span>
-                                <span>BIS RESEARCH WORKSPACE</span>
+                                <span data-i18n="home.eyebrow">BIS RESEARCH WORKSPACE</span>
                             </div>
-                            <h1 class="home-title">Standards intelligence for confident decisions.</h1>
-                            <p class="home-description">
+                            <h1 class="home-title" data-i18n="home.title">Standards intelligence for confident decisions.</h1>
+                            <p class="home-description" data-i18n="home.description">
                                 Navigate Indian Standards, certification requirements, testing pathways, and recognized laboratories from one authoritative research workspace.
                             </p>
                             <div class="home-hero-actions">
                                 <button type="button" class="home-primary-cta" id="homeStartResearch">
-                                    Start research
+                                    <span data-i18n="home.start_research">Start research</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                                 </button>
                                 <button type="button" class="home-secondary-cta" id="homeOpenLabs">
-                                    Explore laboratories
+                                    <span data-i18n="home.explore_labs">Explore laboratories</span>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v7.31a2 2 0 0 1-.37 1.17L4.22 18.4A2 2 0 0 0 5.86 21h12.28a2 2 0 0 0 1.64-2.6l-5.41-7.92A2 2 0 0 1 14 9.31V2"/><line x1="8" y1="2" x2="16" y2="2"/></svg>
                                 </button>
                             </div>
-                            <div class="home-hero-note"><span class="home-note-check" aria-hidden="true">✓</span> Grounded in available BIS evidence</div>
+                            <div class="home-hero-note"><span class="home-note-check" aria-hidden="true">✓</span> <span data-i18n="home.grounded_note">Grounded in available BIS evidence</span></div>
                         </header>
 
                         <div class="home-product-preview" aria-label="BIS evidence workspace preview">
@@ -248,26 +263,26 @@
                             <div class="preview-window">
                                 <div class="preview-window-bar">
                                     <div class="preview-window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
-                                    <span>STANDARD RECORD</span>
+                                    <span data-i18n="home.preview.standard_record">STANDARD RECORD</span>
                                     <span class="preview-live"><i></i> LIVE</span>
                                 </div>
                                 <div class="preview-record-head">
                                     <div>
-                                        <span class="preview-kicker">INDIAN STANDARD</span>
+                                        <span class="preview-kicker" data-i18n="home.preview.kicker">INDIAN STANDARD</span>
                                         <h2>IS 8978 : 1992</h2>
-                                        <p>Electric instantaneous water heaters</p>
+                                        <p data-i18n="home.preview.water_heater_title">Electric instantaneous water heaters</p>
                                     </div>
-                                    <span class="preview-verified">Verified</span>
+                                    <span class="preview-verified" data-i18n="home.preview.verified">Verified</span>
                                 </div>
                                 <div class="preview-record-grid">
-                                    <div class="preview-record-cell"><span>REQUIREMENTS</span><strong>24 clauses</strong></div>
-                                    <div class="preview-record-cell"><span>TESTING SCOPE</span><strong>18 parameters</strong></div>
-                                    <div class="preview-record-cell"><span>LABORATORIES</span><strong>7 matched</strong></div>
-                                    <div class="preview-record-cell"><span>LAST REVIEW</span><strong>Source-backed</strong></div>
+                                    <div class="preview-record-cell"><span data-i18n="home.preview.requirements">REQUIREMENTS</span><strong data-i18n="home.preview.clauses_count">24 clauses</strong></div>
+                                    <div class="preview-record-cell"><span data-i18n="home.preview.testing_scope">TESTING SCOPE</span><strong data-i18n="home.preview.params_count">18 parameters</strong></div>
+                                    <div class="preview-record-cell"><span data-i18n="home.preview.laboratories">LABORATORIES</span><strong data-i18n="home.preview.matched_count">7 matched</strong></div>
+                                    <div class="preview-record-cell"><span data-i18n="home.preview.last_review">LAST REVIEW</span><strong data-i18n="home.preview.source_backed">Source-backed</strong></div>
                                 </div>
                                 <div class="preview-evidence-row">
                                     <span class="preview-evidence-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg></span>
-                                    <div><strong>Evidence trail attached</strong><span>Bureau of Indian Standards · source context available</span></div>
+                                    <div><strong data-i18n="home.preview.evidence_attached">Evidence trail attached</strong><span data-i18n="home.preview.evidence_sub">Bureau of Indian Standards · source context available</span></div>
                                     <svg class="preview-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                                 </div>
                             </div>
@@ -275,19 +290,19 @@
                     </div>
 
                     <div class="home-proof-strip" aria-label="Workspace capabilities">
-                        <div class="home-proof-item"><strong>Standards</strong><span>Requirements and specifications</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.standards_title">Standards</strong><span data-i18n="home.proof.standards_desc">Requirements and specifications</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong>Testing</strong><span>Parameters, methods, and fees</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.testing_title">Testing</strong><span data-i18n="home.proof.testing_desc">Parameters, methods, and fees</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong>Laboratories</strong><span>Recognized scope discovery</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.labs_title">Laboratories</strong><span data-i18n="home.proof.labs_desc">Recognized scope discovery</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong>Evidence</strong><span>Traceable source context</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.evidence_title">Evidence</strong><span data-i18n="home.proof.evidence_desc">Traceable source context</span></div>
                     </div>
 
                     <section class="home-section home-capabilities-section" aria-labelledby="homeCapabilitiesHeading">
                         <div class="home-section-heading-row">
-                            <div><span class="home-section-kicker">RESEARCH PATHWAYS</span><h2 id="homeCapabilitiesHeading">Move from question to clarity.</h2></div>
-                            <span class="home-section-side-note">Built for standards-led work</span>
+                            <div><span class="home-section-kicker" data-i18n="home.pathways.kicker">RESEARCH PATHWAYS</span><h2 id="homeCapabilitiesHeading" data-i18n="home.pathways.title">Move from question to clarity.</h2></div>
+                            <span class="home-section-side-note" data-i18n="home.pathways.side_note">Built for standards-led work</span>
                         </div>
                         <div class="home-capabilities-grid">
                             
@@ -303,7 +318,7 @@
                                             <polyline points="10 9 9 9 8 9"/>
                                         </svg>
                                     </div>
-                                    <span class="home-card-title">Standards</span>
+                                    <span class="home-card-title" data-i18n="home.pathways.card_standards_title">Standards</span>
                                     <div class="home-card-arrow" aria-hidden="true">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -311,7 +326,7 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <p class="home-card-desc">Find requirements and information related to Indian Standards.</p>
+                                <p class="home-card-desc" data-i18n="home.pathways.card_standards_desc">Query clauses, conformity paths, and mandatory scopes.</p>
                             </button>
 
                             <!-- Laboratories -->
@@ -324,7 +339,7 @@
                                             <line x1="7" y1="16" x2="17" y2="16"/>
                                         </svg>
                                     </div>
-                                    <span class="home-card-title">Laboratories</span>
+                                    <span class="home-card-title" data-i18n="home.pathways.card_labs_title">Laboratories</span>
                                     <div class="home-card-arrow" aria-hidden="true">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -332,7 +347,7 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <p class="home-card-desc">Find relevant BIS-recognized/accredited testing laboratories.</p>
+                                <p class="home-card-desc" data-i18n="home.pathways.card_labs_desc">Locate BIS labs with recognized testing parameters.</p>
                             </button>
 
                             <!-- Testing -->
@@ -344,7 +359,7 @@
                                             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                                         </svg>
                                     </div>
-                                    <span class="home-card-title">Testing</span>
+                                    <span class="home-card-title" data-i18n="home.pathways.card_testing_title">Testing</span>
                                     <div class="home-card-arrow" aria-hidden="true">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -352,7 +367,7 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <p class="home-card-desc">Explore available testing requirements and related information.</p>
+                                <p class="home-card-desc" data-i18n="home.pathways.card_testing_desc">Verify fees, cycle times, and normative test methods.</p>
                             </button>
 
                             <!-- Evidence -->
@@ -364,7 +379,7 @@
                                             <path d="m9 12 2 2 4-4"/>
                                         </svg>
                                     </div>
-                                    <span class="home-card-title">Evidence</span>
+                                    <span class="home-card-title" data-i18n="home.pathways.card_evidence_title">Evidence</span>
                                     <div class="home-card-arrow" aria-hidden="true">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -372,35 +387,35 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <p class="home-card-desc">Review available supporting evidence and source context.</p>
+                                <p class="home-card-desc" data-i18n="home.pathways.card_evidence_desc">Trace every answer to its verified statutory source.</p>
                             </button>
                         </div>
                     </section>
 
                     <!-- 4. How The Workspace Works -->
                     <section class="home-section home-workflow-section" aria-labelledby="homeWorkflowHeading">
-                        <h2 id="homeWorkflowHeading" class="home-section-title">How the workspace works</h2>
+                        <h2 id="homeWorkflowHeading" class="home-section-title" data-i18n="home.workflow.title">How the workspace works</h2>
                         <div class="home-workflow-grid">
                             
                             <div class="home-step-item">
                                 <div class="home-step-header">
-                                    <span class="home-step-badge">01 — Ask</span>
+                                    <span class="home-step-badge" data-i18n="home.workflow.step1_badge">01 — Ask</span>
                                 </div>
-                                <p class="home-step-desc">Ask about an Indian Standard, requirement, test, or laboratory.</p>
+                                <p class="home-step-desc" data-i18n="home.workflow.step1_desc">Ask about an Indian Standard, requirement, test, or laboratory.</p>
                             </div>
 
                             <div class="home-step-item">
                                 <div class="home-step-header">
-                                    <span class="home-step-badge">02 — Research</span>
+                                    <span class="home-step-badge" data-i18n="home.workflow.step2_badge">02 — Research</span>
                                 </div>
-                                <p class="home-step-desc">The assistant searches the available BIS knowledge and evidence sources.</p>
+                                <p class="home-step-desc" data-i18n="home.workflow.step2_desc">The assistant searches the available BIS knowledge and evidence sources.</p>
                             </div>
 
                             <div class="home-step-item">
                                 <div class="home-step-header">
-                                    <span class="home-step-badge">03 — Review</span>
+                                    <span class="home-step-badge" data-i18n="home.workflow.step3_badge">03 — Review</span>
                                 </div>
-                                <p class="home-step-desc">Review the answer together with available supporting evidence and source context.</p>
+                                <p class="home-step-desc" data-i18n="home.workflow.step3_desc">Review the answer together with available supporting evidence and source context.</p>
                             </div>
 
                         </div>
@@ -429,53 +444,53 @@
         <div class="drawer-scroll-body no-scrollbar">
             <div class="drawer-meta-table">
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Evidence Unit ID</span>
+                    <span class="cell-label" data-i18n="drawer.unit_id">Evidence Unit ID</span>
                     <span class="cell-value mono" id="drawerUnitId">ru_std_IS 8978</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Source Authority</span>
+                    <span class="cell-label" data-i18n="drawer.authority">Source Authority</span>
                     <span class="cell-value" id="drawerAuthority">Bureau of Indian Standards</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Governing Standard</span>
+                    <span class="cell-label" data-i18n="drawer.standard">Governing Standard</span>
                     <span class="cell-value highlight" id="drawerStandardNum">IS 8978 : 1992</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Clause / Locator</span>
+                    <span class="cell-label" data-i18n="drawer.locator">Clause / Locator</span>
                     <span class="cell-value" id="drawerLocator">Clause 1.1 (Scope)</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Document Page</span>
+                    <span class="cell-label" data-i18n="drawer.page">Document Page</span>
                     <span class="cell-value" id="drawerPage">Page 1</span>
                 </div>
                 <div class="drawer-meta-cell">
-                    <span class="cell-label">Source Reference</span>
-                    <a href="#" target="_blank" rel="noopener" class="cell-value highlight" id="drawerSourceUrl">Official Record</a>
+                    <span class="cell-label" data-i18n="drawer.source_ref">Source Reference</span>
+                    <a href="#" target="_blank" rel="noopener" class="cell-value highlight" id="drawerSourceUrl" data-i18n="drawer.official_record">Official Record</a>
                 </div>
             </div>
 
             <div class="drawer-checksum-card">
                 <div class="checksum-header">
-                    <span>SHA-256 Checksum:</span>
-                    <button type="button" id="copyHashBtn" class="btn-copy-checksum">Copy Hash</button>
+                    <span data-i18n="drawer.checksum">SHA-256 Checksum:</span>
+                    <button type="button" id="copyHashBtn" class="btn-copy-checksum" data-i18n="drawer.copy_hash">Copy Hash</button>
                 </div>
                 <code class="checksum-code" id="drawerSha256">68229fbe37078b6571da7a0b71747fd4b5b383f232b796c71ae6e773c0c13dbe</code>
             </div>
 
             <div class="drawer-section-card">
-                <h4>Extracted Verbatim Passage</h4>
+                <h4 data-i18n="drawer.verbatim_passage">Extracted Verbatim Passage</h4>
                 <div class="drawer-passage-content" id="drawerPassage"></div>
             </div>
 
             <div class="drawer-section-card">
-                <h4>Bound Entity Relationships</h4>
+                <h4 data-i18n="drawer.relationships">Bound Entity Relationships</h4>
                 <div class="drawer-triples-list" id="drawerTriples"></div>
             </div>
         </div>
 
         <div class="drawer-footer">
-            <span class="provenance-label">● Authoritative BIS Evidence Verified</span>
-            <button type="button" id="drawerDoneBtn" class="btn-drawer-done">Close Inspector</button>
+            <span class="provenance-label" data-i18n="drawer.provenance_verified">● Authoritative BIS Evidence Verified</span>
+            <button type="button" id="drawerDoneBtn" class="btn-drawer-done" data-i18n="drawer.close">Close Inspector</button>
         </div>
     </aside>
 

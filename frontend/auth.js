@@ -18,6 +18,7 @@
 
 // Official Supabase JS SDK via browser ESM
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { apiUrl } from './config.js';
 
 // Module-level singleton state
 let supabase = null;
@@ -35,7 +36,7 @@ const subscribers = new Set();
 async function fetchAuthConfig() {
     if (publicConfig) return publicConfig;
     try {
-        const res = await fetch('/api/auth/config');
+        const res = await fetch(apiUrl('/api/auth/config'));
         if (res.ok) {
             publicConfig = await res.json();
             return publicConfig;

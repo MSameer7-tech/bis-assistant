@@ -1,15 +1,26 @@
-# Core & Environment Configuration
+# Core & Web Framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
 pydantic>=2.7.0
 pydantic-settings>=2.2.0
 python-dotenv>=1.0.0
 
-# Document & PDF Processing (Phase 2)
-pymupdf>=1.24.0
+# Authentication & Security
+PyJWT>=2.8.0
+cryptography>=42.0.0
 
-# Embeddings & Vector Database (Phase 3)
-chromadb>=0.5.0
-rank-bm25>=0.2.2
+# HTTP & Networking
+httpx>=0.27.0
+requests>=2.31.0
+
+# Numerical & ML Processing
+numpy>=1.26.0
 sentence-transformers>=3.0.0
+rank-bm25>=0.2.2
+
+# Document & Storage Processing
+pymupdf>=1.24.0
+chromadb>=0.5.0
 
 # Testing
 pytest>=8.0.0

@@ -3,10 +3,12 @@ FastAPI Server for BIS AI Technical Assistant (Phase 7 Production).
 Exposes Grounded RAG Query endpoints, Standards Catalog, Knowledge Graph, Numerical Verification, and Web UI.
 """
 import sys
+import os
 import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
@@ -36,7 +38,31 @@ from backend.lab_finder_api import router as lab_finder_router
 app = FastAPI(
     title="BIS AI Technical Assistant API",
     description="Grounded AI Assistant for Indian Standards (BIS) compliance, parameter lookups, and statutory regulations.",
-    version="5.0.0"
+    version="13.0.0"
+)
+
+# CORS Configuration for Production (Vercel) & Development (Localhost)
+frontend_origin = os.getenv("FRONTEND_ORIGIN")
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+if frontend_origin:
+    for origin in frontend_origin.split(","):
+        clean_origin = origin.strip()
+        if clean_origin and clean_origin not in allowed_origins:
+            allowed_origins.append(clean_origin)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Mount Phase F3 Laboratory Finder Router
@@ -89,6 +115,14 @@ class QueryRequest(BaseModel):
     query: str
     as_of_date: Optional[str] = None
     top_k: int = 5
+    conversation_id: Optional[str] = None
+
+
+class AssistantQueryRequest(BaseModel):
+    query: str
+    target_language: Optional[str] = None
+    language: Optional[str] = None
+    as_of_date: Optional[str] = None
     conversation_id: Optional[str] = None
 
 
@@ -417,15 +451,75 @@ async def get_coverage_stats():
     return auditor.audit()
 
 
+@app.post("/api/assistant/query")
+@app.post("/api/v1/assistant/query")
+async def handle_assistant_query(
+    req: AssistantQueryRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """
+    Production BIS AI Assistant endpoint powered by Phase 12 F2 Orchestrator
+    and Phase 13 v13.0 Grounded RAG Engine.
+    """
+    target_lang = req.target_language or req.language
+    if target_lang == "auto":
+        target_lang = None
+    from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+    result = orchestrate_assistant_query(req.query, target_language=target_lang)
+    if current_user and isinstance(result, dict):
+        result["authenticated_user"] = {
+            "user_id": current_user["user_id"],
+            "email": current_user.get("email")
+        }
+    return result
+
+
+@app.post("/api/phase12e/query")
+@app.post("/api/v1/query")
+async def handle_rag_query(
+    req: AssistantQueryRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """
+    Direct Phase 13 Grounded RAG query endpoint.
+    """
+    from scripts.phase12_e_production_rag import query_production_rag
+    result = query_production_rag(req.query)
+    if current_user and isinstance(result, dict):
+        result["authenticated_user"] = {
+            "user_id": current_user["user_id"],
+            "email": current_user.get("email")
+        }
+    return result
+
+
+@app.get("/api/health")
+@app.get("/api/assistant/health")
+@app.get("/api/phase12e/health")
 @app.get("/health")
 @app.get("/api/v1/health")
 async def health_check():
+    evidence_count = 0
+    try:
+        evidence_count = evidence_reg.count()
+    except Exception:
+        pass
     return {
         "status": "healthy",
         "service": "bis-ai-assistant",
-        "version": "5.0.0",
+        "version": "13.0.0",
+        "phase": "13.0",
+        "engine": "Phase13GroundedRAGEngine",
+        "corpus_version": "v13.0",
         "ps_coverage": "100.00%",
-        "evidence_records": evidence_reg.count(),
+        "evidence_records": evidence_count,
         "graph_edges": 13339,
         "release_gate": "PASSED"
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("backend.app:app", host=host, port=port, reload=False)

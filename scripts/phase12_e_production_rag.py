@@ -40,7 +40,17 @@ def get_production_engine(model_path="data/models/embeddings/all-MiniLM-L6-v2", 
         return _PRODUCTION_ENGINE
 
     rdata = Phase13RetrievalData()
-    hybrid_engine = Phase13HybridRetrievalEngine(rdata)
+    local_p = Path(model_path)
+    if not local_p.is_absolute():
+        local_p = PROJECT_ROOT / model_path
+
+    model = None
+    if not local_p.exists():
+        from sentence_transformers import SentenceTransformer
+        print(f"[Phase12E] Local model {local_p} not found. Loading sentence-transformers/all-MiniLM-L6-v2...")
+        model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device=device)
+
+    hybrid_engine = Phase13HybridRetrievalEngine(rdata, model=model)
     _PRODUCTION_ENGINE = Phase13GroundedRAGEngine(rdata, hybrid_engine)
     return _PRODUCTION_ENGINE
 
@@ -182,9 +192,21 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=frontend_dir, **kwargs)
 
     def _set_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        frontend_origin = os.getenv("FRONTEND_ORIGIN")
+        if frontend_origin:
+            origin = self.headers.get("Origin", "")
+            allowed = [o.strip() for o in frontend_origin.split(",") if o.strip()]
+            if origin in allowed:
+                self.send_header("Access-Control-Allow-Origin", origin)
+            elif allowed:
+                self.send_header("Access-Control-Allow-Origin", allowed[0])
+            else:
+                self.send_header("Access-Control-Allow-Origin", "*")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Credentials", "true")
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -192,7 +214,8 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/api/assistant/health":
+        clean_path = self.path.split("?")[0].split("#")[0]
+        if clean_path in ["/api/health", "/api/assistant/health"]:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self._set_cors_headers()
@@ -396,8 +419,11 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_body.decode("utf-8"))
                 query_text = data.get("query", "")
+                target_lang = data.get("target_language") or data.get("language")
+                if target_lang == "auto":
+                    target_lang = None
                 from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
-                result = orchestrate_assistant_query(query_text)
+                result = orchestrate_assistant_query(query_text, target_language=target_lang)
                 if current_user and isinstance(result, dict):
                     result["authenticated_user"] = {
                         "user_id": current_user["user_id"],
@@ -489,8 +515,10 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
         self.send_response(404)
         self.end_headers()
 
-def run_production_server(port=3000):
+def run_production_server(port=None):
     """Starts the production unified server."""
+    if port is None:
+        port = int(os.getenv("PORT", 3000))
     # Warm up engine
     print("Warming up Phase 13 Production Engine (v13.0)...", flush=True)
     get_production_engine()
@@ -505,7 +533,7 @@ def run_production_server(port=3000):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--serve":
-        port = int(sys.argv[2]) if len(sys.argv) > 2 else 3000
+        port = int(sys.argv[2]) if len(sys.argv) > 2 else int(os.getenv("PORT", 3000))
         run_production_server(port=port)
     else:
         eng = get_production_engine()
