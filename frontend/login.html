@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In | BIS AI Assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-    <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css?v=14.0.1">
     <style>
@@ -366,11 +366,282 @@
             justify-content: center;
             gap: 6px;
         }
+
+        /* Full-viewport sign-in composition */
+        .login-page-wrap {
+            min-height: 100svh;
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(400px, 500px);
+            align-items: stretch;
+            gap: clamp(20px, 3vw, 52px);
+            background:
+                radial-gradient(ellipse 48% 70% at 9% 46%, rgba(52, 58, 77, 0.16), transparent 74%),
+                linear-gradient(115deg, #08090c 0%, #0b0c11 58%, #0d0d13 100%);
+            padding: clamp(28px, 5vw, 72px) clamp(24px, 7vw, 120px);
+            overflow: hidden;
+        }
+
+        .login-page-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+            background-size: 88px 88px;
+            opacity: 0.18;
+            mask-image: linear-gradient(90deg, black, transparent 78%);
+        }
+
+        .login-ambient-glow { display: none; }
+
+        .login-story {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+            padding: 4px 0 8px;
+        }
+
+        .login-story-topline,
+        .login-story-footer,
+        .login-wordmark,
+        .login-story-status {
+            display: flex;
+            align-items: center;
+        }
+
+        .login-story-topline { justify-content: space-between; gap: 20px; }
+
+        .login-wordmark {
+            gap: 10px;
+            color: rgba(255,255,255,0.9);
+            font-size: 15px;
+            font-weight: 650;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+
+        .login-wordmark-mark {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #a69aff;
+            border: 1px solid rgba(166, 154, 255, 0.3);
+            border-radius: 9px;
+            background: rgba(124, 110, 230, 0.1);
+        }
+
+        .login-wordmark-mark img,
+        .login-brand-emblem img {
+            width: 28px;
+            height: 28px;
+            display: block;
+        }
+
+        .login-story-status {
+            gap: 8px;
+            color: rgba(255,255,255,0.38);
+            font-size: 11px;
+            letter-spacing: 0.04em;
+        }
+
+        .login-story-status i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #68d4c2;
+            box-shadow: 0 0 0 4px rgba(104,212,194,0.08), 0 0 10px rgba(104,212,194,0.45);
+        }
+
+        .login-story-copy {
+            max-width: 820px;
+            margin: auto 0;
+            padding: 0;
+        }
+
+        .login-story-eyebrow {
+            display: block;
+            margin-bottom: 22px;
+            color: #9f95f4;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .login-story-copy h2 {
+            max-width: 820px;
+            margin: 0;
+            color: #f7f7f8;
+            font-size: clamp(42px, 4.7vw, 70px);
+            font-weight: 650;
+            line-height: 1.02;
+            letter-spacing: -0.055em;
+            text-wrap: balance;
+        }
+
+        .login-story-copy > p {
+            max-width: 500px;
+            margin: 28px 0 0;
+            color: rgba(255,255,255,0.53);
+            font-size: 16px;
+            line-height: 1.65;
+        }
+
+        .login-story-features {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            max-width: 820px;
+            margin-top: 42px;
+            border: 0;
+        }
+
+        .login-story-feature {
+            min-height: 112px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 18px 18px 17px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.045), rgba(255,255,255,0.014));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 24px rgba(0,0,0,0.12);
+        }
+
+        .login-story-feature + .login-story-feature {
+            border-left: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .login-story-feature:first-child,
+        .login-story-feature:last-child { padding-left: 18px; padding-right: 18px; }
+
+        .login-story-feature small {
+            max-width: none;
+        }
+
+        .login-story-feature span {
+            color: #9f95f4;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+        }
+
+        .login-story-feature strong {
+            color: rgba(255,255,255,0.82);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .login-story-feature small {
+            color: rgba(255,255,255,0.38);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .login-story-footer {
+            gap: 12px;
+            color: rgba(255,255,255,0.3);
+            font-size: 10px;
+            letter-spacing: 0.04em;
+        }
+
+        .login-story-footer-line {
+            width: 42px;
+            height: 1px;
+            background: rgba(255,255,255,0.18);
+        }
+
+        .login-card {
+            align-self: center;
+            justify-self: start;
+            transform: translateX(clamp(-180px, -8vw, -60px));
+            max-width: 500px;
+            padding: clamp(34px, 4vw, 48px) clamp(28px, 4vw, 42px);
+            border-radius: 18px;
+            background: rgba(16, 17, 23, 0.82);
+            border-color: rgba(255,255,255,0.11);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.06);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+        }
+
+        .login-brand-header { margin-bottom: 28px; }
+
+        .login-brand-emblem {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 18px;
+            border-radius: 13px;
+        }
+
+        .login-title { font-size: 24px; }
+        .login-subtitle { max-width: 300px; margin: 0 auto; }
+
+        @media (max-width: 760px) {
+            .login-page-wrap {
+                grid-template-columns: 1fr;
+                gap: 28px;
+                padding: 28px 22px 40px;
+                overflow-y: auto;
+            }
+            .login-story-copy { margin: 0; padding: 4vh 0 3vh; }
+            .login-story-copy h2 { max-width: 620px; font-size: clamp(40px, 9vw, 62px); }
+            .login-story-footer { display: none; }
+            .login-card { width: 100%; justify-self: stretch; transform: none; }
+        }
+
+        @media (max-width: 560px) {
+            .login-page-wrap { padding: 20px 16px 28px; }
+            .login-story-status { display: none; }
+            .login-story-copy { padding: 6vh 0 2vh; }
+            .login-story-copy h2 { font-size: clamp(36px, 12vw, 52px); }
+            .login-story-copy > p { margin-top: 20px; font-size: 14px; }
+            .login-story-features { grid-template-columns: 1fr; gap: 10px; margin-top: 30px; }
+            .login-story-feature,
+            .login-story-feature:first-child,
+            .login-story-feature:last-child { min-height: auto; padding: 14px 15px; border-left: 1px solid rgba(255,255,255,0.1); }
+            .login-card { padding: 30px 20px; }
+        }
     </style>
 </head>
 <body>
     <div class="login-page-wrap">
         <div class="login-ambient-glow" aria-hidden="true"></div>
+
+        <section class="login-story" aria-labelledby="loginStoryTitle">
+            <div class="login-story-topline">
+                <a href="/" class="login-wordmark" aria-label="BIS Assistant home">
+                    <span class="login-wordmark-mark" aria-hidden="true">
+                        <img src="/static/favicon.svg" alt="">
+                    </span>
+                    <span>BIS Assistant</span>
+                </a>
+            </div>
+
+            <div class="login-story-copy">
+                <span class="login-story-eyebrow">Standards intelligence, grounded in evidence</span>
+                <h2 id="loginStoryTitle">Make every standards decision with more clarity.</h2>
+                <p>Research Indian Standards, testing pathways, and recognized laboratories from one authoritative workspace.</p>
+                <div class="login-story-features" aria-label="BIS Assistant capabilities">
+                    <div class="login-story-feature"><span>01</span><strong>Research standards</strong><small>Find requirements and clauses faster.</small></div>
+                    <div class="login-story-feature"><span>02</span><strong>Locate laboratories</strong><small>Discover relevant testing scope.</small></div>
+                    <div class="login-story-feature"><span>03</span><strong>Review evidence</strong><small>Keep source context close at hand.</small></div>
+                </div>
+            </div>
+
+            <div class="login-story-footer">
+                <span>Built for standards-led work</span>
+                <span class="login-story-footer-line"></span>
+                <span>Bureau of Indian Standards research workspace</span>
+            </div>
+        </section>
 
         <div class="login-card" id="loginCard">
             <!-- Active Session View (shown if already logged in) -->
@@ -392,10 +663,7 @@
                 <!-- Brand Header -->
                 <div class="login-brand-header">
                     <a href="/" class="login-brand-emblem" title="Return to Home">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <polygon points="12,2 22,12 12,22 2,12" stroke="#7C6EE6" stroke-width="2" fill="rgba(124, 110, 230, 0.18)"/>
-                            <circle cx="12" cy="12" r="3.5" fill="#7C6EE6"/>
-                        </svg>
+                        <img src="/static/favicon.svg" alt="" aria-hidden="true">
                     </a>
                     <h1 id="pageTitle" class="login-title">Sign in to BIS Assistant</h1>
                     <p id="pageSubtitle" class="login-subtitle">Access verified Indian Standards & research history</p>

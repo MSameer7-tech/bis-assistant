@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BIS Assistant | Standards Research Workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=12.f.5">
-    <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png?v=12.f.5">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=12.f.5">
+    <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=12.f.5">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=12.f.5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
-    <link rel="stylesheet" href="./styles.css?v=aihub-2.1" id="appStyles">
+    <link rel="stylesheet" href="./styles.css?v=aihub-2.5" id="appStyles">
 </head>
 <body>
     <div class="app-shell bg-cosmic-grid">
@@ -22,10 +22,7 @@
             <div class="sidebar-brand">
                 <a href="#assistant" class="brand-left" id="brandLink">
                     <div class="brand-emblem-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <polygon points="12,2 22,12 12,22 2,12" stroke="#8678F9" stroke-width="2" fill="rgba(134, 120, 249, 0.15)"/>
-                            <circle cx="12" cy="12" r="3" fill="#8678F9"/>
-                        </svg>
+                        <img src="/static/favicon.svg" alt="" aria-hidden="true">
                     </div>
                     <div class="brand-titles">
                         <h1 class="brand-name">BIS Assistant</h1>
@@ -131,17 +128,17 @@
 
                         <div class="hero-inner">
                             <!-- Badge Pill -->
-                            <div class="hero-badge-pill">
-                                <span class="hero-badge-icon">✨</span>
-                                <span class="hero-badge-text">Introducing BIS AI Assistant</span>
+                        <div class="hero-badge-pill">
+                                <span class="hero-badge-icon" aria-hidden="true"><i></i></span>
+                                <span class="hero-badge-text">BIS research assistant</span>
                             </div>
 
                             <!-- Headline -->
-                            <h1 class="hero-headline">Research Indian Standards Effortlessly</h1>
+                            <h1 class="hero-headline">What would you like to research?</h1>
 
                             <!-- Subtitle -->
                             <p class="hero-subtitle">
-                                Ask questions, research Indian standards, accredited laboratory scopes, and testing parameters with a few lines of prompt.
+                                Search Indian Standards, testing requirements, laboratory scopes, and evidence from one focused workspace.
                             </p>
 
                             <!-- Central Search Pill Input Bar (Voice mic + Send matching media_1788694281150.png) -->
@@ -150,8 +147,8 @@
                                     type="text" 
                                     id="heroSearchInput" 
                                     class="hero-search-input" 
-                                    placeholder="Ask anything..." 
-                                    aria-label="Ask anything..." 
+                                    placeholder="Ask about a standard, test, or laboratory..."
+                                    aria-label="Ask about a standard, test, or laboratory"
                                     autocomplete="off"
                                 />
                                 <button type="button" class="btn-hero-mic" id="btnHeroMic" title="Voice input" aria-label="Voice input">
@@ -172,16 +169,16 @@
                             <!-- Suggestion Pills (AI Hub 2.0 Style) -->
                             <div class="hero-suggestions-wrap">
                                 <button type="button" class="hero-suggestion-pill" data-query="What is IS 8978?">
-                                    What is IS 8978?
+                                    IS 8978 requirements
                                 </button>
                                 <button type="button" class="hero-suggestion-pill" data-query="Which laboratories have scope for IS 8978?">
-                                    Which laboratories have scope for IS 8978?
+                                    Laboratories for IS 8978
                                 </button>
                                 <button type="button" class="hero-suggestion-pill" data-query="What is the testing fee for IS 8978?">
-                                    What is the testing fee for IS 8978?
+                                    Testing fees for IS 8978
                                 </button>
                                 <button type="button" class="hero-suggestion-pill" data-query="Is there authoritative evidence for this requirement?">
-                                    Is there authoritative evidence for this requirement?
+                                    Show authoritative evidence
                                 </button>
                             </div>
                         </div>
@@ -223,61 +220,75 @@
             <!-- 3. VIEW: HOME (Professional BIS Research Workspace Landing) -->
             <section class="home-view hidden" id="viewHome" role="region" aria-label="BIS Research Workspace Home">
                 <div class="home-content-container">
-                    
-                    <!-- 1. Hero / Introduction -->
-                    <header class="home-hero">
-                        <div class="home-eyebrow">
-                            <span class="home-eyebrow-dot" aria-hidden="true"></span>
-                            <span>BIS RESEARCH WORKSPACE</span>
-                        </div>
-                        <h1 class="home-title">Research Indian Standards with confidence.</h1>
-                        <p class="home-description">
-                            BIS-AI-Assistant helps you research Indian Standards, understand requirements, find relevant testing laboratories, and review available supporting evidence from a single workspace.
-                        </p>
-                    </header>
-
-                    <!-- 2. Primary Search -->
-                    <section class="home-search-section" aria-label="Search Workspace">
-                        <form id="homeSearchForm" class="home-search-box" autocomplete="off">
-                            <div class="home-search-icon-wrap" aria-hidden="true">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                </svg>
+                    <div class="home-hero-grid">
+                        <header class="home-hero">
+                            <div class="home-eyebrow">
+                                <span class="home-eyebrow-dot" aria-hidden="true"></span>
+                                <span>BIS RESEARCH WORKSPACE</span>
                             </div>
-                            <textarea 
-                                id="homeSearchInput" 
-                                class="home-search-textarea no-scrollbar" 
-                                placeholder="Search Indian Standards, requirements, laboratories, or testing..." 
-                                rows="1"
-                                aria-label="Search Indian Standards, requirements, laboratories, or testing"
-                                required
-                            ></textarea>
-                            <div class="home-search-actions">
-                                <button type="button" class="btn-home-mic" id="btnHomeMic" title="Voice input" aria-label="Voice input">
-                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                        <line x1="12" y1="19" x2="12" y2="22"/>
-                                    </svg>
+                            <h1 class="home-title">Standards intelligence for confident decisions.</h1>
+                            <p class="home-description">
+                                Navigate Indian Standards, certification requirements, testing pathways, and recognized laboratories from one authoritative research workspace.
+                            </p>
+                            <div class="home-hero-actions">
+                                <button type="button" class="home-primary-cta" id="homeStartResearch">
+                                    Start research
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                                 </button>
-                                <button type="submit" id="homeSendBtn" class="home-search-submit" title="Search" aria-label="Search" disabled>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="19" x2="12" y2="5"/>
-                                        <polyline points="5 12 12 5 19 12"/>
-                                    </svg>
+                                <button type="button" class="home-secondary-cta" id="homeOpenLabs">
+                                    Explore laboratories
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v7.31a2 2 0 0 1-.37 1.17L4.22 18.4A2 2 0 0 0 5.86 21h12.28a2 2 0 0 0 1.64-2.6l-5.41-7.92A2 2 0 0 1 14 9.31V2"/><line x1="8" y1="2" x2="16" y2="2"/></svg>
                                 </button>
                             </div>
-                        </form>
-                        <div class="home-search-caption">
-                            <span class="home-search-hint-text">Ask about a standard, requirement, test, or laboratory</span>
-                            <span class="home-search-kbd-hint"><kbd>Enter</kbd> to search &nbsp;·&nbsp; <kbd>Shift + Enter</kbd> for new line</span>
-                        </div>
-                    </section>
+                            <div class="home-hero-note"><span class="home-note-check" aria-hidden="true">✓</span> Grounded in available BIS evidence</div>
+                        </header>
 
-                    <!-- 3. What You Can Do -->
+                        <div class="home-product-preview" aria-label="BIS evidence workspace preview">
+                            <div class="preview-glow" aria-hidden="true"></div>
+                            <div class="preview-window">
+                                <div class="preview-window-bar">
+                                    <div class="preview-window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+                                    <span>STANDARD RECORD</span>
+                                    <span class="preview-live"><i></i> LIVE</span>
+                                </div>
+                                <div class="preview-record-head">
+                                    <div>
+                                        <span class="preview-kicker">INDIAN STANDARD</span>
+                                        <h2>IS 8978 : 1992</h2>
+                                        <p>Electric instantaneous water heaters</p>
+                                    </div>
+                                    <span class="preview-verified">Verified</span>
+                                </div>
+                                <div class="preview-record-grid">
+                                    <div class="preview-record-cell"><span>REQUIREMENTS</span><strong>24 clauses</strong></div>
+                                    <div class="preview-record-cell"><span>TESTING SCOPE</span><strong>18 parameters</strong></div>
+                                    <div class="preview-record-cell"><span>LABORATORIES</span><strong>7 matched</strong></div>
+                                    <div class="preview-record-cell"><span>LAST REVIEW</span><strong>Source-backed</strong></div>
+                                </div>
+                                <div class="preview-evidence-row">
+                                    <span class="preview-evidence-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg></span>
+                                    <div><strong>Evidence trail attached</strong><span>Bureau of Indian Standards · source context available</span></div>
+                                    <svg class="preview-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-proof-strip" aria-label="Workspace capabilities">
+                        <div class="home-proof-item"><strong>Standards</strong><span>Requirements and specifications</span></div>
+                        <div class="home-proof-divider" aria-hidden="true"></div>
+                        <div class="home-proof-item"><strong>Testing</strong><span>Parameters, methods, and fees</span></div>
+                        <div class="home-proof-divider" aria-hidden="true"></div>
+                        <div class="home-proof-item"><strong>Laboratories</strong><span>Recognized scope discovery</span></div>
+                        <div class="home-proof-divider" aria-hidden="true"></div>
+                        <div class="home-proof-item"><strong>Evidence</strong><span>Traceable source context</span></div>
+                    </div>
+
                     <section class="home-section home-capabilities-section" aria-labelledby="homeCapabilitiesHeading">
-                        <h2 id="homeCapabilitiesHeading" class="home-section-eyebrow">WHAT YOU CAN DO</h2>
+                        <div class="home-section-heading-row">
+                            <div><span class="home-section-kicker">RESEARCH PATHWAYS</span><h2 id="homeCapabilitiesHeading">Move from question to clarity.</h2></div>
+                            <span class="home-section-side-note">Built for standards-led work</span>
+                        </div>
                         <div class="home-capabilities-grid">
                             
                             <!-- Standards -->
@@ -519,10 +530,7 @@
         <div id="authModal" class="auth-modal-card" role="dialog" aria-labelledby="authModalTitle" aria-modal="true">
             <div class="auth-modal-header">
                 <div class="auth-brand-emblem">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <polygon points="12,2 22,12 12,22 2,12" stroke="#7C6EE6" stroke-width="2" fill="rgba(124, 110, 230, 0.12)"/>
-                        <circle cx="12" cy="12" r="3" fill="#7C6EE6"/>
-                    </svg>
+                    <img src="/static/favicon.svg" alt="" aria-hidden="true">
                 </div>
                 <div class="auth-header-text">
                     <h3 id="authModalTitle" class="auth-title">Sign in to BIS Assistant</h3>
@@ -623,6 +631,6 @@
     <script src="./vendor/leaflet/leaflet.js"></script>
 
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=12.f.8"></script>
+    <script type="module" src="./app.js?v=12.f.10"></script>
 </body>
 </html>

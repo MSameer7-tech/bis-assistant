@@ -82,6 +82,7 @@ PRODUCTS_PATH = ROOT_DIR / "data" / "registry" / "products.jsonl"
 # Mount static frontend
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+    app.mount("/vendor", StaticFiles(directory=str(FRONTEND_DIR / "vendor")), name="vendor")
 
 
 class QueryRequest(BaseModel):

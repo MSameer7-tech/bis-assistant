@@ -18,7 +18,7 @@
  */
 
 import { AssistantService } from './mockData.js';
-import { LabFinderComponent } from './labFinderComponent.js';
+import { LabFinderComponent } from './labFinderComponent.js?v=12.f.10';
 import {
     initializeAuth,
     onAuthStateChange,
@@ -102,6 +102,8 @@ function initApp() {
     const homeSearchInput = document.getElementById('homeSearchInput');
     const homeSendBtn = document.getElementById('homeSendBtn');
     const btnHomeMic = document.getElementById('btnHomeMic');
+    const homeStartResearch = document.getElementById('homeStartResearch');
+    const homeOpenLabs = document.getElementById('homeOpenLabs');
 
     // Evidence Drawer
     const evidenceDrawer = document.getElementById('evidenceDrawer');
@@ -567,10 +569,7 @@ function initApp() {
         row.className = 'assistant-row';
         row.innerHTML = `
             <div class="assistant-avatar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polygon points="12,3 20,8 20,16 12,21 4,16 4,8" stroke="currentColor" stroke-width="1.8" fill="rgba(124, 110, 230, 0.12)"/>
-                    <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
-                </svg>
+                <img src="/static/favicon.svg" alt="" aria-hidden="true">
             </div>
             <div class="assistant-bubble-container">
                 <div class="assistant-thinking">
@@ -589,10 +588,7 @@ function initApp() {
         row.className = 'assistant-row';
         row.innerHTML = `
             <div class="assistant-avatar" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polygon points="12,3 20,8 20,16 12,21 4,16 4,8" stroke="currentColor" stroke-width="1.8" fill="rgba(244, 63, 94, 0.12)"/>
-                    <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
-                </svg>
+                <img src="/static/favicon.svg" alt="" aria-hidden="true">
             </div>
             <div class="assistant-bubble-container">
                 <div class="grounding-notice notice-refusal">
@@ -892,10 +888,7 @@ function initApp() {
 
         row.innerHTML = `
             <div class="assistant-avatar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <polygon points="12,3 20,8 20,16 12,21 4,16 4,8" stroke="currentColor" stroke-width="1.8" fill="rgba(124, 110, 230, 0.12)"/>
-                    <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
-                </svg>
+                <img src="/static/favicon.svg" alt="" aria-hidden="true">
             </div>
             <div class="assistant-bubble-container">
                 <div class="assistant-bubble">
@@ -1306,6 +1299,8 @@ function initApp() {
                 switchView('home');
             });
         }
+        if (homeStartResearch) homeStartResearch.addEventListener('click', () => switchView('assistant'));
+        if (homeOpenLabs) homeOpenLabs.addEventListener('click', () => switchView('labfinder'));
 
         // Home View Explore Cards
         document.querySelectorAll('.home-explore-card').forEach(card => {

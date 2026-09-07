@@ -147,7 +147,7 @@ export class LabFinderComponent {
 
                             <!-- Preset Quick Locations -->
                             <div class="quick-locations-wrap">
-                                <span class="filter-label quick-anchor-label">Quick Anchors:</span>
+                                <span class="filter-label quick-anchor-label">Popular cities</span>
                                 <div class="quick-presets-list">
                                     <button type="button" class="btn-location-preset" data-name="Delhi" data-lat="28.6139" data-lon="77.2090">Delhi</button>
                                     <button type="button" class="btn-location-preset" data-name="Mumbai" data-lat="19.0760" data-lon="72.8777">Mumbai</button>
@@ -184,7 +184,9 @@ export class LabFinderComponent {
                         <div class="results-scroll-container no-scrollbar" id="resultsListContainer">
                             <!-- Initial Landing Guide -->
                             <div class="results-empty-state" id="initialGuideState">
-                                <div class="empty-state-emblem">🔬</div>
+                                <div class="empty-state-emblem" aria-hidden="true">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
+                                </div>
                                 <h3 class="empty-state-title">Search Qualified BIS Laboratories</h3>
                                 <p class="empty-state-desc">Search by standard number or product description (e.g. <code>find labs for IS 4985 testing</code> or <code>testing LED lamps</code>) to inspect accredited laboratory scopes.</p>
                                 <div class="empty-state-shortcuts">
@@ -748,7 +750,7 @@ export class LabFinderComponent {
             if (data.query_criteria.user_coordinates) {
                 const tag = document.createElement('span');
                 tag.className = 'meta-pill';
-                tag.innerHTML = `📍 Proximity: Near Anchor`;
+                tag.textContent = 'Proximity: Near Anchor';
                 metaTags.appendChild(tag);
             }
             if (data.query_criteria.max_distance_km) {
@@ -839,9 +841,9 @@ export class LabFinderComponent {
         // Distance or Location Unavailable Badge
         let distanceHtml = '';
         if (geo.has_coordinates && typeof geo.distance_km === 'number') {
-            distanceHtml = `<span class="card-distance-badge">📍 ${geo.distance_km.toFixed(1)} km</span>`;
+            distanceHtml = `<span class="card-distance-badge">${geo.distance_km.toFixed(1)} km away</span>`;
         } else if (!geo.has_coordinates) {
-            distanceHtml = `<span class="card-distance-badge unavailable" title="No validated geographic coordinates in metadata cache">📍 Location unavailable</span>`;
+            distanceHtml = `<span class="card-distance-badge unavailable" title="No validated geographic coordinates in metadata cache">Location unavailable</span>`;
         }
 
         // Scope Completeness Badge
@@ -858,9 +860,9 @@ export class LabFinderComponent {
         // Matched Clauses Pill
         let clausesHtml = '';
         if (cap.matched_clauses && cap.matched_clauses.length > 0) {
-            clausesHtml = `<span class="card-clauses-info">✓ ${cap.matched_clauses.length} clauses in scope</span>`;
+            clausesHtml = `<span class="card-clauses-info">${cap.matched_clauses.length} clauses in scope</span>`;
         } else if (cap.excluded_clauses && cap.excluded_clauses.length > 0) {
-            clausesHtml = `<span class="card-clauses-info excluded">⚠ ${cap.excluded_clauses.length} clauses excluded</span>`;
+            clausesHtml = `<span class="card-clauses-info excluded">${cap.excluded_clauses.length} clauses excluded</span>`;
         }
 
         card.innerHTML = `
@@ -1226,21 +1228,23 @@ export class LabFinderComponent {
 
         let title = 'No Laboratories Found';
         let desc = 'No accredited testing laboratories matched your criteria.';
-        let icon = '🔍';
+        let icon = 'search';
 
         if (type === 'NO_CAPABILITY_MATCH') {
             title = `No Capability Scope for ${context.standard || 'Standard'}`;
             desc = `None of the 580 laboratories in the BIS LIMS catalog currently hold accredited testing scope for <strong>${this.escapeHtml(context.standard || '')}</strong>. BIS testing scope is normative and capability cannot be synthesized.`;
-            icon = '🛡️';
+            icon = 'shield';
         } else if (type === 'RADIUS_EXHAUSTED') {
             title = `No Laboratories Within ${context.radius} km`;
             desc = `Laboratories with testing scope for <strong>${this.escapeHtml(context.standard || '')}</strong> exist in the BIS catalog, but none fall within ${context.radius} km of your reference location. Expand the distance filter to see qualified facilities.`;
-            icon = '📍';
+            icon = 'pin';
         }
 
         container.innerHTML = `
             <div class="results-empty-state">
-                <div class="empty-state-emblem">${icon}</div>
+                <div class="empty-state-emblem empty-state-emblem-${icon}" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path class="empty-state-shield-line" d="M12 3 19 6v5c0 4.5-3 7.7-7 10-4-2.3-7-5.5-7-10V6l7-3Z"/><path class="empty-state-pin-line" d="M12 21s6-4.2 6-10a6 6 0 1 0-12 0c0 5.8 6 10 6 10Z"/><circle class="empty-state-pin-line" cx="12" cy="11" r="2"/></svg>
+                </div>
                 <h3 class="empty-state-title">${title}</h3>
                 <p class="empty-state-desc">${desc}</p>
                 <div class="empty-state-actions">
