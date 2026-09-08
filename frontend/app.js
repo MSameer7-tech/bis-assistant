@@ -17,7 +17,7 @@
  * - Mobile responsive drawer & sidebar (tested down to 375x667)
  */
 
-import { AssistantService } from './mockData.js';
+import { AssistantService } from './mockData.js?v=14.2.0';
 import { LabFinderComponent } from './labFinderComponent.js';
 import { apiUrl } from './config.js';
 import {
@@ -2331,10 +2331,10 @@ function initApp() {
                 if (btnApiMock) btnApiMock.classList.remove('active');
                 console.log('Production Engine connected successfully.');
             } else {
-                console.log('Production backend endpoint offline, defaulting to high-fidelity mock adapter.');
+                console.log('Production backend health probe returned non-healthy status, keeping production mode.');
             }
         }).catch(() => {
-            console.log('Production backend endpoint offline, defaulting to high-fidelity mock adapter.');
+            console.log('Production backend health probe unreachable, keeping production mode.');
         });
     }
 }

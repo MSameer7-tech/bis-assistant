@@ -661,7 +661,7 @@ export class AssistantService {
         if (this.checkedHealth && this.backendAvailable) return { status: 'healthy' };
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1500);
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
             let res = await fetch(apiUrl('/api/assistant/health'), { signal: controller.signal });
             if (!res.ok) {
                 res = await fetch(apiUrl('/api/phase12e/health'), { signal: controller.signal });
@@ -683,6 +683,9 @@ export class AssistantService {
 
     /**
      * Primary query dispatcher.
+     * In production mode, communicates directly with the real API backend.
+     * Preserves explicit mock mode only when explicitly requested.
+     * Eliminates silent fallbacks from API failures into mock responses.
      */
     static async query(query, options = {}) {
         const cleanQuery = (query || "").trim();
@@ -694,11 +697,11 @@ export class AssistantService {
             return this.queryMock(cleanQuery, options);
         }
 
-        // Try production F2 assistant backend first
+        // Production F2 assistant backend request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const extraHeaders = options.headers || {};
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000);
-            const extraHeaders = options.headers || {};
             let res = await fetch(apiUrl('/api/assistant/query'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...extraHeaders },
@@ -723,13 +726,29 @@ export class AssistantService {
                 this.backendAvailable = true;
                 return this._normalizeResponse(data, cleanQuery);
             }
-        } catch (err) {
-            console.warn('Production backend call failed, falling back to mock adapter:', err.message);
-            this.backendAvailable = false;
-        }
 
-        // Graceful fallback to mock adapter
-        return this.queryMock(cleanQuery, options);
+            // Extract real backend error details if available
+            let errorMsg = `Server error (${res.status})`;
+            try {
+                const errData = await res.json();
+                if (errData?.detail?.error) {
+                    errorMsg = errData.detail.error;
+                } else if (errData?.error) {
+                    errorMsg = errData.error;
+                } else if (errData?.message) {
+                    errorMsg = errData.message;
+                }
+            } catch (_) {}
+            throw new Error(errorMsg);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            this.backendAvailable = false;
+            console.error('[Assistant API Error]:', err.message);
+            if (err.name === 'AbortError') {
+                throw new Error('Query request timed out. Please check your connection and try again.');
+            }
+            throw err;
+        }
     }
 
     /**
