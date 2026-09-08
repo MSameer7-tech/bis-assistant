@@ -321,7 +321,7 @@ export async function signOut() {
     currentSession = null;
     currentUser = null;
 
-    // 2. Immediately purge tokens from localStorage
+    // 2. Immediately purge tokens from localStorage and guest flag from sessionStorage
     try {
         localStorage.removeItem('bis_supabase_auth_token');
         for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -333,6 +333,7 @@ export async function signOut() {
     } catch (e) {
         console.warn('[BIS Auth] LocalStorage purge warning:', e);
     }
+    setGuestSession(false);
 
     // 3. Immediately notify all subscribers
     notifySubscribers('SIGNED_OUT', null);
@@ -380,3 +381,125 @@ export async function updatePassword(newPassword) {
     if (error) throw error;
     return data;
 }
+
+/**
+ * Returns the environment-appropriate Login URL.
+ */
+export function getLoginUrl() {
+    if (typeof window === 'undefined') return '/login';
+    const path = window.location.pathname || '';
+    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
+    return isStaticOrFile ? './login.html' : '/login';
+}
+
+/**
+ * Returns the environment-appropriate Home / Workspace URL.
+ */
+export function getHomeUrl() {
+    if (typeof window === 'undefined') return '/#home';
+    const path = window.location.pathname || '';
+    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
+    return isStaticOrFile ? './index.html#home' : '/#home';
+}
+
+/**
+ * Checks whether the current user has opted for guest session access.
+ */
+export function isGuestSession() {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (sessionStorage.getItem('bis_guest_mode') === 'true') return true;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('guest') === 'true' || params.get('guest') === '1') {
+            sessionStorage.setItem('bis_guest_mode', 'true');
+            return true;
+        }
+    } catch (e) {
+        // silent
+    }
+    return false;
+}
+
+/**
+ * Sets or clears the guest mode flag in sessionStorage.
+ */
+export function setGuestSession(enable = true) {
+    if (typeof window === 'undefined') return;
+    try {
+        if (enable) {
+            sessionStorage.setItem('bis_guest_mode', 'true');
+        } else {
+            sessionStorage.removeItem('bis_guest_mode');
+        }
+    } catch (e) {
+        // silent
+    }
+}
+
+/**
+ * Fast synchronous check used exclusively for early entry to prevent FOUC (flash of unauthenticated content).
+ * NOTE: As per architectural requirements, localStorage is NOT the final authority;
+ * Supabase auth.getSession() performs the canonical session validation.
+ */
+export function hasPotentialSession() {
+    if (typeof window === 'undefined') return false;
+    if (isGuestSession()) return true;
+    try {
+        if (localStorage.getItem('bis_supabase_auth_token')) return true;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
+                return true;
+            }
+        }
+    } catch (e) {
+        // silent
+    }
+    return false;
+}
+
+/**
+ * Asynchronously validates the current session with the Supabase client.
+ * Returns: { authenticated: boolean, user: object|null, session: object|null, isGuest: boolean }
+ */
+export async function validateSession() {
+    // 1. Guest session explicitly enabled
+    if (isGuestSession()) {
+        return { authenticated: true, user: null, session: null, isGuest: true };
+    }
+
+    // 2. Initialize Supabase client
+    const initResult = await initializeAuth();
+    const client = initResult.supabase;
+
+    // If Supabase credentials are not configured in environment, allow guest access
+    if (!initResult.configured || !client) {
+        return { authenticated: true, user: null, session: null, isGuest: true };
+    }
+
+    // 3. Canonical validation with Supabase
+    try {
+        const { data, error } = await client.auth.getSession();
+        if (error || !data?.session) {
+            await signOut();
+            return { authenticated: false, user: null, session: null, isGuest: false };
+        }
+
+        const sess = data.session;
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (sess.expires_at && sess.expires_at <= nowSec) {
+            // Expired session that could not be auto-refreshed
+            await signOut();
+            return { authenticated: false, user: null, session: null, isGuest: false };
+        }
+
+        currentSession = sess;
+        currentUser = sess.user;
+        return { authenticated: true, user: sess.user, session: sess, isGuest: false };
+    } catch (err) {
+        console.warn('[BIS Auth] Session validation error:', err);
+        await signOut();
+        return { authenticated: false, user: null, session: null, isGuest: false };
+    }
+}
+

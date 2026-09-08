@@ -3969,6 +3969,75 @@ html, body {
 }
 
 /* =============================================================================
+   AUTH ENTRY LOADING SCREEN (FOUC Prevention)
+   ============================================================================= */
+
+.auth-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: var(--bg-base, #05060a);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.auth-loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.auth-loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.auth-loading-emblem {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(134, 120, 249, 0.12);
+    border: 1px solid rgba(134, 120, 249, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 24px rgba(134, 120, 249, 0.25);
+}
+
+.auth-loading-emblem img {
+    width: 28px;
+    height: 28px;
+}
+
+.auth-loading-spinner {
+    width: 26px;
+    height: 26px;
+    border: 2.5px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--accent-purple, #8678F9);
+    border-radius: 50%;
+    animation: authSpin 0.8s linear infinite;
+}
+
+.auth-loading-text {
+    font-size: 13.5px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+    font-family: var(--font-main);
+    letter-spacing: -0.01em;
+}
+
+@keyframes authSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* =============================================================================
    PHASE F3: STEP 8 - BIS LABORATORY FINDER FRONTEND WORKSPACE
    ============================================================================= */
 

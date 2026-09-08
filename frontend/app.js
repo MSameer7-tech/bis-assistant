@@ -32,7 +32,11 @@ import {
     updatePassword,
     getAuthHeaders,
     isConfigured,
-    getCachedUser
+    getCachedUser,
+    validateSession,
+    getLoginUrl,
+    isGuestSession,
+    setGuestSession
 } from './auth.js';
 
 function initApp() {
@@ -1702,24 +1706,17 @@ function initApp() {
         if (btnSidebarSignOut) {
             btnSidebarSignOut.addEventListener('click', async (e) => {
                 e.preventDefault();
-                const cachedUser = typeof getCachedUser === 'function' ? getCachedUser() : null;
-                
-                // If authenticated, execute sign out and update UI
-                if (cachedUser) {
-                    try {
-                        await signOut();
-                        updateAuthStateUI('SIGNED_OUT', null, null);
-                    } catch (err) {
-                        console.warn('[BIS Auth] SignOut error:', err);
-                        updateAuthStateUI('SIGNED_OUT', null, null);
-                    }
+                try {
+                    await signOut();
+                    setGuestSession(false);
+                    updateAuthStateUI('SIGNED_OUT', null, null);
+                } catch (err) {
+                    console.warn('[BIS Auth] SignOut error:', err);
+                    updateAuthStateUI('SIGNED_OUT', null, null);
                 }
 
                 // Redirect to login page
-                const path = window.location.pathname || '';
-                const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
-                const loginUrl = isStaticOrFile ? './login.html' : '/login';
-
+                const loginUrl = getLoginUrl();
                 try {
                     window.location.href = loginUrl;
                 } catch (navErr) {
@@ -2081,14 +2078,13 @@ function initApp() {
                 e.preventDefault();
                 try {
                     await signOut();
+                    setGuestSession(false);
                     updateAuthStateUI('SIGNED_OUT', null, null);
                 } catch (err) {
                     console.warn('[BIS Auth] SignOut error:', err);
                     updateAuthStateUI('SIGNED_OUT', null, null);
                 }
-                const path = window.location.pathname || '';
-                const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
-                const loginUrl = isStaticOrFile ? './login.html' : '/login';
+                const loginUrl = getLoginUrl();
                 try {
                     window.location.href = loginUrl;
                 } catch {
@@ -2303,6 +2299,26 @@ function initApp() {
     } catch (err) {
         console.error('[BIS Init] handleHashRouting error:', err);
     }
+
+    // -------------------------------------------------------------------------
+    // Session Guard & Entry Authentication Check
+    // -------------------------------------------------------------------------
+    const authLoadingScreen = document.getElementById('authLoadingScreen');
+
+    validateSession().then((authState) => {
+        if (!authState.authenticated) {
+            window.location.replace(getLoginUrl());
+            return;
+        }
+        if (authLoadingScreen) {
+            authLoadingScreen.classList.add('hidden');
+        }
+    }).catch((err) => {
+        console.warn('[BIS Auth Guard] Validation error:', err);
+        if (authLoadingScreen) {
+            authLoadingScreen.classList.add('hidden');
+        }
+    });
 
     // Check backend health asynchronously
     const checkHealthFn = AssistantService.checkHealth || AssistantService.checkBackendHealth;

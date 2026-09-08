@@ -11,8 +11,55 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="./styles.css?v=aihub-2.5" id="appStyles">
+    <!-- Synchronous Early Entry-Guard to prevent FOUC (flash of unauthenticated content) -->
+    <script>
+        (function() {
+            var isGuest = false;
+            try {
+                if (sessionStorage.getItem('bis_guest_mode') === 'true') isGuest = true;
+                var p = new URLSearchParams(window.location.search);
+                if (p.get('guest') === 'true' || p.get('guest') === '1') {
+                    sessionStorage.setItem('bis_guest_mode', 'true');
+                    isGuest = true;
+                }
+            } catch(e) {}
+
+            if (isGuest) return;
+
+            var hasCandidateToken = false;
+            try {
+                if (localStorage.getItem('bis_supabase_auth_token')) {
+                    hasCandidateToken = true;
+                } else {
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var k = localStorage.key(i);
+                        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+                            hasCandidateToken = true;
+                            break;
+                        }
+                    }
+                }
+            } catch(e) {}
+
+            if (!hasCandidateToken) {
+                var isStatic = window.location.protocol === 'file:' || window.location.pathname.endsWith('.html');
+                var target = isStatic ? './login.html' : '/login';
+                window.location.replace(target);
+            }
+        })();
+    </script>
 </head>
 <body>
+    <!-- Dedicated Fullscreen Loading Overlay for Session Verification -->
+    <div id="authLoadingScreen" class="auth-loading-overlay" aria-live="polite">
+        <div class="auth-loading-content">
+            <div class="auth-loading-emblem">
+                <img src="/static/favicon.svg" alt="BIS Logo">
+            </div>
+            <div class="auth-loading-spinner" aria-hidden="true"></div>
+            <span class="auth-loading-text">Verifying secure session...</span>
+        </div>
+    </div>
     <div class="app-shell bg-cosmic-grid">
         <!-- ======================================================= -->
         <!-- LEFT SIDEBAR: AI-Hub Style Workspace Navigation         -->

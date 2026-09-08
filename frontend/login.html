@@ -653,7 +653,7 @@
                     Authenticated via Supabase
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <a href="/#home" class="btn-login-submit" style="text-decoration: none;">Go to Home &rarr;</a>
+                    <a href="/#home" id="btnActiveGoHome" class="btn-login-submit" style="text-decoration: none;">Go to Workspace &rarr;</a>
                     <button type="button" id="btnActiveSignOut" class="btn-login-social">Sign Out</button>
                 </div>
             </div>
@@ -662,7 +662,7 @@
             <div id="authFormView">
                 <!-- Brand Header -->
                 <div class="login-brand-header">
-                    <a href="/" class="login-brand-emblem" title="Return to Home">
+                    <a href="/login" class="login-brand-emblem" title="BIS Assistant">
                         <img src="/static/favicon.svg" alt="" aria-hidden="true">
                     </a>
                     <h1 id="pageTitle" class="login-title">Sign in to BIS Assistant</h1>
@@ -755,7 +755,7 @@
                         <span id="footerPromptText">Don't have an account?</span>
                         <button type="button" id="btnSwitchMode" class="btn-switch-link">Create an account</button>
                     </div>
-                    <a href="/" class="btn-guest-link" title="Continue using BIS Assistant without signing in">
+                    <a href="/?guest=true" class="btn-guest-link" id="btnGuestLink" title="Continue using BIS Assistant without signing in">
                         Continue as Guest &rarr;
                     </a>
                 </div>
@@ -774,7 +774,9 @@
             signInWithGitHub,
             signOut,
             sendPasswordReset,
-            updatePassword
+            updatePassword,
+            getHomeUrl,
+            setGuestSession
         } from './auth.js';
 
         // DOM elements
@@ -941,9 +943,24 @@
             }
         });
 
+        const btnGuestLink = document.getElementById('btnGuestLink');
+        if (btnGuestLink) {
+            btnGuestLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                setGuestSession(true);
+                window.location.href = getHomeUrl();
+            });
+        }
+
+        const btnActiveGoHome = document.getElementById('btnActiveGoHome');
+        if (btnActiveGoHome) {
+            btnActiveGoHome.href = getHomeUrl();
+        }
+
         btnActiveSignOut.addEventListener('click', async () => {
             try {
                 await signOut();
+                setGuestSession(false);
                 activeSessionView.classList.add('hidden');
                 authFormView.classList.remove('hidden');
                 setMode('signin');
@@ -986,16 +1003,18 @@
             try {
                 if (mode === 'signin') {
                     const data = await signInWithEmail(email, password);
+                    setGuestSession(false);
                     showAlert('success', 'Sign in successful! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = '/#home';
+                        window.location.href = getHomeUrl();
                     }, 800);
                 } else if (mode === 'signup') {
                     const data = await signUpWithEmail(email, password);
                     if (data?.session) {
+                        setGuestSession(false);
                         showAlert('success', 'Account created successfully! Redirecting...');
                         setTimeout(() => {
-                            window.location.href = '/#home';
+                            window.location.href = getHomeUrl();
                         }, 800);
                     } else {
                         showAlert('success', 'Account created! Please check your email inbox to confirm your registration.');
@@ -1005,9 +1024,10 @@
                     showAlert('success', 'A password reset link has been sent to your email.');
                 } else if (mode === 'reset') {
                     await updatePassword(password);
+                    setGuestSession(false);
                     showAlert('success', 'Your password has been successfully updated! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = '/#home';
+                        window.location.href = getHomeUrl();
                     }, 1000);
                 }
             } catch (err) {
