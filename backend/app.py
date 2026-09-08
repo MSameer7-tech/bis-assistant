@@ -125,6 +125,8 @@ PRODUCTS_PATH = ROOT_DIR / "data" / "registry" / "products.jsonl"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
     app.mount("/vendor", StaticFiles(directory=str(FRONTEND_DIR / "vendor")), name="vendor")
+    if (FRONTEND_DIR / "i18n").exists():
+        app.mount("/i18n", StaticFiles(directory=str(FRONTEND_DIR / "i18n")), name="i18n")
 
 
 class QueryRequest(BaseModel):
@@ -195,6 +197,14 @@ async def serve_css(filename: str):
     file_path = FRONTEND_DIR / f"{filename}.css"
     if file_path.exists():
         return FileResponse(str(file_path), media_type="text/css")
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/i18n/{filename}.json")
+async def serve_i18n(filename: str):
+    file_path = FRONTEND_DIR / "i18n" / f"{filename}.json"
+    if file_path.exists():
+        return FileResponse(str(file_path), media_type="application/json")
     raise HTTPException(status_code=404, detail="File not found")
 
 

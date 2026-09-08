@@ -273,3 +273,14 @@ def test_server_secrets_isolation(client):
     content3 = res3.text
     assert "gsk_" not in content3
     assert "service_role" not in content3
+
+
+def test_i18n_static_endpoints(client):
+    """Verify that /i18n/en.json and /i18n/hi.json return HTTP 200 with valid JSON dictionaries."""
+    for lang in ["en", "hi"]:
+        res = client.get(f"/i18n/{lang}.json")
+        assert res.status_code == 200
+        data = res.json()
+        assert isinstance(data, dict)
+        assert len(data) > 0
+        assert "app" in data or "common" in data or "nav" in data
