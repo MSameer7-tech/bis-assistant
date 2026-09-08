@@ -1,0 +1,2 @@
+[phases.build]
+cmds = ["python scripts/prepare_production_model.py"]

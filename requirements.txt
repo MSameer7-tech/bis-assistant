@@ -15,7 +15,10 @@ requests>=2.31.0
 
 # Numerical & ML Processing
 numpy>=1.26.0
+torch>=2.2.0
+transformers>=4.40.0
 sentence-transformers>=3.0.0
+huggingface-hub>=0.23.0
 rank-bm25>=0.2.2
 
 # Document & Storage Processing

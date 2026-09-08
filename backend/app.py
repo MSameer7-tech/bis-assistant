@@ -8,6 +8,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -36,10 +37,29 @@ from backend.auth import (
 )
 from backend.lab_finder_api import router as lab_finder_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Ensures that the production Grounded RAG Engine and local embedding model
+    are verified and pre-warmed in memory before accepting traffic.
+    """
+    try:
+        from scripts.phase12_e_production_rag import get_production_engine
+        engine = get_production_engine()
+        logging.getLogger("bis_startup").info(
+            f"Production Grounded RAG Engine pre-warmed successfully: {engine.__class__.__name__}"
+        )
+    except Exception as e:
+        logging.getLogger("bis_startup").error(f"Startup engine pre-warming notice: {e}")
+    yield
+
+
 app = FastAPI(
     title="BIS AI Technical Assistant API",
     description="Grounded AI Assistant for Indian Standards (BIS) compliance, parameter lookups, and statutory regulations.",
-    version="13.0.0"
+    version="13.0.0",
+    lifespan=lifespan
 )
 
 # CORS Configuration for Production (Vercel) & Development (Localhost)
@@ -83,6 +103,7 @@ app.add_middleware(
 
 # Mount Phase F3 Laboratory Finder Router
 app.include_router(lab_finder_router)
+
 
 # Initialize lightweight singletons
 pipeline = RAGPipeline()
