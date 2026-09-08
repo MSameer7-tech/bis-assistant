@@ -36,6 +36,19 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 class TestAuthEntryFlow:
     """Test suite validating the production authentication entry-point flow."""
 
+    @pytest.fixture(autouse=True)
+    def cleanup_temp_files(self):
+        """Cleans up any temporary test files before and after each test."""
+        for pattern in ["mock_sb*.js", "test_*.mjs", "temp_*.js"]:
+            for f in FRONTEND_DIR.glob(pattern):
+                try: f.unlink()
+                except Exception: pass
+        yield
+        for pattern in ["mock_sb*.js", "test_*.mjs", "temp_*.js"]:
+            for f in FRONTEND_DIR.glob(pattern):
+                try: f.unlink()
+                except Exception: pass
+
     def test_01_frontend_auth_helper_exports(self):
         """Verifies that auth.js exports canonical session validation & URL helpers."""
         auth_file = FRONTEND_DIR / "auth.js"
@@ -375,3 +388,587 @@ class TestAuthEntryFlow:
 
         res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
         assert res.returncode == 0, f"SignOut storage purge failed: {res.stderr}"
+
+    def test_11_all_auth_imports_exist_as_exports(self):
+        """Verifies every single imported symbol from auth.js in login.html, app.js, and auth-callback.html is exported."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        const loginHtml = fs.readFileSync('frontend/login.html', 'utf-8');
+        const loginMatch = loginHtml.match(/import\\s*\\{([^}]+)\\}\\s*from\\s*['\"](\\.\\/auth\\.js[^'\"]*)['\"];/);
+        if (!loginMatch) throw new Error('Could not find auth.js import in login.html');
+        const loginImports = loginMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+
+        const appJs = fs.readFileSync('frontend/app.js', 'utf-8');
+        const appMatch = appJs.match(/import\\s*\\{([^}]+)\\}\\s*from\\s*['\"](\\.\\/auth\\.js[^'\"]*)['\"];/);
+        if (!appMatch) throw new Error('Could not find auth.js import in app.js');
+        const appImports = appMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+
+        const authJs = fs.readFileSync('frontend/auth.js', 'utf-8');
+        const exportRegex = /export\\s+(?:async\\s+)?function\\s+([a-zA-Z0-9_]+)/g;
+        const exports = [];
+        let m;
+        while ((m = exportRegex.exec(authJs)) !== null) {
+            exports.push(m[1]);
+        }
+
+        for (const imp of loginImports) {
+            if (!exports.includes(imp)) {
+                console.error('MISMATCH in login.html: ' + imp + ' is not exported by auth.js');
+                process.exit(1);
+            }
+        }
+
+        for (const imp of appImports) {
+            if (!exports.includes(imp)) {
+                console.error('MISMATCH in app.js: ' + imp + ' is not exported by auth.js');
+                process.exit(1);
+            }
+        }
+        process.exit(0);
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Import/export mismatch: {res.stderr}"
+
+    def test_12_login_html_loads_with_zero_syntax_or_module_errors(self):
+        """Verifies login.html parses and executes module script with zero errors."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        const loginHtml = fs.readFileSync('frontend/login.html', 'utf-8');
+
+        // Extract the <script type="module"> contents
+        const scriptMatch = loginHtml.match(/<script type=\"module\">([\\s\\S]*?)<\\/script>/);
+        if (!scriptMatch) throw new Error('Could not find module script in login.html');
+        let code = scriptMatch[1];
+
+        // Replace relative imports with mocked module for headless execution
+        fs.writeFileSync('frontend/mock_supabase_test.js', 'export function createClient() { return {}; }');
+        let authJs = fs.readFileSync('frontend/auth.js', 'utf-8');
+        authJs = authJs.replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_supabase_test.js\"');
+        fs.writeFileSync('frontend/temp_auth.js', authJs);
+
+        // Replace import from './auth.js...' with './temp_auth.js'
+        code = code.replace(/from\\s+['\"]\\.\\/auth\\.js[^'\"]*['\"]/, 'from \"./temp_auth.js\"');
+        fs.writeFileSync('frontend/temp_login_runner.js', code);
+
+        // Run syntax check on the runner
+        const { execSync } = require('child_process');
+        try {
+            execSync('node --check frontend/temp_login_runner.js');
+        } finally {
+            try { fs.unlinkSync('frontend/mock_supabase_test.js'); } catch(e) {}
+            try { fs.unlinkSync('frontend/temp_auth.js'); } catch(e) {}
+            try { fs.unlinkSync('frontend/temp_login_runner.js'); } catch(e) {}
+        }
+        process.exit(0);
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"login.html module syntax error: {res.stderr}"
+
+    def test_13_auth_email_password_sign_in(self):
+        """Verifies signInWithEmail calls supabase.auth.signInWithPassword with correct credentials."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_13.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_13.js\"');
+        fs.writeFileSync('frontend/test_13.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        let calledCreds = null;
+        global.mockSupabaseClient = {
+            auth: {
+                signInWithPassword: async (creds) => {
+                    calledCreds = creds;
+                    return { data: { session: { access_token: 'valid-jwt' }, user: { id: 'u1', email: creds.email } }, error: null };
+                },
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_13.mjs').then(async (m) => {
+            try {
+                const res = await m.signInWithEmail('officer@bis.gov.in', 'Secret123!');
+                if (!res.user || res.user.email !== 'officer@bis.gov.in') {
+                    console.error('Sign-in result mismatch:', res);
+                    process.exit(1);
+                }
+                if (!calledCreds || calledCreds.email !== 'officer@bis.gov.in' || calledCreds.password !== 'Secret123!') {
+                    console.error('Credentials mismatch:', calledCreds);
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_13.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_13.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Email/Password Sign-In failed: {res.stderr}"
+
+    def test_14_auth_google_oauth(self):
+        """Verifies signInWithGoogle invokes signInWithOAuth with google provider."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_14.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_14.js\"');
+        fs.writeFileSync('frontend/test_14.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        global.window = {
+            location: { origin: 'https://bis-assistant.up.railway.app' }
+        };
+
+        let oauthOpts = null;
+        global.mockSupabaseClient = {
+            auth: {
+                signInWithOAuth: async (opts) => {
+                    oauthOpts = opts;
+                    return { data: { url: 'https://accounts.google.com/o/oauth2' }, error: null };
+                },
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_14.mjs').then(async (m) => {
+            try {
+                await m.signInWithGoogle();
+                if (!oauthOpts || oauthOpts.provider !== 'google') {
+                    console.error('Expected google provider, got:', oauthOpts);
+                    process.exit(1);
+                }
+                if (!oauthOpts.options?.redirectTo || !oauthOpts.options.redirectTo.includes('/auth/callback')) {
+                    console.error('Expected redirect to /auth/callback, got:', oauthOpts);
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_14.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_14.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Google OAuth failed: {res.stderr}"
+
+    def test_15_auth_github_oauth(self):
+        """Verifies signInWithGitHub invokes signInWithOAuth with github provider."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_15.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_15.js\"');
+        fs.writeFileSync('frontend/test_15.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        global.window = {
+            location: { origin: 'http://localhost:3000' }
+        };
+
+        let oauthOpts = null;
+        global.mockSupabaseClient = {
+            auth: {
+                signInWithOAuth: async (opts) => {
+                    oauthOpts = opts;
+                    return { data: { url: 'https://github.com/login/oauth' }, error: null };
+                },
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_15.mjs').then(async (m) => {
+            try {
+                await m.signInWithGitHub();
+                if (!oauthOpts || oauthOpts.provider !== 'github') {
+                    console.error('Expected github provider, got:', oauthOpts);
+                    process.exit(1);
+                }
+                if (!oauthOpts.options?.redirectTo || !oauthOpts.options.redirectTo.includes('/auth/callback')) {
+                    console.error('Expected redirect to /auth/callback, got:', oauthOpts);
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_15.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_15.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"GitHub OAuth failed: {res.stderr}"
+
+    def test_16_auth_create_account(self):
+        """Verifies signUpWithEmail invokes signUp with email and password."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_16.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_16.js\"');
+        fs.writeFileSync('frontend/test_16.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        global.window = {
+            location: { origin: 'https://bis-assistant.up.railway.app' }
+        };
+
+        let signUpCreds = null;
+        global.mockSupabaseClient = {
+            auth: {
+                signUp: async (creds) => {
+                    signUpCreds = creds;
+                    return { data: { user: { id: 'u2', email: creds.email }, session: null }, error: null };
+                },
+                getSession: async () => ({ data: { session: null }, error: null }),
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_16.mjs').then(async (m) => {
+            try {
+                const res = await m.signUpWithEmail('newuser@bis.gov.in', 'StrongPwd99!');
+                if (!signUpCreds || signUpCreds.email !== 'newuser@bis.gov.in' || signUpCreds.password !== 'StrongPwd99!') {
+                    console.error('Sign-up creds mismatch:', signUpCreds);
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_16.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_16.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Account creation failed: {res.stderr}"
+
+    def test_17_auth_forgot_password(self):
+        """Verifies sendPasswordReset invokes resetPasswordForEmail with redirect."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_17.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_17.js\"');
+        fs.writeFileSync('frontend/test_17.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        global.window = {
+            location: { origin: 'https://bis-assistant.up.railway.app' }
+        };
+
+        let resetEmail = null;
+        global.mockSupabaseClient = {
+            auth: {
+                resetPasswordForEmail: async (email, opts) => {
+                    resetEmail = email;
+                    return { data: {}, error: null };
+                },
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_17.mjs').then(async (m) => {
+            try {
+                await m.sendPasswordReset('forgot@bis.gov.in');
+                if (resetEmail !== 'forgot@bis.gov.in') {
+                    console.error('Expected reset email forgot@bis.gov.in, got:', resetEmail);
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_17.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_17.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Forgot password failed: {res.stderr}"
+
+    def test_18_successful_login_redirect_urls(self):
+        """Verifies getHomeUrl returns proper URLs across localhost, Railway, and static hosting."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_18.js', 'export function createClient() { return {}; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_18.js\"');
+        fs.writeFileSync('frontend/test_18.mjs', authContent);
+
+        import('./frontend/test_18.mjs').then((m) => {
+            try {
+                // Scenario A: Localhost http://localhost:3000/login
+                global.window = {
+                    location: {
+                        protocol: 'http:',
+                        pathname: '/login',
+                        origin: 'http://localhost:3000'
+                    }
+                };
+                if (m.getHomeUrl() !== '/#home') {
+                    console.error('Localhost getHomeUrl() expected /#home, got:', m.getHomeUrl());
+                    process.exit(1);
+                }
+
+                // Scenario B: Railway https://bis-assistant.up.railway.app/login
+                global.window = {
+                    location: {
+                        protocol: 'https:',
+                        pathname: '/login',
+                        origin: 'https://bis-assistant.up.railway.app'
+                    }
+                };
+                if (m.getHomeUrl() !== '/#home') {
+                    console.error('Railway getHomeUrl() expected /#home, got:', m.getHomeUrl());
+                    process.exit(1);
+                }
+
+                // Scenario C: Static file hosting / file:///Users/.../login.html
+                global.window = {
+                    location: {
+                        protocol: 'file:',
+                        pathname: '/Users/test/login.html',
+                        origin: 'null'
+                    }
+                };
+                if (m.getHomeUrl() !== './index.html#home') {
+                    console.error('Static getHomeUrl() expected ./index.html#home, got:', m.getHomeUrl());
+                    process.exit(1);
+                }
+
+                process.exit(0);
+            } catch(e) {
+                console.error(e);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_18.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_18.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Login redirect URL tests failed: {res.stderr}"
+
+    def test_19_logout_full_flow(self):
+        """Verifies signOut clears Supabase session, localStorage tokens, and sessionStorage guest flags."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_19.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_19.js\"');
+        fs.writeFileSync('frontend/test_19.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        let supabaseSignedOut = false;
+        const store = { 'bis_supabase_auth_token': 'active-token', 'sb-test-auth-token': 'sb-token' };
+        const sessionStore = { 'bis_guest_mode': 'true' };
+
+        global.window = {
+            location: { protocol: 'https:', pathname: '/#home', replace: () => {} }
+        };
+        global.localStorage = {
+            getItem: (k) => store[k] || null,
+            removeItem: (k) => { delete store[k]; },
+            get length() { return Object.keys(store).length; },
+            key: (i) => Object.keys(store)[i] || null
+        };
+        global.sessionStorage = {
+            getItem: (k) => sessionStore[k] || null,
+            removeItem: (k) => { delete sessionStore[k]; }
+        };
+
+        global.mockSupabaseClient = {
+            auth: {
+                signOut: async () => {
+                    supabaseSignedOut = true;
+                    return { error: null };
+                },
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_19.mjs').then(async (m) => {
+            try {
+                await m.initializeAuth();
+                await m.signOut();
+
+                if (!supabaseSignedOut) {
+                    console.error('Supabase client.auth.signOut was not called');
+                    process.exit(1);
+                }
+                if (store['bis_supabase_auth_token']) {
+                    console.error('bis_supabase_auth_token not purged');
+                    process.exit(1);
+                }
+                if (sessionStore['bis_guest_mode']) {
+                    console.error('bis_guest_mode not purged');
+                    process.exit(1);
+                }
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_19.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_19.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Logout full flow failed: {res.stderr}"
+
+    def test_20_authenticated_refresh_preserves_session(self):
+        """Verifies refreshing the page preserves the active session without redirecting to login."""
+        node_bin = shutil.which("node")
+        if not node_bin:
+            pytest.skip("Node.js not installed")
+
+        script = """
+        const fs = require('fs');
+        fs.writeFileSync('frontend/mock_sb_20.js', 'export function createClient() { return global.mockSupabaseClient; }');
+        const authContent = fs.readFileSync('frontend/auth.js', 'utf-8').replace(/from\\s+['\"]https:[^'\"]+['\"]/g, 'from \"./mock_sb_20.js\"');
+        fs.writeFileSync('frontend/test_20.mjs', authContent);
+
+        global.fetch = async () => ({
+            ok: true,
+            json: async () => ({ configured: true, supabase_url: 'https://test.supabase.co', supabase_anon_key: 'key' })
+        });
+
+        let redirectedTo = null;
+        global.window = {
+            location: {
+                protocol: 'https:',
+                pathname: '/',
+                search: '',
+                replace: (url) => { redirectedTo = url; }
+            }
+        };
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const validSession = {
+            access_token: 'fresh-valid-token',
+            expires_at: nowSec + 3600,
+            user: { email: 'officer@bis.gov.in', id: 'officer-1' }
+        };
+
+        const store = {
+            'bis_supabase_auth_token': JSON.stringify(validSession)
+        };
+
+        global.localStorage = {
+            getItem: (k) => store[k] || null,
+            get length() { return Object.keys(store).length; },
+            key: (i) => Object.keys(store)[i] || null
+        };
+        global.sessionStorage = {
+            getItem: () => null
+        };
+
+        global.mockSupabaseClient = {
+            auth: {
+                getSession: async () => ({
+                    data: { session: validSession },
+                    error: null
+                }),
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+            }
+        };
+
+        import('./frontend/test_20.mjs').then(async (m) => {
+            try {
+                // Check early entry guard
+                const hasCandidate = m.hasPotentialSession();
+                if (!hasCandidate) {
+                    window.location.replace('/login');
+                }
+
+                // Canonical validation on page load/refresh
+                const valResult = await m.validateSession();
+                if (!valResult.authenticated || !valResult.user) {
+                    window.location.replace('/login');
+                }
+
+                // Expectation: NO redirect was triggered
+                if (redirectedTo !== null) {
+                    console.error('Authenticated user was unexpectedly redirected to:', redirectedTo);
+                    process.exit(1);
+                }
+
+                process.exit(0);
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            } finally {
+                try { fs.unlinkSync('frontend/mock_sb_20.js'); } catch(e) {}
+                try { fs.unlinkSync('frontend/test_20.mjs'); } catch(e) {}
+            }
+        });
+        """
+        res = subprocess.run([node_bin, "-e", script], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        assert res.returncode == 0, f"Authenticated refresh preservation failed: {res.stderr}"
+

@@ -777,7 +777,16 @@
             updatePassword,
             getHomeUrl,
             setGuestSession
-        } from './auth.js';
+        } from './auth.js?v=14.1.0';
+
+        // Canonical environment-aware workspace home URL resolver
+        const resolveHome = () => {
+            if (typeof getHomeUrl === 'function') {
+                return getHomeUrl();
+            }
+            const isStatic = window.location.protocol === 'file:' || window.location.pathname.endsWith('.html');
+            return isStatic ? './index.html#home' : '/#home';
+        };
 
         // DOM elements
         const authFormView = document.getElementById('authFormView');
@@ -948,13 +957,13 @@
             btnGuestLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 setGuestSession(true);
-                window.location.href = getHomeUrl();
+                window.location.href = resolveHome();
             });
         }
 
         const btnActiveGoHome = document.getElementById('btnActiveGoHome');
         if (btnActiveGoHome) {
-            btnActiveGoHome.href = getHomeUrl();
+            btnActiveGoHome.href = resolveHome();
         }
 
         btnActiveSignOut.addEventListener('click', async () => {
@@ -1006,7 +1015,7 @@
                     setGuestSession(false);
                     showAlert('success', 'Sign in successful! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = getHomeUrl();
+                        window.location.href = resolveHome();
                     }, 800);
                 } else if (mode === 'signup') {
                     const data = await signUpWithEmail(email, password);
@@ -1014,7 +1023,7 @@
                         setGuestSession(false);
                         showAlert('success', 'Account created successfully! Redirecting...');
                         setTimeout(() => {
-                            window.location.href = getHomeUrl();
+                            window.location.href = resolveHome();
                         }, 800);
                     } else {
                         showAlert('success', 'Account created! Please check your email inbox to confirm your registration.');
@@ -1027,7 +1036,7 @@
                     setGuestSession(false);
                     showAlert('success', 'Your password has been successfully updated! Redirecting...');
                     setTimeout(() => {
-                        window.location.href = getHomeUrl();
+                        window.location.href = resolveHome();
                     }, 1000);
                 }
             } catch (err) {

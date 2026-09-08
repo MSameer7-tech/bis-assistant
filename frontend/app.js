@@ -35,9 +35,10 @@ import {
     getCachedUser,
     validateSession,
     getLoginUrl,
+    getHomeUrl,
     isGuestSession,
     setGuestSession
-} from './auth.js';
+} from './auth.js?v=14.1.0';
 
 function initApp() {
     // -------------------------------------------------------------------------

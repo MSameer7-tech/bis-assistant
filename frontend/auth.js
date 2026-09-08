@@ -266,7 +266,9 @@ export async function signUpWithEmail(email, password) {
         email: email.trim(),
         password: password,
         options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`
+            emailRedirectTo: (typeof window !== 'undefined' && window.location && window.location.origin) 
+                ? `${window.location.origin}/auth/callback` 
+                : '/auth/callback'
         }
     });
     if (error) throw error;
