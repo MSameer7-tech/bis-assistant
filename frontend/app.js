@@ -1196,8 +1196,10 @@ function initApp() {
             let sourceTagHtml = '';
             if (genMode === 'GROUNDED' && status === 'SUFFICIENT') {
                 sourceTagHtml = `<span class="subtle-source-tag tag-verified" data-i18n="assistant.status.sufficient">&bull; ${t('assistant.status.sufficient', 'Verified BIS Grounded')}</span>`;
-            } else if (status === 'PARTIAL') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-partial" data-i18n="assistant.status.partial">&bull; ${t('assistant.status.partial', 'Partial Evidence')}</span>`;
+            } else if (genMode === 'HYBRID' || status === 'PARTIAL') {
+                sourceTagHtml = `<span class="subtle-source-tag tag-partial" data-i18n="assistant.status.hybrid">&bull; ${t('assistant.status.hybrid', 'Partially BIS-verified • Additional information is unverified')}</span>`;
+            } else if (genMode === 'LLM_FALLBACK') {
+                sourceTagHtml = `<span class="subtle-source-tag tag-fallback" data-i18n="assistant.status.fallback">&bull; ${t('assistant.status.fallback', 'General knowledge • Not BIS-verified')}</span>`;
             } else if (status === 'INSUFFICIENT') {
                 sourceTagHtml = `<span class="subtle-source-tag tag-insufficient" data-i18n="assistant.status.insufficient">&bull; ${t('assistant.status.insufficient', 'Insufficient Evidence')}</span>`;
             }

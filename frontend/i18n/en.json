@@ -38,7 +38,9 @@
       "sufficient": "Verified BIS Grounded",
       "partial": "Partial Evidence",
       "insufficient": "Insufficient Evidence",
-      "error": "Error processing query"
+      "error": "Error processing query",
+      "hybrid": "Partially BIS-verified • Additional information is unverified",
+      "fallback": "General knowledge • Not BIS-verified"
     },
     "actions": {
       "copy": "Copy answer",

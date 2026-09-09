@@ -57,6 +57,28 @@ logger = logging.getLogger("phase12_f2_orchestrator")
 DEFAULT_GROQ_MODEL = os.getenv("BIS_LLM_MODEL") or os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b"
 DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
+# Module-level F3 Lab Finder imports for natural lab queries and monkeypatching in tests
+try:
+    from backend.lab_finder_api import execute_natural_search, LabNaturalSearchRequest
+except ImportError:
+    try:
+        import importlib.util
+        _spec = importlib.util.spec_from_file_location(
+            "lab_finder_api",
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", "lab_finder_api.py")
+        )
+        if _spec and _spec.loader:
+            _mod = importlib.util.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            execute_natural_search = getattr(_mod, "execute_natural_search", None)
+            LabNaturalSearchRequest = getattr(_mod, "LabNaturalSearchRequest", None)
+        else:
+            execute_natural_search = None
+            LabNaturalSearchRequest = None
+    except Exception:
+        execute_natural_search = None
+        LabNaturalSearchRequest = None
+
 # -----------------------------------------------------------------------------
 # Conversational / General Query Detection
 # -----------------------------------------------------------------------------
@@ -337,6 +359,97 @@ COMPLETENESS_CAVEAT_MAP = {
     "as": "টোকা: উপলব্ধ বিআইএছ নথিসমূহে মুখ্য পৰীক্ষণ প্ৰয়োজনীয়তাসমূহৰ ({tests}) এটা অংশ প্ৰদান কৰে। সম্পূৰ্ণ পৰীক্ষণ সূচীৰ বাবে মূল {std} মানদণ্ড নথিপত্ৰ চাওক।",
     "or": "ଟିପ୍ପଣୀ: ଉପଲବ୍ଧ BIS ରେକର୍ଡଗୁଡିକ ମୁଖ୍ୟ ପରୀକ୍ଷଣ ଆବଶ୍ୟକତାଗୁଡିକର ({tests}) ଏକ ଅଂଶ ପ୍ରଦାନ କରେ। ସମ୍ପୂର୍ଣ୍ଣ ପରୀକ୍ଷଣ ତାଲିକା ପାଇଁ ଅଫିସିଆଲ୍ {std} ମାନକ ଦଲିଲ ଦେଖନ୍ତୁ।"
 }
+
+LLM_FALLBACK_DISCLAIMER_MAP = {
+    "en": "> ⚠️ This answer is based on general knowledge and is not verified against BIS evidence.",
+    "hi": "> ⚠️ यह उत्तर सामान्य ज्ञान पर आधारित है और बीआईएस साक्ष्यों से सत्यापित नहीं है।",
+    "bn": "> ⚠️ এই উত্তরটি সাধারণ জ্ঞানের উপর ভিত্তি করে তৈরি এবং বিআইএস প্রমাণের দ্বারা যাচাই করা নয়।",
+    "te": "> ⚠️ ఈ సమాధానం సాధారణ పరిజ్ఞానంపై ఆధారపడి ఉంటుంది మరియు BIS ఆధారాలతో ధృవీకరించబడలేదు.",
+    "mr": "> ⚠️ हे उत्तर सामान्य ज्ञानावर आधारित असून बीआयएस पुराव्यांवरून पडताळलेले नाही.",
+    "ta": "> ⚠️ இந்த பதில் பொது அறிவை அடிப்படையாகக் கொண்டது மற்றும் BIS ஆதாரங்களால் சரிபார்க்கப்படவில்லை.",
+    "gu": "> ⚠️ આ જવાબ સામાન્ય જ્ઞાન પર આધારિત છે અને BIS પુરાવાઓથી ચકાસાયેલ નથી.",
+    "kn": "> ⚠️ ಈ ಉತ್ತರವು ಸಾಮಾನ್ಯ ಜ್ಞಾನವನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು BIS ಪುರಾವೆಗಳಿಂದ ಪರಿಶೀಲಿಸಲಾಗಿಲ್ಲ.",
+    "ml": "> ⚠️ ഈ ഉത്തരം പൊതുവിജ്ഞാനത്തെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്, ഇത് ബിഐഎസ് തെളിവുകളാൽ സ്ഥിരീകരിച്ചിട്ടില്ല.",
+    "pa": "> ⚠️ ਇਹ ਜਵਾਬ ਆਮ ਗਿਆਨ 'ਤੇ ਆਧਾਰਿਤ ਹੈ ਅਤੇ BIS ਸਬੂਤਾਂ ਦੁਆਰਾ ਪ੍ਰਮਾਣਿਤ ਨਹੀਂ ਹੈ।",
+    "as": "> ⚠️ এই উত্তৰটো সাধাৰণ জ্ঞানৰ ওপৰত ভিত্তি কৰি প্ৰস্তুত কৰা হৈছে আৰু বিআইএছ প্ৰমাণৰ দ্বাৰা সত্যাপন কৰা হোৱা নাই।",
+    "or": "> ⚠️ ଏହି ଉତ୍ତରଟି ସାଧାରଣ ଜ୍ଞାନ ଉପରେ ଆଧାରିତ ଏବଂ BIS ପ୍ରମାଣ ଦ୍ୱାରା ଯାଞ୍ଚ କରାଯାଇ ନାହିଁ।"
+}
+
+HYBRID_DISCLAIMER_MAP = {
+    "en": "> ⚠️ Additional information is based on general knowledge and is not verified against BIS evidence.",
+    "hi": "> ⚠️ अतिरिक्त जानकारी सामान्य ज्ञान पर आधारित है और बीआईएस साक्ष्यों से सत्यापित नहीं है।",
+    "bn": "> ⚠️ অতিরিক্ত তথ্য সাধারণ জ্ঞানের উপর ভিত্তি করে তৈরি এবং বিআইএস প্রমাণের দ্বারা যাচাই করা নয়।",
+    "te": "> ⚠️ అదనపు సమాచారం సాధారణ పరిజ్ఞానంపై ఆధారపడి ఉంటుంది మరియు BIS ఆధారాలతో ధృవీకరించబడలేదు.",
+    "mr": "> ⚠️ अतिरिक्त माहिती सामान्य ज्ञानावर आधारित असून बीआयएस पुराव्यांवरून पडताळलेली नाही.",
+    "ta": "> ⚠️ கூடுதல் தகவல்கள் பொது அறிவை அடிப்படையாகக் கொண்டவை மற்றும் BIS ஆதாரங்களால் சரிபார்க்கப்படவில்லை.",
+    "gu": "> ⚠️ વધારાની માહિતી સામાન્ય જ્ઞાન પર આધારિત છે અને BIS પુરાવાઓથી ચકાસાયેલ નથી.",
+    "kn": "> ⚠️ ಹೆಚ್ಚುವರಿ ಮಾಹಿತಿಯು ಸಾಮಾನ್ಯ ಜ್ಞಾನವನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು BIS ಪುರಾವೆಗಳಿಂದ ಪರಿಶೀಲಿಸಲಾಗಿಲ್ಲ.",
+    "ml": "> ⚠️ അധിക വിവരങ്ങൾ പൊതുവിജ്ഞാനത്തെ അടിസ്ഥാനമാക്കിയുള്ളതാണ്, ഇത് ബിഐഎസ് തെളിവുകളാൽ സ്ഥിരീകരിച്ചിട്ടില്ല.",
+    "pa": "> ⚠️ ਵਾਧੂ ਜਾਣਕਾਰੀ ਆਮ ਗਿਆਨ 'ਤੇ ਆਧਾਰਿਤ ਹੈ ਅਤੇ BIS ਸਬੂਤਾਂ ਦੁਆਰਾ ਪ੍ਰਮਾਣਿਤ ਨਹੀਂ ਹੈ।",
+    "as": "> ⚠️ অতিৰিক্ত তথ্য সাধাৰণ জ্ঞানৰ ওপৰত ভিত্তি কৰি প্ৰস্তুত কৰা হৈছে আৰু বিআইএছ প্ৰমাণৰ দ্বাৰা সত্যাপন কৰা হোৱা নাই।",
+    "or": "> ⚠️ ଅତିରିକ୍ତ ସୂଚନା ସାଧାରଣ ଜ୍ଞାନ ଉପରେ ଆଧାରିତ ଏବଂ BIS ପ୍ରମାଣ ଦ୍ୱାରା ଯାଞ୍ଚ କରାଯାଇ ନାହିଁ।"
+}
+
+HYBRID_SECTION_HEADERS_MAP = {
+    "en": {"verified": "Verified BIS Information", "general": "Additional General Information"},
+    "hi": {"verified": "सत्यापित बीआईएस जानकारी", "general": "अतिरिक्त सामान्य जानकारी"},
+    "bn": {"verified": "যাচাইকৃত বিআইএস তথ্য", "general": "অতিরিক্ত সাধারণ তথ্য"},
+    "te": {"verified": "ధృవీకరించబడిన BIS సమాచారం", "general": "అదనపు సాధారణ సమాచారం"},
+    "mr": {"verified": "पडताळलेली बीआयएस माहिती", "general": "अतिरिक्त सामान्य माहिती"},
+    "ta": {"verified": "சரிபார்க்கப்பட்ட BIS தகவல்", "general": "கூடுதல் பொதுத் தகவல்"},
+    "gu": {"verified": "ચકાસાયેલ BIS માહિતી", "general": "વધારાની સામાન્ય માહિતી"},
+    "kn": {"verified": "ಪರಿಶೀಲಿಸಿದ BIS ಮಾಹಿತಿ", "general": "ಹೆಚ್ಚುವರಿ ಸಾಮಾನ್ಯ ಮಾಹಿತಿ"},
+    "ml": {"verified": "സ്ഥിരീകരിച്ച ബിഐഎസ് വിവരങ്ങൾ", "general": "അധിക പൊതുവിവരങ്ങൾ"},
+    "pa": {"verified": "ਪ੍ਰਮਾਣਿਤ BIS ਜਾਣਕਾਰੀ", "general": "ਵਾਧੂ ਆਮ ਜਾਣਕਾਰੀ"},
+    "as": {"verified": "সত্যাপন কৰা বিআইএছ তথ্য", "general": "অতিৰিক্ত সাধাৰণ তথ্য"},
+    "or": {"verified": "ଯାଞ୍ଚ କରାଯାଇଥିବା BIS ସୂଚନା", "general": "ଅତିରିକ୍ତ ସାଧାରଣ ସୂଚନା"}
+}
+
+STANDARD_UNVERIFIED_MAP = {
+    "en": "I could not verify {std} in the available BIS records, so I cannot reliably identify this standard. The indexed records do not contain normative specifications, titles, or testing schedules for this designation.",
+    "hi": "उपलब्ध बीआईएस अभिलेखों में {std} का सत्यापन नहीं किया जा सका, इसलिए इस मानक की विश्वसनीय पहचान नहीं की जा सकती। अनुक्रमित अभिलेखों में इस मानक के लिए कोई विनिर्देश, शीर्षक या परीक्षण अनुसूची उपलब्ध नहीं है।",
+    "bn": "উপলব্ধ বিআইএস রেকর্ডে {std} যাচাই করা যায়নি, তাই এই মানদণ্ডটি নির্ভরযোগ্যভাবে সনাক্ত করা সম্ভব নয়। অনুক্রমিত রেকর্ডে এই মানদণ্ডের জন্য কোনো নির্দিষ্ট বিবরণ বা পরীক্ষার তথ্য নেই।",
+    "te": "అందుబాటులో ఉన్న BIS రికార్డులలో {std} ధృవీకరించబడలేదు, కాబట్టి ఈ ప్రమాణాన్ని విశ్వసనీయంగా గుర్తించలేము. సూచిక రికార్డులలో దీనికి సంబంధించిన పరీక్ష లేదా నిర్దేశాలు లేవు.",
+    "mr": "उपलब्ध बीआयएस नोंदींमध्ये {std} पडताळले जाऊ शकले नाही, त्यामुळे या मानकाची खात्रीशीर ओळख पटवता येत नाही. अनुक्रमित नोंदींमध्ये यासाठी तपशील किंवा चाचणी वेळापत्रक समाविष्ट नाही.",
+    "ta": "கிடைக்கக்கூடிய BIS பதிவுகளில் {std} சரிபார்க்கப்படவில்லை, எனவே இந்த தரநிலையை நம்பகத்தன்மையுடன் அடையாளம் காண முடியவில்லை. குறியிடப்பட்ட பதிவுகளில் இதற்கான விவரக்குறிப்புகள் இல்லை.",
+    "gu": "ઉપલબ્ધ BIS રેકોર્ડ્સમાં {std} ની ચકાસણી થઈ શકી નથી, તેથી આ માનકને વિશ્વસનીય રીતે ઓળખી શકાતું નથી. અનુક્રમિત રેકોર્ડમાં આના માટે કોઈ સ્પષ્ટીકરણો નથી.",
+    "kn": "ಲಭ್ಯವಿರುವ BIS ದಾಖಲೆಗಳಲ್ಲಿ {std} ಪರಿಶೀಲಿಸಲಾಗಿಲ್ಲ, ಆದ್ದರಿಂದ ಈ ಮಾನದಂಡವನ್ನು ವಿಶ್ವಾಸಾರ್ಹವಾಗಿ ಗುರುತಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಸೂಚ್ಯಂಕ ದಾಖಲೆಗಳಲ್ಲಿ ಇದಕ್ಕಾಗಿ ಯಾವುದೇ ವಿಶೇಷಣಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+    "ml": "ലഭ്യമായ ബിഐഎസ് രേഖകളിൽ {std} സ്ഥിരീകരിക്കാൻ കഴിഞ്ഞില്ല, അതിനാൽ ഈ മാനദണ്ഡം കൃത്യമായി തിരിച്ചറിയാൻ കഴിയില്ല. ലഭ്യമായ രേഖകളിൽ ഇതിന്റെ പരിശോധനാ വിശദാംശങ്ങൾ ലഭ്യമല്ല.",
+    "pa": "ਉਪਲਬਧ BIS ਰਿਕਾਰਡਾਂ ਵਿੱਚ {std} ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ, ਇਸ ਲਈ ਇਸ ਮਿਆਰ ਦੀ ਭਰੋਸੇਯੋਗ ਪਛਾਣ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕਦੀ। ਸੂਚੀਬੱਧ ਰਿਕਾਰਡਾਂ ਵਿੱਚ ਕੋਈ ਵੇਰਵੇ ਉਪਲਬਧ ਨਹੀਂ ਹਨ।",
+    "as": "উপলব্ধ বিআইএছ নথিপত্ৰত {std} সত্যাপন কৰিব পৰা নগ'ল, গতিকে এই মানদণ্ডটো নিশ্চিতভাৱে চিনাক্ত কৰিব নোৱাৰি। অনুক্ৰমিত নথিসমূহত ইয়াৰ নিৰ্দিষ্ট বিৱৰণ নাই।",
+    "or": "ଉପଲବ୍ଧ BIS ରେକର୍ଡଗୁଡିକରେ {std} ଯାଞ୍ଚ କରାଯାଇ ପାରିଲା ନାହିଁ, ତେଣୁ ଏହି ମାନକକୁ ନିର୍ଭରଯୋଗ୍ୟ ଭାବରେ ଚିହ୍ନଟ କରାଯାଇ ପାରିବ ନାହିଁ। ଇଣ୍ଡେକ୍ସ ହୋଇଥିବା ରେକର୍ଡରେ କୌଣସି ନିର୍ଦ୍ଦିଷ୍ଟତା ନାହିଁ।"
+}
+
+OFFLINE_FALLBACK_UNAVAILABLE_MAP = {
+    "en": "General AI model assistance is currently offline. Please refer to official BIS documentation at https://bis.gov.in/ for standard inquiries.",
+    "hi": "सामान्य एआई मॉडल सहायता वर्तमान में ऑफ़लाइन है। कृपया मानक संबंधी जानकारी के लिए आधिकारिक बीआईएस पोर्टल https://bis.gov.in/ देखें।",
+    "bn": "সাধারণ এআই সহায়তা বর্তমানে অফলাইন রয়েছে। বিস্তারিত জানার জন্য দয়া করে অফিসিয়াল বিআইএস পোর্টাল https://bis.gov.in/ দেখুন।",
+    "te": "సాధారణ AI సహాయం ప్రస్తుతం ఆఫ్‌లైన్‌లో ఉంది. దయచేసి అధికారిక BIS పోర్టల్ https://bis.gov.in/ చూడండి.",
+    "mr": "सामान्य एआय सहाय्य सध्या ऑफलाइन आहे. कृपया अधिकृत बीआयएस पोर्टल https://bis.gov.in/ पहा.",
+    "ta": "பொதுவான AI உதவி தற்போது ஆஃப்லைனில் உள்ளது. அதிகாரப்பூர்வ BIS இணையதளமான https://bis.gov.in/ ஐப் பார்க்கவும்.",
+    "gu": "સામાન્ય AI સહાય હાલમાં ઑફલાઇન છે. કૃપા કરીને સત્તાવાર BIS પોર્ટલ https://bis.gov.in/ જુઓ.",
+    "kn": "ಸಾಮಾನ್ಯ AI ನೆರವು ಪ್ರಸ್ತುತ ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದೆ. ದಯವಿಟ್ಟು ಅಧಿಕೃತ BIS ಪೋರ್ಟಲ್ https://bis.gov.in/ ನೋಡಿ.",
+    "ml": "ജനറൽ AI സഹായം നിലവിൽ ഓഫ്‌ലൈനിലാണ്. ദയവായി ഔദ്യോഗിക ബിഐഎസ് പോർട്ടൽ https://bis.gov.in/ കാണുക.",
+    "pa": "ਆਮ AI ਸਹਾਇਤਾ ਫਿਲਹਾਲ ਔਫਲਾਈਨ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਅਧਿਕਾਰਤ BIS ਪੋਰਟਲ https://bis.gov.in/ ਵੇਖੋ।",
+    "as": "সাধাৰণ এআই সহায় বৰ্তমান অফলাইন আছে। অনুগ্ৰহ কৰি অফিচিয়েল বিআইএছ পৰ্টেল https://bis.gov.in/ চাওক।",
+    "or": "ସାଧାରଣ AI ସହାୟତା ବର୍ତ୍ତମାନ ଅଫଲାଇନ୍ ଅଛି। ଦୟାକରି ସରକାରୀ BIS ପୋର୍ଟାଲ୍ https://bis.gov.in/ ଦେଖନ୍ତୁ।"
+}
+
+F3_ZERO_MATCH_MAP = {
+    "en": "No matching qualified laboratory was found for {label} in the BIS records. Please use the official BIS Accredited Laboratory Finder to search across additional regional or private recognized testing laboratories.",
+    "hi": "{label} के लिए बीआईएस अभिलेखों में कोई मान्यता प्राप्त प्रयोगशाला नहीं मिली। कृपया क्षेत्रीय या निजी मान्यता प्राप्त प्रयोगशालाओं की खोज के लिए आधिकारिक BIS Accredited Laboratory Finder का उपयोग करें।",
+    "bn": "{label}-এর জন্য বিআইএস রেকর্ডে কোনো যোগ্য পরীক্ষাগার পাওয়া যায়নি। অন্যান্য আঞ্চলিক পরীক্ষাগারের জন্য দয়া করে অফিশিয়াল BIS Lab Finder ব্যবহার করুন।",
+    "te": "{label} కోసం BIS రికార్డులలో సరిపోలే అర్హత కలిగిన ప్రయోగశాల కనుగొనబడలేదు. దయచేసి అధికారిక BIS Lab Finder ఉపయోగించండి.",
+    "mr": "{label} साठी बीआयएस नोंदींमध्ये कोणतीही मान्यताप्राप्त प्रयोगशाळा आढळली नाही. कृपया अधिकृत BIS Lab Finder वापरा.",
+    "ta": "{label}க்கான தகுதியான ஆய்வகம் எதுவும் BIS பதிவுகளில் கிடைக்கவில்லை. கூடுதல் ஆய்வகங்களைத் தேட அதிகாரப்பூர்வ BIS Lab Finder-ஐப் பயன்படுத்தவும்.",
+    "gu": "{label} માટે BIS રેકોર્ડ્સમાં કોઈ યોગ્ય પ્રયોગશાળા મળી નથી. કૃપા કરીને સત્તાવાર BIS Lab Finder નો ઉપયોગ કરો.",
+    "kn": "{label}ಗಾಗಿ BIS ದಾಖಲೆಗಳಲ್ಲಿ ಯಾವುದೇ ಅರ್ಹ ಪ್ರಯೋಗಾಲಯ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಅಧಿಕೃತ BIS Lab Finder ಬಳಸಿ.",
+    "ml": "{label}-ന് അനുയോജ്യമായ ലാബുകളൊന്നും ബിഐഎസ് രേഖകളിൽ കണ്ടെത്താനായില്ല. ദയവായി ഔദ്യോഗിക BIS Lab Finder ഉപയോഗിക്കുക.",
+    "pa": "{label} ਲਈ BIS ਰਿਕਾਰਡਾਂ ਵਿੱਚ ਕੋਈ ਮਾਨਤਾ ਪ੍ਰਾਪਤ ਪ੍ਰਯੋਗਸ਼ਾਲਾ ਨਹੀਂ ਮਿਲੀ। ਕਿਰਪਾ ਕਰਕੇ ਅਧਿਕਾਰਤ BIS Lab Finder ਦੀ ਵਰਤੋਂ ਕਰੋ।",
+    "as": "{label}-ৰ বাবে বিআইএছ নথিপত্ৰত কোনো যোগ্য পৰীক্ষাগাৰ পোৱা নগ'ল। অনুগ্ৰহ কৰি অফিচিয়েল BIS Lab Finder ব্যৱহাৰ কৰক।",
+    "or": "{label} ପାଇଁ BIS ରେକର୍ଡଗୁଡିକରେ କୌଣସି ଯୋଗ୍ୟ ପ୍ରୟୋଗଶାଳା ମିଳିଲା ନାହିଁ। ଦୟାକରି ଅଫିସିଆଲ୍ BIS Lab Finder ବ୍ୟବହାର କରନ୍ତୁ।"
+}
+
 
 def resolve_conversational_context(
     query_text: str,
@@ -1897,6 +2010,39 @@ CRITICAL GROUNDING & MULTILINGUAL RULES:
 2. PRESERVE TECHNICAL IDENTIFIERS: Keep standard numbers (e.g. 'IS 4985', 'IS 8978'), clause numbers (e.g. 'Clause 4.1'), laboratory names, test parameters, units (e.g. 'MPa', '°C', 'mm', 'INR'), and URLs in standard Latin/numerical format. Do NOT transliterate standard numbers or identifiers into {meta['script']} digits.
 3. Language: Write the natural explanatory prose and headings in natural, grammatically pure {meta['name']} ({meta['native_name']}).
 4. Never invent missing BIS information."""
+    elif role in ("ROLE_HYBRID_SYNTHESIS", "HYBRID_SYNTHESIS"):
+        v_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["verified"]
+        g_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["general"]
+        h_disc = HYBRID_DISCLAIMER_MAP.get(resp_lang, HYBRID_DISCLAIMER_MAP["en"])
+        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
+        system_prompt = f"""You are the secondary knowledge layer of the Bureau of Indian Standards (BIS) AI Assistant.
+The application has executed authoritative BIS RAG retrieval, which returned PARTIAL evidence for this query.
+
+Your responsibility is to synthesize a HYBRID response in {meta['name']} ({meta['native_name']}, {meta['script']} script) with two strictly separated sections:
+1. Under '### {v_head}': Include ONLY facts directly grounded in the verified BIS reference context (standard numbers, verified clauses, test requirements, lab scope).
+2. Under '### {g_head}': Provide useful general technical guidance for aspects not covered by the retrieved BIS evidence.
+3. At the end of the answer, append the exact disclaimer:
+{h_disc}
+
+CRITICAL RULES:
+- Never invent unindexed Indian Standards, clauses, amendment numbers/dates, QCO numbers, or legal mandates.
+- Keep technical identifiers (e.g. 'IS 4985') and units in Latin characters.
+- Do NOT merge general knowledge into the verified BIS section."""
+    elif role in ("ROLE_LLM_FALLBACK", "LLM_FALLBACK"):
+        f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
+        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
+        system_prompt = f"""You are the general assistance knowledge layer of the Bureau of Indian Standards (BIS) AI Assistant.
+The retrieved BIS evidence has no authoritative records for this query (it is general knowledge or out of corpus).
+
+Your responsibility is to provide a helpful, comprehensive, and accurate general answer in {meta['name']} ({meta['native_name']}, {meta['script']} script):
+1. Format your response under the header '### Answer'.
+2. Conclude your response with this exact warning:
+{f_disc}
+
+CRITICAL RULES:
+- If the user asks about an unknown or unverified Indian Standard number (e.g. IS 9999999), state clearly that you cannot identify or verify this standard in BIS records; NEVER fabricate standard specifications, titles, or clauses.
+- Never invent amendment numbers, amendment dates, QCO mandates, or BIS fees.
+- Keep technical terms and standard designations in standard Latin characters."""
     else:
         if resp_lang == "hi":
             system_prompt = SYSTEM_PROMPT_STRUCTURING_AND_FALLBACK_HI
@@ -2058,6 +2204,46 @@ CRITICAL RULES:
                 f"- Provide a comprehensive, structured explanation in {meta['name']} ({meta['native_name']}) covering background, scope, technical benchmarks, and practical meaning.\n"
                 f"- Use clear markdown headings answering the question thoroughly and conclude cleanly."
             )
+
+    if role in ("ROLE_HYBRID_SYNTHESIS", "HYBRID_SYNTHESIS"):
+        v_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["verified"]
+        g_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["general"]
+        h_disc = HYBRID_DISCLAIMER_MAP.get(resp_lang, HYBRID_DISCLAIMER_MAP["en"])
+        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
+        user_prompt = f"""User Query: {query}
+
+Reference context:
+---
+{context_text}
+---
+
+Please synthesize a HYBRID answer in {meta['name']} ({meta['native_name']}) strictly formatted with these two distinct sections:
+### {v_head}
+(Include only facts directly verified by the BIS reference context above)
+
+### {g_head}
+(Provide helpful general technical guidance addressing aspects not covered in the BIS evidence)
+
+{h_disc}"""
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+
+    if role in ("ROLE_LLM_FALLBACK", "LLM_FALLBACK"):
+        f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
+        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
+        user_prompt = f"""User Query: {query}
+
+Please provide a helpful, clear, and comprehensive general answer in {meta['name']} ({meta['native_name']}):
+### Answer
+(Your general knowledge answer)
+
+{f_disc}"""
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
 
     if resp_lang == "hi":
         user_prompt = f"""User Query: {query}
@@ -2976,7 +3162,7 @@ def orchestrate_assistant_query(
             "response_style": returned_style,
             "rag": {},
             "llm": {"used": False, "role": None, "answer": None, "source_type": None, "verified_by_bis_rag": False},
-            "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG"},
+            "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG", "verified_against_bis": False},
             "language_detection": {
                 "detected_language": "en",
                 "confidence": 1.0,
@@ -3007,26 +3193,6 @@ def orchestrate_assistant_query(
         lab_dispatch_success = False
         lab_dispatch_error = None
         try:
-            # Robust import: try multiple paths for F3 Lab Finder
-            execute_natural_search = None
-            LabNaturalSearchRequest = None
-            try:
-                from backend.lab_finder_api import execute_natural_search, LabNaturalSearchRequest
-            except ImportError:
-                try:
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location(
-                        "lab_finder_api",
-                        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", "lab_finder_api.py")
-                    )
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        execute_natural_search = mod.execute_natural_search
-                        LabNaturalSearchRequest = mod.LabNaturalSearchRequest
-                except Exception:
-                    pass
-
             if execute_natural_search and LabNaturalSearchRequest:
                 lab_query_parts = []
                 stds = query_ctx.get("is_numbers", [])
@@ -3079,7 +3245,7 @@ def orchestrate_assistant_query(
                         "response_style": returned_style,
                         "rag": rag_result,
                         "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
-                        "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                        "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "verified_against_bis": True, "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
                         "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
                         "intent": detected_intent
                     }
@@ -3096,27 +3262,25 @@ def orchestrate_assistant_query(
             stds = query_ctx.get("is_numbers", [])
             std_label = stds[0] if stds else "the specified standard"
             loc = query_ctx.get("entities", {}).get("location")
-            if resp_lang_early == "hi":
-                fallback_lab_answer = f"### {std_label} के लिए परीक्षण प्रयोगशालाएं\n\n"
-                fallback_lab_answer += f"{std_label} के लिए BIS-मान्यता प्राप्त प्रयोगशालाओं की खोज के लिए कृपया BIS Accredited Laboratory Finder का उपयोग करें।\n\n"
-                fallback_lab_answer += "**BIS Lab Finder:** https://bis.gov.in/\n"
-            else:
-                fallback_lab_answer = f"### Testing Laboratories for {std_label}\n\n"
-                fallback_lab_answer += f"To find BIS-recognized laboratories qualified to test according to {std_label}"
-                if loc:
-                    fallback_lab_answer += f" in {loc}"
-                fallback_lab_answer += ", please use the BIS Accredited Laboratory Finder.\n\n"
-                fallback_lab_answer += "**BIS Lab Finder:** https://bis.gov.in/\n"
-                if lab_dispatch_error:
-                    logger.info(f"LAB_SEARCH fallback used. F3 error: {lab_dispatch_error}")
+            zero_msg = F3_ZERO_MATCH_MAP.get(resp_lang_early, F3_ZERO_MATCH_MAP["en"]).format(label=std_label)
+            if loc:
+                zero_msg += f" (Location filtered: {loc})"
+            header = f"### {std_label} के लिए परीक्षण प्रयोगशालाएं\n\n" if resp_lang_early == "hi" else f"### Testing Laboratories for {std_label}\n\n"
+            fallback_lab_answer = f"{header}{zero_msg}\n\n**BIS Lab Finder:** https://bis.gov.in/\n"
+            if lab_dispatch_error:
+                logger.info(f"LAB_SEARCH fallback used. F3 error: {lab_dispatch_error}")
             return {
-                "status": rag_result.get("status", "INSUFFICIENT"),
+                "status": "INSUFFICIENT",
                 "answer": fallback_lab_answer,
                 "generation_mode": "GROUNDED",
                 "response_style": returned_style,
                 "rag": rag_result,
-                "llm": {"used": False, "role": "LAB_SEARCH_FALLBACK", "answer": None, "source_type": None, "verified_by_bis_rag": (rag_result.get("status") == "SUFFICIENT")},
-                "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "LAB_SEARCH_FALLBACK", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                "claims": [],
+                "unsupported_claims": [],
+                "evidence": [],
+                "citations": [],
+                "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": False},
+                "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "verified_against_bis": False, "rag_status": "INSUFFICIENT", "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
                 "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
                 "intent": detected_intent
             }
@@ -3184,7 +3348,7 @@ def orchestrate_assistant_query(
                     "intent": detected_intent,
                     "rag": rag_result,
                     "llm": {"used": False, "role": "STANDARD_COMPARISON_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
-                    "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                    "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG", "verified_against_bis": (rag_result.get("status") == "SUFFICIENT"), "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
                     "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early}
                 }
             except Exception as e:
@@ -3253,6 +3417,35 @@ def orchestrate_assistant_query(
                     f"The indexed records do not contain standards or testing specifications for this product."
                 )
 
+    # Check if query has explicit standard number or BIS entities
+    stds = query_ctx.get("is_numbers", [])
+    has_explicit_is = len(stds) > 0 or bool(re.search(r'\b(?:IS|is|आईएस|आई\.?एस\.?)\s*[:/-]?\s*\d+', clean_query, re.IGNORECASE))
+    has_bis_cue = bool(re.search(r'\b(bis|isi|crs|fmcs|hallmark\w*|huid\w*|qco\w*|gazette|quality control order|manak|standard mark|indian standard|certif\w*)\b', clean_query, re.IGNORECASE))
+    has_bis_entities = bool(query_ctx.get("requested_scheme") or query_ctx.get("product") or has_explicit_is or has_bis_cue or query_ctx.get("candidate_domain_mismatch"))
+
+    # Out-of-Corpus / General Knowledge Gate:
+    # If the query has NO explicit IS numbers, NO product, NO scheme, and NO BIS cues (e.g. "What is retrieval augmented generation?"),
+    # check lexical relevance of retrieved evidence chunks to query content words.
+    # If there is no sufficient overlap, treat as out-of-corpus general query for LLM_FALLBACK.
+    is_out_of_corpus = False
+    if not has_bis_entities and not is_conv and not is_general:
+        query_words = [w for w in re.findall(r'[a-zA-Z]{3,}', clean_query.lower()) if w not in {"what", "how", "when", "where", "which", "who", "why", "the", "and", "for", "with", "about", "tell", "does", "explain", "give", "list"}]
+        if query_words:
+            ev_text = " ".join(((e.get("text") or "") + " " + (e.get("heading") or "") + " " + (e.get("standard_title") or "")).lower() for e in rag_result.get("evidence", []))
+            matches = sum(1 for w in query_words if w in ev_text)
+            if matches == 0 or (len(query_words) >= 2 and matches < 2):
+                is_out_of_corpus = True
+        else:
+            is_out_of_corpus = True
+
+    if is_out_of_corpus:
+        rag_result["evidence"] = []
+        rag_result["claims"] = []
+        rag_status = "INSUFFICIENT"
+        rag_result["status"] = "INSUFFICIENT"
+
+    is_unknown_is = bool(has_explicit_is and rag_status == "INSUFFICIENT")
+
     # Determine Groq Role and expected parameters
     if is_conv or is_general:
         groq_role = "ANALYZE_AND_RESPOND"
@@ -3263,6 +3456,18 @@ def orchestrate_assistant_query(
         rag_result["claims"] = []
         rag_result["evidence"] = []
         final_status = "SUFFICIENT"
+    elif is_unknown_is:
+        groq_role = "STRUCTURING_AND_FALLBACK"
+        expected_mode = "GROUNDED"
+        source_layer = "RAG"
+        verified_by_bis_rag = False
+        final_status = "INSUFFICIENT"
+    elif is_out_of_corpus:
+        groq_role = "ROLE_LLM_FALLBACK"
+        expected_mode = "LLM_FALLBACK"
+        source_layer = "GENERAL_LLM_KNOWLEDGE"
+        verified_by_bis_rag = False
+        final_status = "INSUFFICIENT"
     elif rag_status == "SUFFICIENT":
         groq_role = "STRUCTURING_ONLY"
         expected_mode = "GROUNDED"
@@ -3270,15 +3475,15 @@ def orchestrate_assistant_query(
         verified_by_bis_rag = True
         final_status = "SUFFICIENT"
     elif rag_status == "PARTIAL":
-        groq_role = "STRUCTURING_AND_FALLBACK"
-        expected_mode = "LLM_FALLBACK"
+        groq_role = "ROLE_HYBRID_SYNTHESIS"
+        expected_mode = "HYBRID"
         source_layer = "RAG_PLUS_LLM"
         verified_by_bis_rag = False
         final_status = "PARTIAL"
-    else:  # INSUFFICIENT
+    else:  # INSUFFICIENT (BIS-specific query with insufficient authoritative evidence)
         groq_role = "STRUCTURING_AND_FALLBACK"
-        expected_mode = "LLM_FALLBACK"
-        source_layer = "LLM"
+        expected_mode = "GROUNDED"
+        source_layer = "RAG"
         verified_by_bis_rag = False
         final_status = "INSUFFICIENT"
 
@@ -3305,7 +3510,33 @@ def orchestrate_assistant_query(
                 else:
                     llm_used = True
                     llm_answer = candidate_answer
-                    final_answer = candidate_answer
+                    if is_unknown_is:
+                        std_label = stds[0] if stds else clean_query
+                        unverified_notice = STANDARD_UNVERIFIED_MAP.get(resp_lang, STANDARD_UNVERIFIED_MAP["en"]).format(std=std_label)
+                        if "not an active" in candidate_answer.lower() or "could not verify" in candidate_answer.lower() or "unrecognized" in candidate_answer.lower():
+                            final_answer = candidate_answer
+                        else:
+                            final_answer = unverified_notice
+                    elif expected_mode == "HYBRID":
+                        v_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["verified"]
+                        g_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["general"]
+                        h_disc = HYBRID_DISCLAIMER_MAP.get(resp_lang, HYBRID_DISCLAIMER_MAP["en"])
+                        if v_head not in candidate_answer or g_head not in candidate_answer:
+                            det_part = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx, response_style=effective_style)
+                            final_answer = f"### {v_head}\n\n{det_part}\n\n### {g_head}\n\n{candidate_answer}\n\n{h_disc}"
+                        elif h_disc not in candidate_answer:
+                            final_answer = f"{candidate_answer}\n\n{h_disc}"
+                        else:
+                            final_answer = candidate_answer
+                    elif expected_mode == "LLM_FALLBACK":
+                        f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
+                        if not candidate_answer.startswith("### Answer") and not candidate_answer.startswith("### উত্তর") and not candidate_answer.startswith("### "):
+                            candidate_answer = f"### Answer\n\n{candidate_answer}"
+                        if f_disc not in candidate_answer:
+                            candidate_answer = f"{candidate_answer}\n\n{f_disc}"
+                        final_answer = candidate_answer
+                    else:
+                        final_answer = candidate_answer
         except Exception as e:
             logger.warning(f"Groq execution failed, preserving original RAG result: {e}")
             llm_error = str(e)
@@ -3342,10 +3573,36 @@ def orchestrate_assistant_query(
             active_source_layer = "OFFLINE_FALLBACK"
             active_verified_by_bis = True
             final_status = "SUFFICIENT"
+        elif is_unknown_is:
+            std_label = stds[0] if stds else clean_query
+            final_answer = STANDARD_UNVERIFIED_MAP.get(resp_lang, STANDARD_UNVERIFIED_MAP["en"]).format(std=std_label)
+            active_generation_mode = "GROUNDED"
+            active_source_layer = "RAG"
+            active_verified_by_bis = False
+            final_status = "INSUFFICIENT"
+        elif expected_mode == "HYBRID":
+            det_part = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx, response_style=effective_style)
+            off_msg = OFFLINE_FALLBACK_UNAVAILABLE_MAP.get(resp_lang, OFFLINE_FALLBACK_UNAVAILABLE_MAP["en"])
+            v_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["verified"]
+            g_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["general"]
+            h_disc = HYBRID_DISCLAIMER_MAP.get(resp_lang, HYBRID_DISCLAIMER_MAP["en"])
+            final_answer = f"### {v_head}\n\n{det_part}\n\n### {g_head}\n\n{off_msg}\n\n{h_disc}"
+            active_generation_mode = "HYBRID"
+            active_source_layer = "RAG_PLUS_LLM"
+            active_verified_by_bis = False
+            final_status = "PARTIAL"
+        elif expected_mode == "LLM_FALLBACK":
+            off_msg = OFFLINE_FALLBACK_UNAVAILABLE_MAP.get(resp_lang, OFFLINE_FALLBACK_UNAVAILABLE_MAP["en"])
+            f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
+            final_answer = f"### Answer\n\n{off_msg}\n\n{f_disc}"
+            active_generation_mode = "LLM_FALLBACK"
+            active_source_layer = "GENERAL_LLM_KNOWLEDGE"
+            active_verified_by_bis = False
+            final_status = "INSUFFICIENT"
         else:
             final_answer = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx, response_style=effective_style)
-            active_generation_mode = "GROUNDED" if rag_status == "SUFFICIENT" else "LLM_FALLBACK"
-            active_source_layer = "RAG"
+            active_generation_mode = expected_mode
+            active_source_layer = source_layer
             active_verified_by_bis = (rag_status == "SUFFICIENT")
     else:
         active_generation_mode = expected_mode
@@ -3450,6 +3707,30 @@ def orchestrate_assistant_query(
         )
         final_answer = final_answer + "\n\n" + caveat
 
+    # Classify claims for the response contract
+    claims_out = []
+    unsupported_claims_out = []
+    if active_generation_mode == "HYBRID":
+        for c in rag_result.get("claims", []):
+            c_copy = dict(c)
+            c_copy["source"] = "BIS_VERIFIED"
+            claims_out.append(c_copy)
+        unsupported_claims_out.append({
+            "subject_entity": "GENERAL_KNOWLEDGE",
+            "predicate": "ADDITIONAL_INFORMATION",
+            "object_entity": "UNVERIFIED_GUIDANCE",
+            "statement": "Additional information is based on general knowledge and is not verified against BIS evidence.",
+            "source": "GENERAL_UNVERIFIED"
+        })
+    elif active_generation_mode == "GROUNDED":
+        for c in rag_result.get("claims", []):
+            c_copy = dict(c)
+            c_copy["source"] = "BIS_VERIFIED"
+            claims_out.append(c_copy)
+    elif active_generation_mode == "LLM_FALLBACK":
+        claims_out = []
+        unsupported_claims_out = []
+
     # Build structured response contract
     response = {
         "status": final_status,
@@ -3457,6 +3738,10 @@ def orchestrate_assistant_query(
         "generation_mode": active_generation_mode,
         "response_style": returned_style,
         "intent": detected_intent,
+        "claims": claims_out,
+        "unsupported_claims": unsupported_claims_out,
+        "evidence": rag_result.get("evidence", []),
+        "citations": rag_result.get("citations", []),
         "rag": rag_result,
         "llm": {
             "used": llm_used,
@@ -3471,6 +3756,7 @@ def orchestrate_assistant_query(
             "rag_executed_first": True,
             "llm_fallback_used": (rag_status in ("PARTIAL", "INSUFFICIENT") and llm_used and not (is_conv or is_general)),
             "source_layer": active_source_layer,
+            "verified_against_bis": active_verified_by_bis,
             "rag_status": rag_status,
             "generation_mode": active_generation_mode,
             "corpus_version": "v13.0",
