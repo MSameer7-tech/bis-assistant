@@ -4126,6 +4126,7 @@ html, body {
     border-radius: 10px;
     padding: 0 8px 0 14px;
     height: 46px;
+    gap: 6px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
@@ -4155,6 +4156,8 @@ html, body {
     font-size: 14px;
     font-weight: 500;
     width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: inherit;
 }
 
@@ -4184,20 +4187,35 @@ html, body {
 
 /* Voice Search (Microphone) Action Button in Lab Finder */
 .btn-lab-mic {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    padding: 0;
+    display: inline-flex !important;
+    align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    color: #A5B4FC;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(134, 120, 249, 0.3);
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    padding: 0 !important;
+    border-radius: 9px;
+    color: #c5ccff;
+    background: rgba(141, 155, 243, 0.12);
+    border: 1px solid rgba(141, 155, 243, 0.35);
     box-shadow: none;
     margin-right: 6px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
+    cursor: pointer;
+    visibility: visible !important;
+    opacity: 1;
+    z-index: 2;
+}
+
+.btn-lab-mic svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    pointer-events: none;
 }
 
 .btn-lab-mic:hover {

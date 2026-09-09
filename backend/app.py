@@ -175,7 +175,7 @@ class NumericalVerifyRequest(BaseModel):
 async def serve_index():
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        return FileResponse(str(index_path), headers={"Cache-Control": "no-cache, must-revalidate"})
     return HTMLResponse("<h1>BIS AI Assistant API is Running</h1><p>Visit <a href='/docs'>/docs</a> for Swagger UI.</p>")
 
 
@@ -187,7 +187,7 @@ async def serve_login_page():
     """Serves the dedicated login and registration page."""
     login_path = FRONTEND_DIR / "login.html"
     if login_path.exists():
-        return FileResponse(str(login_path))
+        return FileResponse(str(login_path), headers={"Cache-Control": "no-cache, must-revalidate"})
     return HTMLResponse("<h1>Login</h1>")
 
 
@@ -196,10 +196,10 @@ async def serve_auth_callback():
     """Serves the static OAuth and recovery callback handler."""
     callback_path = FRONTEND_DIR / "auth-callback.html"
     if callback_path.exists():
-        return FileResponse(str(callback_path))
+        return FileResponse(str(callback_path), headers={"Cache-Control": "no-cache, must-revalidate"})
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        return FileResponse(str(index_path), headers={"Cache-Control": "no-cache, must-revalidate"})
     return HTMLResponse("<h1>Auth Callback</h1>")
 
 
@@ -208,7 +208,7 @@ async def serve_auth_callback():
 async def serve_js(filename: str):
     file_path = FRONTEND_DIR / f"{filename}.js"
     if file_path.exists():
-        return FileResponse(str(file_path), media_type="application/javascript")
+        return FileResponse(str(file_path), media_type="application/javascript", headers={"Cache-Control": "no-cache, must-revalidate"})
     raise HTTPException(status_code=404, detail="File not found")
 
 
@@ -217,7 +217,7 @@ async def serve_js(filename: str):
 async def serve_css(filename: str):
     file_path = FRONTEND_DIR / f"{filename}.css"
     if file_path.exists():
-        return FileResponse(str(file_path), media_type="text/css")
+        return FileResponse(str(file_path), media_type="text/css", headers={"Cache-Control": "no-cache, must-revalidate"})
     raise HTTPException(status_code=404, detail="File not found")
 
 
@@ -225,7 +225,7 @@ async def serve_css(filename: str):
 async def serve_i18n(filename: str):
     file_path = FRONTEND_DIR / "i18n" / f"{filename}.json"
     if file_path.exists():
-        return FileResponse(str(file_path), media_type="application/json")
+        return FileResponse(str(file_path), media_type="application/json", headers={"Cache-Control": "no-cache, must-revalidate"})
     raise HTTPException(status_code=404, detail="File not found")
 
 
