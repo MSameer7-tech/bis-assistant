@@ -4182,6 +4182,54 @@ html, body {
     flex-shrink: 0;
 }
 
+/* Voice Search (Microphone) Action Button in Lab Finder */
+.btn-lab-mic {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 8px;
+    color: #A5B4FC;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(134, 120, 249, 0.3);
+    box-shadow: none;
+    margin-right: 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.btn-lab-mic:hover {
+    color: #FFFFFF;
+    background: rgba(134, 120, 249, 0.24);
+    border-color: #A78BFA;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(134, 120, 249, 0.35);
+}
+
+.btn-lab-mic.unsupported {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-lab-mic.listening {
+    color: #FFFFFF;
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #EF4444;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+    position: relative;
+}
+
+.btn-lab-mic.listening::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 11px;
+    border: 2px solid rgba(239, 68, 68, 0.6);
+    animation: pulseRing 1.5s infinite ease-in-out;
+}
+
 .btn-gps-highlight {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(134, 120, 249, 0.28) 100%);
     border: 1px solid rgba(134, 120, 249, 0.45);
@@ -5295,6 +5343,15 @@ html, body {
     }
 }
 
+@media (max-width: 480px) {
+    .gps-btn-text {
+        display: none;
+    }
+    .btn-gps-highlight {
+        padding: 0 8px;
+    }
+}
+
 /* ============================================================================
    HOME FINISHING PASS: ambient gradient + restrained glass surfaces
    ============================================================================ */
@@ -5595,6 +5652,17 @@ html, body {
     background: rgba(141, 155, 243, 0.1);
     border-color: rgba(141, 155, 243, 0.28);
     color: #c5ccff;
+}
+
+.btn-lab-mic {
+    height: 34px;
+    width: 34px;
+    min-width: 34px;
+    border-radius: 9px;
+    background: rgba(141, 155, 243, 0.1);
+    border-color: rgba(141, 155, 243, 0.28);
+    color: #c5ccff;
+    margin-right: 6px;
 }
 
 .btn-gps-highlight {

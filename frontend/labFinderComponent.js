@@ -90,6 +90,13 @@ export class LabFinderComponent {
                                     <input type="text" id="labInputQuery" class="search-input" placeholder="Search by Indian Standard (e.g. IS 4985, IS 10500), product, or city..." data-i18n-placeholder="lab_finder.input_placeholder" autocomplete="off" spellcheck="false" aria-label="Search laboratories">
                                     <input type="hidden" id="labInputStandard" value="">
                                     <input type="hidden" id="labInputLocation" value="">
+                                    <button type="button" id="btnLabMic" class="btn-input-action btn-lab-mic" title="Voice search" aria-label="Voice search" data-i18n-title="lab_finder.voice_search">
+                                        <svg class="mic-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                                        </svg>
+                                    </button>
                                     <button type="button" id="btnGeolocate" class="btn-input-action btn-gps-highlight" title="Use current GPS coordinates to locate nearest laboratories" aria-label="Use current location">
                                         <span class="gps-pulse-beacon"></span>
                                         <svg class="gps-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
@@ -300,6 +307,9 @@ export class LabFinderComponent {
             btnGeolocate.addEventListener('click', () => this.handleGeolocate());
         }
 
+        // Voice Input (Speech Recognition)
+        this.bindVoiceSearch();
+
         // Clear Location
         const btnClearLoc = this.container.querySelector('#btnClearLocation');
         if (btnClearLoc) {
@@ -486,6 +496,107 @@ export class LabFinderComponent {
             },
             { timeout: 10000, enableHighAccuracy: true }
         );
+    }
+
+    /**
+     * Binds voice input (speech-to-text) to the laboratory search query input.
+     * Uses the browser Web Speech API (SpeechRecognition / webkitSpeechRecognition).
+     */
+    bindVoiceSearch() {
+        const btnMic = this.container.querySelector('#btnLabMic');
+        const inputQuery = this.container.querySelector('#labInputQuery');
+        if (!btnMic || !inputQuery) return;
+
+        const hasSpeechSupport = typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+        if (!hasSpeechSupport) {
+            btnMic.title = this.t('lab_finder.voice_not_supported', 'Voice input (Speech recognition not supported in this browser)');
+            btnMic.setAttribute('aria-label', btnMic.title);
+            btnMic.classList.add('unsupported');
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        try {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        } catch (err) {
+            console.warn('[LabFinder] SpeechRecognition initialization error:', err);
+            return;
+        }
+
+        let isListening = false;
+        let savedPlaceholder = '';
+
+        const stopListening = () => {
+            isListening = false;
+            btnMic.classList.remove('listening');
+            btnMic.setAttribute('aria-pressed', 'false');
+            btnMic.title = this.t('lab_finder.voice_search', 'Voice search');
+            if (savedPlaceholder) {
+                inputQuery.placeholder = savedPlaceholder;
+                savedPlaceholder = '';
+            }
+        };
+
+        btnMic.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!isListening) {
+                try {
+                    const currentLang = (this.getLanguage && typeof this.getLanguage === 'function')
+                        ? this.getLanguage()
+                        : (window.bisI18n ? window.bisI18n.getLanguage() : 'en');
+                    recognition.lang = currentLang === 'hi' ? 'hi-IN' : 'en-IN';
+
+                    savedPlaceholder = inputQuery.placeholder;
+                    inputQuery.placeholder = this.t('lab_finder.voice_listening', 'Listening... speak now');
+
+                    recognition.start();
+                    isListening = true;
+                    btnMic.classList.add('listening');
+                    btnMic.setAttribute('aria-pressed', 'true');
+                    btnMic.title = this.t('lab_finder.voice_listening', 'Listening... speak now');
+                } catch (err) {
+                    console.warn('[LabFinder] SpeechRecognition start error:', err);
+                    stopListening();
+                }
+            } else {
+                try {
+                    recognition.stop();
+                } catch (err) {
+                    console.warn('[LabFinder] SpeechRecognition stop error:', err);
+                }
+                stopListening();
+            }
+        });
+
+        recognition.onresult = (event) => {
+            if (event.results && event.results.length > 0 && event.results[0].length > 0) {
+                const transcript = event.results[0][0].transcript.trim();
+                if (transcript) {
+                    inputQuery.value = transcript;
+                    const inputStd = this.container.querySelector('#labInputStandard');
+                    if (inputStd) inputStd.value = '';
+
+                    inputQuery.focus();
+                    inputQuery.dispatchEvent(new Event('input', { bubbles: true }));
+                    this.executeSearchFromInputs();
+                }
+            }
+            stopListening();
+        };
+
+        recognition.onerror = (event) => {
+            console.warn('[LabFinder] Speech recognition error:', event.error);
+            stopListening();
+        };
+
+        recognition.onend = () => {
+            stopListening();
+        };
     }
 
     /**
