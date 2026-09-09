@@ -390,12 +390,16 @@ def resolve_conversational_context(
         return q, None, resolved_prod, False
 
     resolved_query = q
-    if re.search(r'\b(it|this\s+standard|the\s+standard)\b', q_lower):
-        resolved_query = re.sub(r'\b(it|this\s+standard|the\s+standard)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
-    elif re.search(r'\b(where\s+can\s+i\s+get\s+(?:these|the)?\s*tests?\s*done|where\s+to\s+test|which\s+labs?|who\s+tests?)\b', q_lower):
-        resolved_query = f"Find laboratories for testing according to {resolved_std}"
+    if re.search(r'\b(where\s+can\s+i\s+get\s+(?:these|the)?\s*tests?\s*done|where\s+to\s+test|which\s+labs?|who\s+tests?)\b', q_lower):
+        resolved_query = f"Find laboratories that can perform the testing requirements associated with {resolved_std}."
+    elif re.search(r'\b(where|which\s+labs?|who\s+tests?|where\s+to\s+test)\b', q_lower) and re.search(r'\b(these\s+tests|those\s+tests|the\s+tests|tests?)\b', q_lower):
+        loc_m = re.search(r'\b(?:in|near|at|around)\s+([A-Za-z]+)\b', q)
+        loc_str = f" in {loc_m.group(1).title()}" if loc_m and loc_m.group(1).lower() not in ["bis", "is", "standard", "india", "laboratory", "laboratories"] else ""
+        resolved_query = f"Find laboratories that can perform the testing requirements associated with {resolved_std}{loc_str}."
     elif re.search(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', q_lower):
-        resolved_query = re.sub(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', f"tests under {resolved_std}", resolved_query, flags=re.IGNORECASE)
+        resolved_query = re.sub(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', f"testing requirements associated with {resolved_std}", resolved_query, flags=re.IGNORECASE)
+    elif re.search(r'\b(it|this\s+standard|the\s+standard)\b', q_lower):
+        resolved_query = re.sub(r'\b(it|this\s+standard|the\s+standard)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
     elif re.search(r'\b(where|lab|labs|laboratory|laboratories)\b', q_lower):
         resolved_query = f"{q} for {resolved_std}"
     else:
@@ -421,6 +425,10 @@ def classify_orchestrator_intent(
     if is_conv or is_general:
         return INTENT_GENERAL
 
+    # Direct entity definitions (e.g. "what is IS 4985?", "what is LAB-UNKNOWN_79dcb12d?")
+    if re.match(r'^(?:what\s+is|what\s+are|define|explain)\s+(?:lab[-_]|is[-_])?[a-z0-9_-]+\??$', q_lower) and not any(c in q_lower for c in ["scope", "test", "amendment", "revision", "fee", "cost", "mandatory"]):
+        return INTENT_DEFINITION
+
     # 1. STANDARD_COMPARISON
     comp_cues = ["difference between", "differ between", "differences between", "compare", "comparison", "versus", "vs", "vs.", "अन्तर", "अंतर", "तुलना", "फरक"]
     if len(clean_stds) >= 2 or (clean_stds and any(c in q_lower for c in comp_cues)):
@@ -428,15 +436,8 @@ def classify_orchestrator_intent(
             return INTENT_STANDARD_COMPARISON
 
     # 2. LAB_SEARCH
-    lab_cues = [
-        "lab", "labs", "laboratory", "laboratories", "where to test", "where can i test",
-        "where can i get", "testing facility", "testing facilities", "test center",
-        "recognized lab", "recognized laboratories", "who tests", "empanelled lab",
-        "find bis-recognized laboratories", "find laboratories",
-        "प्रयोगशाला", "प्रयोगशालाएं", "परीक्षण केंद्र", "परीक्षण सुविधा", "कहाँ परीक्षण कराएं",
-        "कहाँ टेस्ट कराएं"
-    ]
-    if any(c in q_lower for c in lab_cues):
+    lab_pattern = r'\b(?:labs|laboratory|laboratories|where\s+to\s+test|where\s+can\s+i\s+test|where\s+can\s+i\s+get|testing\s+facilit(?:y|ies)|test\s+centers?|recognized\s+labs?|recognized\s+laboratories|who\s+tests?|empanelled\s+labs?|find\s+.*laborator(?:y|ies)|find\s+labs?|search\s+labs?|प्रयोगशाला|प्रयोगशालाएं|परीक्षण\s+केंद्र|परीक्षण\s+सुविधा|कहाँ\s+परीक्षण|कहाँ\s+टेस्ट)\b'
+    if re.search(lab_pattern, q_lower):
         return INTENT_LAB_SEARCH
 
     # 3. AMENDMENT_HISTORY
@@ -765,12 +766,12 @@ def analyze_query_context(
             lab_cues = ["lab", "laboratory", "laboratories", "प्रयोगशाला", "प्रयोगशालाएं", "scope"]
             fee_cues = ["fee", "fees", "cost", "charge", "charges", "price", "शुल्क", "फीस"]
 
-            if any(cue in q_lower for cue in req_cues):
-                search_intent = f"{std_candidate} requirements testing specifications"
-            elif any(cue in q_lower for cue in lab_cues):
+            if intent == INTENT_LAB_SEARCH or any(cue in q_lower for cue in lab_cues):
                 search_intent = f"{std_candidate} testing laboratory scope"
             elif any(cue in q_lower for cue in fee_cues):
                 search_intent = f"{std_candidate} testing fee charges"
+            elif any(cue in q_lower for cue in req_cues):
+                search_intent = f"{std_candidate} requirements testing specifications"
             else:
                 search_intent = std_candidate
         elif product:
@@ -3003,85 +3004,189 @@ def orchestrate_assistant_query(
 
     # LAB_SEARCH: Route to F3 Lab Finder
     if detected_intent == INTENT_LAB_SEARCH:
+        lab_dispatch_success = False
+        lab_dispatch_error = None
         try:
-            from backend.lab_finder_api import execute_natural_search, LabNaturalSearchRequest
-            lab_query_parts = []
-            stds = query_ctx.get("is_numbers", [])
-            prod = query_ctx.get("product")
-            loc = query_ctx.get("entities", {}).get("location")
-            if stds:
-                lab_query_parts.append(f"Find BIS-recognized laboratories that can test according to {stds[0]}")
-            elif prod:
-                lab_query_parts.append(f"Find BIS-recognized laboratories for testing {prod}")
-            else:
-                lab_query_parts.append(clean_query)
-            if loc:
-                lab_query_parts.append(f"in {loc}")
-            lab_search_query = " ".join(lab_query_parts)
-            lab_response = execute_natural_search(LabNaturalSearchRequest(query=lab_search_query))
-            if lab_response.status in ("success", "MATCH") and lab_response.search_results and lab_response.search_results.total_matching > 0:
-                candidates = lab_response.search_results.candidates
-                total = lab_response.search_results.total_matching
-                std_label = stds[0] if stds else (prod or "the specified standard")
-                lab_lines = []
-                if resp_lang_early == "hi":
-                    lab_lines.append(f"### {std_label} \u0915\u0947 \u0932\u093f\u090f BIS-\u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u0930\u0940\u0915\u094d\u0937\u0923 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\n")
-                    lab_lines.append(f"\u0915\u0941\u0932 **{total}** \u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902 \u092e\u093f\u0932\u0940\u0902\u0964\n")
-                else:
-                    lab_lines.append(f"### BIS-Recognized Testing Laboratories for {std_label}\n")
-                    lab_lines.append(f"Found **{total}** recognized laboratories.\n")
-                shown = candidates[:10]
-                for i, cand in enumerate(shown, 1):
-                    name = getattr(cand, 'laboratory_name', 'Unknown')
-                    code = getattr(cand, 'public_lab_code', '')
-                    addr = getattr(cand, 'address', None)
-                    city = getattr(addr, 'city', '') if addr else ''
-                    state = getattr(addr, 'state', '') if addr else ''
-                    city = city if city and city != 'None' else ''
-                    state = state if state and state != 'None' else ''
-                    location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
-                    lab_lines.append(f"{i}. **{name}**" + (f" ({code})" if code else "") + (f" \u2014 {location_str}" if location_str else ""))
-                if total > 10:
-                    remaining = total - 10
-                    if resp_lang_early == "hi":
-                        lab_lines.append(f"\n...\u0914\u0930 {remaining} \u0905\u0928\u094d\u092f \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\u0964 \u0935\u093f\u0938\u094d\u0924\u0943\u0924 \u0938\u0942\u091a\u0940 \u0915\u0947 \u0932\u093f\u090f BIS Lab Finder \u0926\u0947\u0916\u0947\u0902\u0964")
-                    else:
-                        lab_lines.append(f"\n...and {remaining} more. Use the BIS Lab Finder for the full list.")
-                lab_answer = "\n".join(lab_lines)
-                return {
-                    "status": "SUFFICIENT",
-                    "answer": lab_answer,
-                    "generation_mode": "GROUNDED",
-                    "response_style": returned_style,
-                    "rag": rag_result,
-                    "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
-                    "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
-                    "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
-                    "intent": detected_intent
-                }
-        except Exception as e:
-            logger.warning(f"F3 Lab Finder dispatch failed, falling back to RAG: {e}")
+            # Robust import: try multiple paths for F3 Lab Finder
+            execute_natural_search = None
+            LabNaturalSearchRequest = None
+            try:
+                from backend.lab_finder_api import execute_natural_search, LabNaturalSearchRequest
+            except ImportError:
+                try:
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location(
+                        "lab_finder_api",
+                        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", "lab_finder_api.py")
+                    )
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        execute_natural_search = mod.execute_natural_search
+                        LabNaturalSearchRequest = mod.LabNaturalSearchRequest
+                except Exception:
+                    pass
 
-    # STANDARD_COMPARISON: Isolated retrieval per standard, then merge
+            if execute_natural_search and LabNaturalSearchRequest:
+                lab_query_parts = []
+                stds = query_ctx.get("is_numbers", [])
+                prod = query_ctx.get("product")
+                loc = query_ctx.get("entities", {}).get("location")
+                if stds:
+                    lab_query_parts.append(f"Find BIS-recognized laboratories that can test according to {stds[0]}")
+                elif prod:
+                    lab_query_parts.append(f"Find BIS-recognized laboratories for testing {prod}")
+                else:
+                    lab_query_parts.append(clean_query)
+                if loc:
+                    lab_query_parts.append(f"in {loc}")
+                lab_search_query = " ".join(lab_query_parts)
+                lab_response = execute_natural_search(LabNaturalSearchRequest(query=lab_search_query))
+                if lab_response.status in ("success", "MATCH") and lab_response.search_results and lab_response.search_results.total_matching > 0:
+                    candidates = lab_response.search_results.candidates
+                    total = lab_response.search_results.total_matching
+                    std_label = stds[0] if stds else (prod or "the specified standard")
+                    lab_lines = []
+                    if resp_lang_early == "hi":
+                        lab_lines.append(f"### {std_label} \u0915\u0947 \u0932\u093f\u090f BIS-\u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u0930\u0940\u0915\u094d\u0937\u0923 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\n")
+                        lab_lines.append(f"\u0915\u0941\u0932 **{total}** \u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902 \u092e\u093f\u0932\u0940\u0902\u0964\n")
+                    else:
+                        lab_lines.append(f"### BIS-Recognized Testing Laboratories for {std_label}\n")
+                        lab_lines.append(f"Found **{total}** recognized laboratories.\n")
+                    shown = candidates[:10]
+                    for i, cand in enumerate(shown, 1):
+                        name = getattr(cand, 'laboratory_name', 'Unknown')
+                        code = getattr(cand, 'public_lab_code', '')
+                        addr = getattr(cand, 'address', None)
+                        city = getattr(addr, 'city', '') if addr else ''
+                        state = getattr(addr, 'state', '') if addr else ''
+                        city = city if city and city != 'None' else ''
+                        state = state if state and state != 'None' else ''
+                        location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
+                        lab_lines.append(f"{i}. **{name}**" + (f" ({code})" if code else "") + (f" \u2014 {location_str}" if location_str else ""))
+                    if total > 10:
+                        remaining = total - 10
+                        if resp_lang_early == "hi":
+                            lab_lines.append(f"\n...\u0914\u0930 {remaining} \u0905\u0928\u094d\u092f \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\u0964 \u0935\u093f\u0938\u094d\u0924\u0943\u0924 \u0938\u0942\u091a\u0940 \u0915\u0947 \u0932\u093f\u090f BIS Lab Finder \u0926\u0947\u0916\u0947\u0902\u0964")
+                        else:
+                            lab_lines.append(f"\n...and {remaining} more. Use the BIS Lab Finder for the full list.")
+                    lab_answer = "\n".join(lab_lines)
+                    lab_dispatch_success = True
+                    return {
+                        "status": "SUFFICIENT",
+                        "answer": lab_answer,
+                        "generation_mode": "GROUNDED",
+                        "response_style": returned_style,
+                        "rag": rag_result,
+                        "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
+                        "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                        "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
+                        "intent": detected_intent
+                    }
+                else:
+                    lab_dispatch_error = f"F3 returned status={lab_response.status}, no matching labs"
+            else:
+                lab_dispatch_error = "F3 Lab Finder module could not be imported"
+        except Exception as e:
+            lab_dispatch_error = str(e)
+            logger.warning(f"F3 Lab Finder dispatch failed: {e}")
+
+        # LAB_SEARCH fallback: provide a lab-specific answer instead of generic RAG
+        if not lab_dispatch_success:
+            stds = query_ctx.get("is_numbers", [])
+            std_label = stds[0] if stds else "the specified standard"
+            loc = query_ctx.get("entities", {}).get("location")
+            if resp_lang_early == "hi":
+                fallback_lab_answer = f"### {std_label} के लिए परीक्षण प्रयोगशालाएं\n\n"
+                fallback_lab_answer += f"{std_label} के लिए BIS-मान्यता प्राप्त प्रयोगशालाओं की खोज के लिए कृपया BIS Accredited Laboratory Finder का उपयोग करें।\n\n"
+                fallback_lab_answer += "**BIS Lab Finder:** https://bis.gov.in/\n"
+            else:
+                fallback_lab_answer = f"### Testing Laboratories for {std_label}\n\n"
+                fallback_lab_answer += f"To find BIS-recognized laboratories qualified to test according to {std_label}"
+                if loc:
+                    fallback_lab_answer += f" in {loc}"
+                fallback_lab_answer += ", please use the BIS Accredited Laboratory Finder.\n\n"
+                fallback_lab_answer += "**BIS Lab Finder:** https://bis.gov.in/\n"
+                if lab_dispatch_error:
+                    logger.info(f"LAB_SEARCH fallback used. F3 error: {lab_dispatch_error}")
+            return {
+                "status": rag_result.get("status", "INSUFFICIENT"),
+                "answer": fallback_lab_answer,
+                "generation_mode": "GROUNDED",
+                "response_style": returned_style,
+                "rag": rag_result,
+                "llm": {"used": False, "role": "LAB_SEARCH_FALLBACK", "answer": None, "source_type": None, "verified_by_bis_rag": (rag_result.get("status") == "SUFFICIENT")},
+                "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "LAB_SEARCH_FALLBACK", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
+                "intent": detected_intent
+            }
+
+    # STANDARD_COMPARISON: Isolated retrieval per standard, then merge and return
     if detected_intent == INTENT_STANDARD_COMPARISON:
         comp_stds = query_ctx.get("is_numbers", [])
         if len(comp_stds) >= 2:
             try:
-                merged_evidence = []
-                merged_answer_parts = []
+                per_std_evidence = {}  # std -> evidence list
+                per_std_answer = {}    # std -> answer text
                 for std in comp_stds:
                     std_rag = query_production_rag(std, engine=engine)
-                    if std_rag.get("evidence"):
-                        merged_evidence.extend(std_rag["evidence"])
-                    std_answer = std_rag.get("answer", "")
-                    if std_answer:
-                        merged_answer_parts.append(f"### {std}\n{std_answer}")
-                if merged_evidence:
-                    rag_result["evidence"] = rag_result.get("evidence", []) + merged_evidence
-                    rag_result["status"] = "SUFFICIENT"
-                    if merged_answer_parts:
-                        comp_header = f"Comparison of {' and '.join(comp_stds)}" if resp_lang_early != "hi" else f"{' \u0914\u0930 '.join(comp_stds)} \u0915\u0940 \u0924\u0941\u0932\u0928\u093e"
-                        rag_result["answer"] = f"## {comp_header}\n\n" + "\n\n".join(merged_answer_parts)
+                    per_std_evidence[std] = std_rag.get("evidence", [])
+                    per_std_answer[std] = std_rag.get("answer", "")
+                # Build comparison answer with both standards
+                if resp_lang_early == "hi":
+                    comp_header = f"{' और '.join(comp_stds)} की तुलना"
+                else:
+                    comp_header = f"Comparison of {' and '.join(comp_stds)}"
+                comp_sections = []
+                all_evidence = list(rag_result.get("evidence", []))
+                for std in comp_stds:
+                    ev_list = per_std_evidence.get(std, [])
+                    all_evidence.extend(ev_list)
+                    std_ans = per_std_answer.get(std, "").strip()
+                    if std_ans:
+                        comp_sections.append(f"### {std}\n\n{std_ans}")
+                    elif ev_list:
+                        # Extract standard title
+                        std_title = ""
+                        for ev in ev_list:
+                            t = ev.get("standard_title") or ""
+                            if t:
+                                std_title = t
+                                break
+                        section = f"### {std}"
+                        if std_title:
+                            section += f"\n**{std_title}**\n"
+                        key_points = []
+                        for ev in ev_list[:5]:
+                            heading = ev.get("heading") or ""
+                            text_snippet = (ev.get("text") or "")[:200]
+                            if heading:
+                                key_points.append(f"- **{heading}:** {text_snippet}")
+                            elif text_snippet:
+                                key_points.append(f"- {text_snippet}")
+                        if key_points:
+                            section += "\n" + "\n".join(key_points)
+                        comp_sections.append(section)
+                    else:
+                        if resp_lang_early == "hi":
+                            comp_sections.append(f"### {std}\nउपलब्ध बीआईएस साक्ष्यों में {std} के लिए कोई रिकॉर्ड नहीं मिला।")
+                        else:
+                            comp_sections.append(f"### {std}\nNo BIS evidence was found for {std} in the indexed records.")
+                comp_answer = f"## {comp_header}\n\n" + "\n\n".join(comp_sections)
+                # Merge evidence into rag_result for provenance
+                rag_result["evidence"] = all_evidence
+                rag_result["status"] = "SUFFICIENT" if any(per_std_evidence.get(s) for s in comp_stds) else "INSUFFICIENT"
+                return {
+                    "status": "SUFFICIENT" if any(per_std_evidence.get(s) for s in comp_stds) else "INSUFFICIENT",
+                    "answer": comp_answer,
+                    "generation_mode": "GROUNDED",
+                    "response_style": returned_style,
+                    "intent": detected_intent,
+                    "rag": rag_result,
+                    "llm": {"used": False, "role": "STANDARD_COMPARISON_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
+                    "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                    "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early}
+                }
             except Exception as e:
                 logger.warning(f"Standard comparison dispatch failed, using single RAG result: {e}")
 
@@ -3248,7 +3353,7 @@ def orchestrate_assistant_query(
         active_verified_by_bis = verified_by_bis_rag
 
     # ---- Phase 14: Intent-Specific Safety Post-Processing ----
-    # Amendment Safety
+    # Amendment Safety: SCRUB unsafe revision≡amendment conflation
     if detected_intent == INTENT_AMENDMENT_HISTORY and not (is_conv or is_general):
         evidence_list = rag_result.get("evidence", [])
         verified_rev, verified_amend = check_amendment_evidence(evidence_list)
@@ -3257,11 +3362,63 @@ def orchestrate_assistant_query(
             std_label = stds[0] if stds else "this standard"
             year_m = re.search(r':\s*(\d{4})', std_label)
             year = year_m.group(1) if year_m else ""
+            if not year:
+                # Try to extract year from evidence
+                for ev in evidence_list:
+                    t = (ev.get("standard_title") or "") + " " + (ev.get("text") or "")
+                    y_m = re.search(r'(?:IS\s*(?:\d+)\s*:\s*(\d{4})|(\d{4})\s*(?:revision|edition))', t, re.IGNORECASE)
+                    if y_m:
+                        year = y_m.group(1) or y_m.group(2)
+                        break
             rev_label = verified_rev if verified_rev else "a revision"
             caveat = AMENDMENT_CONSERVATIVE_MAP.get(resp_lang, AMENDMENT_CONSERVATIVE_MAP["en"]).format(
                 std=std_label, year=year, rev=rev_label
             )
-            final_answer = final_answer + "\n\n" + caveat
+            # Scrub unsafe revision=amendment conflation from the generated answer
+            unsafe_patterns = [
+                # "latest amendment (fourth revision)" and variants
+                re.compile(r'(?:the\s+)?latest\s+amendment\s*(?:\(?\s*(?:fourth|first|second|third|fifth|sixth|\d+(?:st|nd|rd|th)?)\s+revision\s*\)?)?', re.IGNORECASE),
+                # "No newer amendment beyond the 2021 fourth revision"
+                re.compile(r'[Nn]o\s+newer\s+amendment\s+beyond\s+[^.]*revision[^.]*\.?', re.IGNORECASE),
+                # "is the latest amendment" / "latest amendment is" / "latest amendment to IS XXXX"
+                re.compile(r'(?:is\s+the\s+latest\s+amendment|latest\s+amendment\s+(?:is|to|of)\s+)', re.IGNORECASE),
+                # "the amendment" when used interchangeably with revision
+                re.compile(r'(?:this|the)\s+(?:fourth|first|second|third)\s+revision\s+(?:is|serves?\s+as|represents?|constitutes?)\s+(?:the\s+)?(?:latest\s+)?amendment', re.IGNORECASE),
+            ]
+            scrubbed = final_answer
+            for pat in unsafe_patterns:
+                scrubbed = pat.sub('', scrubbed)
+            # Clean up double whitespace/newlines left by scrubbing
+            scrubbed = re.sub(r'\n{3,}', '\n\n', scrubbed).strip()
+            # If scrubbing removed most of the answer, rebuild it entirely
+            # Extract standard title from evidence for a clean answer
+            std_title = ""
+            for ev in evidence_list:
+                t = ev.get("standard_title") or ""
+                if t:
+                    std_title = t
+                    break
+            if len(scrubbed) < 50 or scrubbed == final_answer.strip():
+                # Even if scrubbing didn't change text, the answer may still be
+                # about testing specs rather than amendments. Rebuild a clean answer.
+                pass
+            # Build a clean amendment-focused answer
+            if resp_lang == "hi":
+                clean_amendment_answer = f"### {std_label} — संशोधन जानकारी\n\n"
+                if std_title:
+                    clean_amendment_answer += f"**{std_title}**\n\n"
+                if verified_rev:
+                    clean_amendment_answer += f"उपलब्ध बीआईएस साक्ष्यों के अनुसार, {std_label} वर्तमान में **{verified_rev}** ({year}) के रूप में सत्यापित है।\n\n"
+                clean_amendment_answer += caveat
+            else:
+                clean_amendment_answer = f"### {std_label} — Amendment Information\n\n"
+                if std_title:
+                    clean_amendment_answer += f"**{std_title}**\n\n"
+                if verified_rev:
+                    clean_amendment_answer += f"Based on the available BIS evidence, {std_label} is verified as the **{verified_rev}** ({year}).\n\n"
+                clean_amendment_answer += caveat
+                clean_amendment_answer += "\n\n> **Note:** A *revision* replaces the entire standard text. An *amendment* is a smaller change to a specific clause. The existence of a revision does not establish whether subsequent amendments have been issued."
+            final_answer = clean_amendment_answer
 
     # Certification / Mandatory Safety
     if detected_intent == INTENT_CERTIFICATION and not (is_conv or is_general):

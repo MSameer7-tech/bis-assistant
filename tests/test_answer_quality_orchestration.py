@@ -438,5 +438,138 @@ class TestBackwardCompatibility:
             assert key in ctx, f"Missing new key: {key}"
 
 
+# ============================================================================
+# 9. Phase 14 Remediation Production Regression Tests (Live Output Assertions)
+# ============================================================================
+class TestPhase14RemediationLiveOutputs:
+    """Rigorous tests asserting final outputs for all 4 remediation bugs."""
+
+    def test_remediation_bug1_amendment_does_not_contain_unsafe_conflation(self):
+        """
+        BUG 1 Assertion:
+        Final answer must NEVER contain 'latest amendment (fourth revision)' or
+        equate 'Fourth Revision' with 'latest amendment'.
+        When only revision is established, answer must state latest amendment could not be verified.
+        """
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        result = orchestrate_assistant_query("What is the latest amendment to IS 4985?")
+        answer = result["answer"]
+        answer_lower = answer.lower()
+
+        # Unsafe conflation MUST NOT appear
+        assert "latest amendment (fourth revision)" not in answer_lower
+        assert "no newer amendment beyond the 2021 fourth revision" not in answer_lower
+        assert "is the latest amendment" not in answer_lower
+
+        # Must explicitly acknowledge the verified revision while stating amendment could not be verified
+        assert "fourth revision" in answer_lower
+        assert ("could not verify the latest amendment" in answer_lower or
+                "could not be verified" in answer_lower or
+                "सत्यापन नहीं" in answer)
+
+    def test_remediation_bug2_standard_comparison_retains_both_standards(self):
+        """
+        BUG 2 Assertion:
+        For comparison queries (e.g. IS 4985 and IS 13592), independent retrieval
+        must be performed and BOTH standards must appear in the final response.
+        """
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        result = orchestrate_assistant_query("What is the difference between IS 4985 and IS 13592?")
+        answer = result["answer"]
+
+        assert result["status"] == "SUFFICIENT"
+        assert result.get("intent") == "STANDARD_COMPARISON"
+
+        # Both standards must have dedicated verified sections in the final answer
+        assert "4985" in answer
+        assert "13592" in answer
+        assert "### IS 4985" in answer
+        assert "### IS 13592" in answer
+
+        # Evidence must contain units from both standards
+        evidence = result.get("rag", {}).get("evidence", [])
+        assert len(evidence) > 0
+        std_numbers = set()
+        for ev in evidence:
+            t = (ev.get("standard_title") or "") + " " + (ev.get("text") or "")
+            if "4985" in t:
+                std_numbers.add("4985")
+            if "13592" in t:
+                std_numbers.add("13592")
+        assert "4985" in std_numbers
+        assert "13592" in std_numbers
+
+    def test_remediation_bug3_lab_search_returns_f3_matches(self):
+        """
+        BUG 3 Assertion:
+        LAB_SEARCH must route to F3 Lab Finder, returning dynamic qualified labs,
+        not a generic RAG refusal or claim that labs could not be verified.
+        """
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        result = orchestrate_assistant_query("Find labs for IS 4985")
+
+        assert result.get("intent") == "LAB_SEARCH"
+        assert result["provenance"]["source_layer"] == "F3_LAB_FINDER"
+        assert result["llm"]["role"] == "LAB_SEARCH_DISPATCH"
+
+        answer = result["answer"]
+        # Must not be a refusal
+        assert "could not be verified" not in answer.lower()
+        # Must contain recognized laboratories from F3
+        assert "recognized laboratories" in answer.lower() or "मान्यता प्राप्त" in answer
+        assert "IS 4985" in answer
+        # Must contain at least one laboratory name
+        assert "shriram" in answer.lower() or "siir" in answer.lower() or "kailtech" in answer.lower() or "cipet" in answer.lower()
+
+    def test_remediation_bug3_delhi_location_filtering(self):
+        """
+        BUG 3 Location Filtering Assertion:
+        Find labs in Delhi for IS 4985 must filter F3 results for Delhi.
+        """
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        result = orchestrate_assistant_query("Find labs in Delhi for IS 4985")
+
+        assert result.get("intent") == "LAB_SEARCH"
+        assert result["provenance"]["source_layer"] == "F3_LAB_FINDER"
+        answer = result["answer"]
+        assert "Delhi" in answer
+        assert "SIIR" in answer or "Shriram" in answer or "Analytical" in answer
+
+    def test_remediation_bug4_conversational_these_tests_chain(self):
+        """
+        BUG 4 Assertion:
+        Conversational sequence:
+        Turn 1: What is IS 4985?
+        Turn 2: What tests does it require?
+        Turn 3: Where can I get these tests done?
+        Turn 3 must resolve 'these tests' to IS 4985 and route to LAB_SEARCH -> F3.
+        Must NOT jump to unrelated standards like IS 13049.
+        """
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
+        history = []
+
+        # Turn 1
+        q1 = "What is IS 4985?"
+        r1 = orchestrate_assistant_query(q1, conversation_history=history)
+        history.append({"role": "user", "text": q1})
+        history.append({"role": "assistant", "data": {"answer": r1["answer"], "intent": r1.get("intent"), "rag": {"standard": "IS 4985"}}})
+
+        # Turn 2
+        q2 = "What tests does it require?"
+        r2 = orchestrate_assistant_query(q2, conversation_history=history)
+        history.append({"role": "user", "text": q2})
+        history.append({"role": "assistant", "data": {"answer": r2["answer"], "intent": r2.get("intent"), "rag": {"standard": "IS 4985"}}})
+
+        # Turn 3
+        q3 = "Where can I get these tests done?"
+        r3 = orchestrate_assistant_query(q3, conversation_history=history)
+
+        assert r3.get("intent") == "LAB_SEARCH"
+        assert r3["provenance"]["source_layer"] in ("F3_LAB_FINDER", "LAB_SEARCH_FALLBACK")
+        answer = r3["answer"]
+        assert "IS 4985" in answer
+        assert "13049" not in answer  # Must NOT jump to flushing cisterns (IS 13049)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

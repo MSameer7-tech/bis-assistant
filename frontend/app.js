@@ -858,11 +858,16 @@ function initApp() {
         try {
             const userPrefs = typeof getUserPreferences === 'function' ? getUserPreferences() : null;
             const effectiveLang = userPrefs?.language || currentLanguage || 'en';
-            // Build conversation history for context resolution
-            const historyMessages = (conv.messages || []).slice(-10).map(m => ({
+            // Build conversation history for context resolution (exclude the query currently being submitted)
+            const priorMessages = (conv.messages || []).slice(0, -1);
+            const historyMessages = priorMessages.slice(-10).map(m => ({
                 role: m.role,
                 text: m.text || '',
-                data: m.data ? { answer: m.data.answer || m.data.answer_markdown || '' } : undefined
+                data: m.data ? {
+                    answer: m.data.answer || m.data.answer_markdown || '',
+                    intent: m.data.intent,
+                    rag: m.data.rag ? { standard: m.data.rag.standard } : undefined
+                } : undefined
             }));
             const responseData = await AssistantService.query(query, {
                 mode: backendMode,
@@ -1048,11 +1053,11 @@ function initApp() {
         if (currentConv && currentConv.messages && currentConv.messages.length > 0) {
             const userMsgs = currentConv.messages.filter(m => m.role === 'user');
             if (userMsgs.length > 0) {
-                userQueryText = userMsgs[userMsgs.length - 1].content || userQueryText;
+                userQueryText = userMsgs[userMsgs.length - 1].text || userMsgs[userMsgs.length - 1].content || userQueryText;
             }
         }
 
-        const isLabQuery = /\b(labs?|laborator(?:y|ies)|testing\s+facilit(?:y|ies)|testing\s+scope|where\s+to\s+test|who\s+can\s+test|accredited|lims)\b/i.test(userQueryText);
+        const isLabQuery = Boolean(data.intent === 'LAB_SEARCH') || /\b(labs?|laborator(?:y|ies)|testing\s+facilit(?:y|ies)|testing\s+scope|where\s+to\s+test|who\s+can\s+test|accredited|lims|where\s+can\s+i\s+get.*tests?\s*done)\b/i.test(userQueryText);
         const isFeeQuery = /\b(fees?|costs?|charges?|pricing|rates?|amount|how\s+much)\b/i.test(userQueryText);
 
         // 1. Answer Body (Structured, normalized editorial markdown)
