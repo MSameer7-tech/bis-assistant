@@ -54,7 +54,7 @@ from scripts.phase12_e_production_rag import query_production_rag, get_productio
 
 logger = logging.getLogger("phase12_f2_orchestrator")
 
-DEFAULT_GROQ_MODEL = os.getenv("BIS_LLM_MODEL") or os.getenv("GROQ_MODEL") or "qwen/qwen3.8-27b"
+DEFAULT_GROQ_MODEL = os.getenv("BIS_LLM_MODEL") or os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b"
 DEFAULT_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 # -----------------------------------------------------------------------------
@@ -1519,6 +1519,8 @@ def strip_unverified_disclaimers(text: str) -> str:
     """Removes any apologetic, refusal, or 'not verified' disclaimers, retrieval debug dumps, or trailing sources block if generated."""
     if not text:
         return ""
+    # Strip thinking / chain-of-thought blocks if emitted by reasoning models
+    text = re.sub(r'<think>[\s\S]*?</think>', '', text)
     # Strip disclaimers
     text = re.sub(r'\(?Note:\s*This answer is based on general model knowledge[^\n\)]*\)?\.?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\(?Note:\s*This information is not verified[^\n\)]*\)?\.?', '', text, flags=re.IGNORECASE)
