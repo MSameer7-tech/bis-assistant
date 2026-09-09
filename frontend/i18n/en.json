@@ -13,6 +13,8 @@
     "user_default": "Workspace User",
     "status_operational": "Operational",
     "language": "Language",
+    "preferences": "Preferences",
+    "quick_tour": "Quick Tour",
     "sign_in": "Sign in",
     "sign_out": "Sign out"
   },
@@ -216,5 +218,90 @@
     "no_account": "Don't have an account?",
     "switch_signin": "Sign In",
     "switch_signup": "Create an account"
+  },
+  "onboarding": {
+    "badge": "BIS PERSONALIZATION",
+    "title": "Welcome to BIS AI Assistant",
+    "subtitle": "Personalize your workspace for faster, evidence-grounded standards intelligence.",
+    "edit_title": "Personalization Preferences",
+    "edit_subtitle": "Update your role, objectives, and interface settings anytime.",
+    "step_counter": "Step {current} of {total}",
+    "btn_skip": "Skip for now",
+    "btn_back": "Back",
+    "btn_continue": "Continue",
+    "btn_finish": "Complete & Start Exploring",
+    "btn_save": "Save Changes",
+    "close": "Close",
+    "step1": {
+      "title": "What best describes you?",
+      "subtitle": "Select the profile that best matches your workflow to customize your experience.",
+      "roles": {
+        "manufacturer": "Manufacturer",
+        "importer_exporter": "Importer / Exporter",
+        "business_seller": "Business / Seller",
+        "testing_laboratory": "Testing Laboratory",
+        "compliance_professional": "Compliance / Regulatory Professional",
+        "consumer": "Consumer",
+        "student_researcher": "Student / Researcher",
+        "other": "Other"
+      }
+    },
+    "step2": {
+      "title": "What do you mainly use BIS services for?",
+      "subtitle": "Select one or more primary objectives to customize quick actions and references.",
+      "multi_hint": "Select all that apply",
+      "use_cases": {
+        "finding_standards": "Finding Indian Standards",
+        "checking_compliance": "Checking compliance requirements",
+        "understanding_qcos": "Understanding QCOs",
+        "certification_licensing": "BIS Certification / Licensing",
+        "testing_requirements": "Testing Requirements",
+        "finding_labs": "Finding Testing Laboratories",
+        "hallmarking_huid": "Hallmarking / HUID",
+        "verifying_licence": "Verifying BIS Licence / Certification",
+        "understanding_clauses": "Understanding Standards & Clauses",
+        "other": "Other"
+      }
+    },
+    "step3": {
+      "title": "Where are you based?",
+      "subtitle": "Helps anchor testing laboratory searches and regional compliance data.",
+      "country": "Country",
+      "state": "State / Union Territory",
+      "city": "City / Town",
+      "search_state": "Search or select state...",
+      "search_city": "Select or type city name...",
+      "india": "India",
+      "other_country": "Other Country"
+    },
+    "step4": {
+      "title": "How would you like to interact with BIS Assistant?",
+      "subtitle": "Choose your preferred language and response depth.",
+      "language_label": "Preferred Language (12 Indian Languages)",
+      "response_style_label": "Response Style",
+      "styles": {
+        "quick_simple": "Quick & Simple",
+        "quick_simple_desc": "Concise summaries, direct clauses, and key takeaways.",
+        "detailed_explanatory": "Detailed & Explanatory",
+        "detailed_explanatory_desc": "Comprehensive breakdowns with context and normative references.",
+        "professional_compliance": "Professional & Compliance-focused",
+        "professional_compliance_desc": "Strict statutory clauses, audit rigor, and regulatory obligations."
+      }
+    },
+    "tour": {
+      "badge": "WORKSPACE TOUR",
+      "title": "Explore BIS Assistant Capabilities",
+      "subtitle": "A quick overview of evidence-grounded research tools.",
+      "step1_title": "Evidence-Grounded Intelligence",
+      "step1_desc": "Answers grounded in verified BIS evidence. Every response provides traceable standard clauses, official document IDs, and SHA-256 verified source provenance.",
+      "step2_title": "580+ BIS Laboratory Records",
+      "step2_desc": "Find laboratories using verified testing scope. Search across 580+ BIS-owned, recognized, and empanelled laboratories with specific parameter capabilities.",
+      "step3_title": "Normative Standards & Fee Inspection",
+      "step3_desc": "Inspect official testing fees, normative parameter clauses, and accredited testing scopes in real-time.",
+      "step4_title": "Multilingual & Voice Interaction",
+      "step4_desc": "Access support across 12 Indian languages and utilize microphone voice input on both Assistant and Lab Finder search bars.",
+      "btn_explore_assistant": "Start Researching",
+      "btn_explore_labs": "Find Laboratories"
+    }
   }
 }

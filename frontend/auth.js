@@ -81,6 +81,10 @@ export async function initializeAuth() {
                 }
             });
 
+            if (typeof window !== 'undefined') {
+                window.__BIS_SUPABASE_CLIENT__ = supabase;
+            }
+
             // Listen for auth state changes
             supabase.auth.onAuthStateChange(async (event, session) => {
                 currentSession = session;
@@ -159,7 +163,22 @@ export function getCachedSession() {
  * Returns the singleton Supabase client instance.
  */
 export function getSupabaseClient() {
-    return supabase;
+    if (supabase) return supabase;
+    if (typeof window !== 'undefined' && window.__BIS_SUPABASE_CLIENT__) {
+        supabase = window.__BIS_SUPABASE_CLIENT__;
+        return supabase;
+    }
+    return null;
+}
+
+/**
+ * Returns or asynchronously initializes the singleton Supabase client instance.
+ */
+export async function getOrInitSupabaseClient() {
+    const client = getSupabaseClient();
+    if (client) return client;
+    const res = await initializeAuth();
+    return res?.supabase || getSupabaseClient();
 }
 
 /**
@@ -332,6 +351,8 @@ export async function signOut() {
                 localStorage.removeItem(key);
             }
         }
+        localStorage.removeItem('bis_user_preferences');
+        localStorage.removeItem('bis_onboarding_completed');
     } catch (e) {
         console.warn('[BIS Auth] LocalStorage purge warning:', e);
     }

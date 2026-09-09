@@ -163,6 +163,7 @@ class AssistantQueryRequest(BaseModel):
     language: Optional[str] = None
     as_of_date: Optional[str] = None
     conversation_id: Optional[str] = None
+    response_style: Optional[str] = None
 
 
 class NumericalVerifyRequest(BaseModel):
@@ -527,8 +528,13 @@ async def handle_assistant_query(
         target_lang = req.target_language or req.language
         if target_lang == "auto":
             target_lang = None
-        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query
-        result = orchestrate_assistant_query(req.query, target_language=target_lang)
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query, normalize_language_code
+        normalized_lang = normalize_language_code(target_lang) if target_lang else None
+        result = orchestrate_assistant_query(
+            req.query,
+            target_language=normalized_lang,
+            response_style=req.response_style
+        )
         if current_user and isinstance(result, dict):
             result["authenticated_user"] = {
                 "user_id": current_user["user_id"],

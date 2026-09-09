@@ -40,6 +40,16 @@ import {
     setGuestSession
 } from './auth.js?v=14.1.0';
 
+import {
+    DEFAULT_USER_PREFERENCES as MODULE_DEFAULT_USER_PREFERENCES,
+    getUserPreferences as getStoredUserPreferences,
+    saveUserPreferences as storeUserPreferences,
+    loadUserPreferencesFromSupabase,
+    clearAuthenticatedPreferences,
+    normalizeDbToFrontend,
+    normalizeFrontendToDb
+} from './preferences.js?v=14.6.1';
+
 function initApp() {
     // -------------------------------------------------------------------------
     // DOM Element References
@@ -182,6 +192,47 @@ function initApp() {
     const authFooterText = document.getElementById('authFooterText');
     const authFooterSwitchBtn = document.getElementById('authFooterSwitchBtn');
 
+    // Sidebar User Action Buttons
+    const btnSidebarPreferences = document.getElementById('btnSidebarPreferences');
+    const btnSidebarTour = document.getElementById('btnSidebarTour');
+    const btnSystemModalTour = document.getElementById('btnSystemModalTour');
+
+    // Onboarding & Personalization Elements
+    const onboardingModalBackdrop = document.getElementById('onboardingModalBackdrop');
+    const onboardingModal = document.getElementById('onboardingModal');
+    const onboardingModalTitle = document.getElementById('onboardingModalTitle');
+    const onboardingModalSubtitle = document.getElementById('onboardingModalSubtitle');
+    const onboardingKicker = document.getElementById('onboardingKicker');
+    const onboardingStepBadge = document.getElementById('onboardingStepBadge');
+    const onboardingProgressFill = document.getElementById('onboardingProgressFill');
+    const btnOnboardingClose = document.getElementById('btnOnboardingClose');
+    const btnOnboardingSkip = document.getElementById('btnOnboardingSkip');
+    const btnOnboardingBack = document.getElementById('btnOnboardingBack');
+    const btnOnboardingNext = document.getElementById('btnOnboardingNext');
+    const onboardingNextText = document.getElementById('onboardingNextText');
+    const obCountrySelect = document.getElementById('obCountrySelect');
+    const obIndiaLocationWrap = document.getElementById('obIndiaLocationWrap');
+    const obStateInput = document.getElementById('obStateInput');
+    const obStateList = document.getElementById('obStateList');
+    const obStateDropdown = document.getElementById('obStateDropdown');
+    const btnToggleStateDropdown = document.getElementById('btnToggleStateDropdown');
+    const obStateComboboxWrap = document.getElementById('obStateComboboxWrap');
+    const obCityInput = document.getElementById('obCityInput');
+    const obCityList = document.getElementById('obCityList');
+    const obCityDropdown = document.getElementById('obCityDropdown');
+    const btnToggleCityDropdown = document.getElementById('btnToggleCityDropdown');
+    const obCityComboboxWrap = document.getElementById('obCityComboboxWrap');
+    const obPopularCitiesWrap = document.getElementById('obPopularCitiesWrap');
+
+    // Quick Tour Elements
+    const quickTourModalBackdrop = document.getElementById('quickTourModalBackdrop');
+    const quickTourModal = document.getElementById('quickTourModal');
+    const btnTourClose = document.getElementById('btnTourClose');
+    const btnTourPrev = document.getElementById('btnTourPrev');
+    const btnTourNext = document.getElementById('btnTourNext');
+    const tourDots = document.getElementById('tourDots');
+    const tourSlidesContainer = document.getElementById('tourSlidesContainer');
+
     // -------------------------------------------------------------------------
     // Application State
     // -------------------------------------------------------------------------
@@ -195,17 +246,61 @@ function initApp() {
     // -------------------------------------------------------------------------
     // Phase M1: Internationalization (i18n) Engine
     // -------------------------------------------------------------------------
+    const SUPPORTED_LANGUAGES = {
+        en: { code: 'EN', name: 'English', native: 'English' },
+        hi: { code: 'हि', name: 'Hindi', native: 'हिन्दी' },
+        bn: { code: 'বাং', name: 'Bengali', native: 'বাংলা' },
+        te: { code: 'తె', name: 'Telugu', native: 'తెలుగు' },
+        mr: { code: 'म', name: 'Marathi', native: 'मराठी' },
+        ta: { code: 'த', name: 'Tamil', native: 'தமிழ்' },
+        gu: { code: 'ગુ', name: 'Gujarati', native: 'ગુજરાતી' },
+        kn: { code: 'ಕ', name: 'Kannada', native: 'ಕನ್ನಡ' },
+        ml: { code: 'മ', name: 'Malayalam', native: 'മലയാളം' },
+        pa: { code: 'ਪੰ', name: 'Punjabi', native: 'ਪੰਜਾਬੀ' },
+        as: { code: 'অ', name: 'Assamese', native: 'অসমীয়া' },
+        or: { code: 'ଓ', name: 'Odia', native: 'ଓଡ଼ିଆ' }
+    };
+
     let currentLanguage = 'en';
     try {
         currentLanguage = localStorage.getItem('bis_ui_language') || 'en';
+        if (!SUPPORTED_LANGUAGES[currentLanguage]) {
+            currentLanguage = 'en';
+        }
     } catch (e) {
         currentLanguage = 'en';
     }
 
-    const i18nCache = {
-        en: null,
-        hi: null
-    };
+    const i18nCache = {};
+    const i18nLoadingPromises = {};
+
+    async function ensureLanguageLoaded(lang) {
+        const targetLang = (lang && SUPPORTED_LANGUAGES[lang]) ? lang : 'en';
+        if (i18nCache[targetLang]) {
+            return i18nCache[targetLang];
+        }
+        if (i18nLoadingPromises[targetLang]) {
+            return i18nLoadingPromises[targetLang];
+        }
+        i18nLoadingPromises[targetLang] = (async () => {
+            try {
+                const res = await fetch(`./i18n/${targetLang}.json`);
+                if (res.ok) {
+                    const data = await res.json();
+                    i18nCache[targetLang] = data;
+                    return data;
+                } else {
+                    console.warn(`[i18n] Failed to fetch dictionary for ${targetLang}: HTTP ${res.status}`);
+                }
+            } catch (e) {
+                console.warn(`[i18n] Network error fetching dictionary for ${targetLang}:`, e);
+            } finally {
+                delete i18nLoadingPromises[targetLang];
+            }
+            return null;
+        })();
+        return i18nLoadingPromises[targetLang];
+    }
 
     function t(keyPath, fallback = '') {
         const dict = i18nCache[currentLanguage];
@@ -227,7 +322,10 @@ function initApp() {
         return fallback;
     }
 
-    function applyLanguage(lang) {
+    async function applyLanguage(lang, syncPreferences = false) {
+        if (!SUPPORTED_LANGUAGES[lang]) {
+            lang = 'en';
+        }
         currentLanguage = lang;
         try {
             localStorage.setItem('bis_ui_language', lang);
@@ -235,6 +333,12 @@ function initApp() {
             // localStorage not accessible
         }
         document.documentElement.lang = lang;
+
+        // Ensure current language and fallback English dictionaries are loaded
+        await Promise.all([
+            ensureLanguageLoaded(lang),
+            ensureLanguageLoaded('en')
+        ]);
 
         // Update all elements with data-i18n
         document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -269,21 +373,37 @@ function initApp() {
             }
         });
 
-        // Update active class on all language toggle buttons
+        // Sync all language dropdown selectors across the UI
+        document.querySelectorAll('.lang-select').forEach(sel => {
+            if (sel.value !== lang) {
+                sel.value = lang;
+            }
+        });
+
+        // Sync onboarding language grid cards if present
+        document.querySelectorAll('#onboardingLangGrid .onboarding-lang-card').forEach(card => {
+            const cardLang = card.getAttribute('data-lang');
+            const isSelected = cardLang === lang;
+            card.classList.toggle('selected', isSelected);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+
+        // Update active class on any legacy language toggle buttons
         document.querySelectorAll('.btn-lang-toggle').forEach(btn => {
             const btnLang = btn.getAttribute('data-lang');
             btn.classList.toggle('active', btnLang === lang);
         });
 
         // Sync collapsed sidebar language badge & tooltip
+        const langMeta = SUPPORTED_LANGUAGES[lang] || { code: (lang || 'en').toUpperCase().slice(0, 2), name: lang, native: lang };
         const collapsedCode = document.getElementById('collapsedLangCode');
         if (collapsedCode) {
-            collapsedCode.textContent = lang === 'hi' ? 'हि' : 'EN';
+            collapsedCode.textContent = langMeta.code;
         }
         const btnCollapsed = document.getElementById('btnCollapsedLangToggle');
         if (btnCollapsed) {
-            btnCollapsed.setAttribute('title', lang === 'hi' ? 'Switch to English' : 'Switch to हिन्दी (भाषा बदलें)');
-            btnCollapsed.setAttribute('aria-label', lang === 'hi' ? 'Switch to English' : 'Switch to हिन्दी (भाषा बदलें)');
+            btnCollapsed.setAttribute('title', `Active language: ${langMeta.native} (${langMeta.name || lang})`);
+            btnCollapsed.setAttribute('aria-label', `Active language: ${langMeta.native} (${langMeta.name || lang})`);
         }
 
         // Notify LabFinder component to re-render active results and dropdowns
@@ -296,47 +416,95 @@ function initApp() {
             const cached = typeof getCachedUser === 'function' ? getCachedUser() : null;
             updateAuthStateUI('LANG_CHANGE', null, cached);
         }
+
+        // Sync language change to user preferences ONLY if explicitly requested by user action
+        if (syncPreferences) {
+            try {
+                if (typeof getUserPreferences === 'function' && typeof storeUserPreferences === 'function') {
+                    const p = getUserPreferences();
+                    if (p && p.language !== lang) {
+                        storeUserPreferences({ ...p, language: lang });
+                    }
+                }
+            } catch (e) {
+                console.warn('[i18n] Failed to sync language to user preferences:', e);
+            }
+        }
     }
 
     // Expose globally for modular component access
     window.bisI18n = {
         t: (k, fb) => t(k, fb),
         getLanguage: () => currentLanguage,
-        setLanguage: applyLanguage
+        setLanguage: applyLanguage,
+        getSupportedLanguages: () => ({ ...SUPPORTED_LANGUAGES }),
+        ensureLanguageLoaded: ensureLanguageLoaded,
+        cache: i18nCache
     };
 
     async function loadI18n() {
         try {
-            const [resEn, resHi] = await Promise.all([
-                fetch('./i18n/en.json'),
-                fetch('./i18n/hi.json')
-            ]);
-            if (resEn.ok) i18nCache.en = await resEn.json();
-            if (resHi.ok) i18nCache.hi = await resHi.json();
+            await ensureLanguageLoaded('en');
+            if (currentLanguage !== 'en') {
+                await ensureLanguageLoaded(currentLanguage);
+            }
         } catch (e) {
             console.warn('[i18n] Network fetch failed, relying on DOM defaults:', e);
         }
-        applyLanguage(currentLanguage);
+        await applyLanguage(currentLanguage);
     }
 
     function initLanguageSelectors() {
+        // Dropdown language selects (sidebar and topbar)
+        document.querySelectorAll('.lang-select').forEach(sel => {
+            if (sel.value !== currentLanguage) {
+                sel.value = currentLanguage;
+            }
+            sel.addEventListener('change', (e) => {
+                const targetLang = e.target.value;
+                if (targetLang && targetLang !== currentLanguage) {
+                    applyLanguage(targetLang, true);
+                }
+            });
+        });
+
+        // Legacy toggle buttons if present
         document.querySelectorAll('.btn-lang-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetLang = btn.getAttribute('data-lang');
                 if (targetLang && targetLang !== currentLanguage) {
-                    applyLanguage(targetLang);
+                    applyLanguage(targetLang, true);
                 }
             });
         });
 
+        // Collapsed sidebar language toggle
         const btnCollapsed = document.getElementById('btnCollapsedLangToggle');
         if (btnCollapsed) {
             btnCollapsed.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const nextLang = currentLanguage === 'en' ? 'hi' : 'en';
-                applyLanguage(nextLang);
+                if (sidebar && sidebar.classList.contains('collapsed')) {
+                    toggleSidebarCollapse();
+                    setTimeout(() => {
+                        const sidebarSel = document.getElementById('sidebarLangSelect');
+                        if (sidebarSel) {
+                            sidebarSel.focus();
+                            if (typeof sidebarSel.showPicker === 'function') {
+                                try { sidebarSel.showPicker(); } catch (_) {}
+                            }
+                        }
+                    }, 180);
+                } else {
+                    const sidebarSel = document.getElementById('sidebarLangSelect');
+                    if (sidebarSel) {
+                        sidebarSel.focus();
+                        if (typeof sidebarSel.showPicker === 'function') {
+                            try { sidebarSel.showPicker(); } catch (_) {}
+                        }
+                    }
+                }
             });
         }
     }
@@ -512,6 +680,7 @@ function initApp() {
         currentChatTitle.textContent = conv.title || (isEmpty ? 'New Session' : 'Conversation');
 
         if (isEmpty) {
+            applyPersonalization();
             welcomeContainer.classList.remove('hidden');
             messagesStream.classList.add('hidden');
             if (chatDockWrapper) chatDockWrapper.classList.add('hidden');
@@ -568,6 +737,13 @@ function initApp() {
                 viewLabFinder.classList.remove('hidden');
                 if (labFinder && labFinder.mapComponent) {
                     setTimeout(() => labFinder.mapComponent.invalidateSize(), 60);
+                }
+                const prefs = getUserPreferences();
+                if (prefs?.location?.city) {
+                    const labInput = document.getElementById('labInputQuery');
+                    if (labInput && !labInput.value.trim()) {
+                        labInput.placeholder = `Search standards, or labs in ${prefs.location.city}...`;
+                    }
                 }
             }
             if (navLabFinder) navLabFinder.classList.add('active');
@@ -680,10 +856,13 @@ function initApp() {
         if (inputSpinner) inputSpinner.classList.remove('hidden');
 
         try {
+            const userPrefs = typeof getUserPreferences === 'function' ? getUserPreferences() : null;
+            const effectiveLang = userPrefs?.language || currentLanguage || 'en';
             const responseData = await AssistantService.query(query, {
                 mode: backendMode,
                 headers: getAuthHeaders(),
-                language: currentLanguage
+                language: effectiveLang,
+                responseStyle: userPrefs?.responseStyle || 'Detailed & Explanatory'
             });
 
             thinkingRow.remove();
@@ -1048,12 +1227,21 @@ function initApp() {
             `;
         }
 
+        const userPrefs = typeof getUserPreferences === 'function' ? getUserPreferences() : null;
+        const respStyle = data.response_style || userPrefs?.responseStyle || 'Detailed & Explanatory';
+        let styleClass = 'style-detailed-explanatory';
+        if (respStyle === 'Quick & Simple' || respStyle === 'quick') {
+            styleClass = 'style-quick-simple';
+        } else if (respStyle === 'Professional & Compliance-focused' || respStyle === 'professional') {
+            styleClass = 'style-professional-compliance';
+        }
+
         row.innerHTML = `
             <div class="assistant-avatar">
                 <img src="/static/favicon.svg" alt="" aria-hidden="true">
             </div>
             <div class="assistant-bubble-container">
-                <div class="assistant-bubble">
+                <div class="assistant-bubble ${styleClass}">
                     <div class="editorial-answer">${answerHtml}</div>
                     ${feeResultsHtml}
                     ${labResultsHtml}
@@ -1389,6 +1577,657 @@ function initApp() {
     }
 
     // -------------------------------------------------------------------------
+    // 7b. Personalization, Onboarding & Quick Tour Controllers
+    // -------------------------------------------------------------------------
+    const INDIA_STATES_AND_CITIES = {
+        "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Tirupati", "Rajahmundry", "Kakinada"],
+        "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tawang", "Ziro"],
+        "Assam": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon", "Tinsukia", "Tezpur"],
+        "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia", "Darbhanga", "Bihar Sharif", "Arrah"],
+        "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Korba", "Durg", "Rajnandgaon"],
+        "Goa": ["Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda"],
+        "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh"],
+        "Haryana": ["Gurugram", "Faridabad", "Panipat", "Ambala", "Yamunanagar", "Rohtak", "Hisar", "Karnal", "Panchkula"],
+        "Himachal Pradesh": ["Shimla", "Dharamshala", "Solan", "Mandi", "Baddi", "Kullu"],
+        "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro Steel City", "Deoghar", "Hazaribagh"],
+        "Karnataka": ["Bengaluru", "Mysuru", "Hubballi-Dharwad", "Mangaluru", "Belagavi", "Davangere", "Ballari", "Kalaburagi"],
+        "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Palakkad", "Alappuzha", "Kannur"],
+        "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain", "Sagar", "Dewas", "Satna"],
+        "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Navi Mumbai", "Aurangabad", "Solapur", "Kolhapur"],
+        "Manipur": ["Imphal", "Churachandpur", "Thoubal"],
+        "Meghalaya": ["Shillong", "Tura", "Jowai"],
+        "Mizoram": ["Aizawl", "Lunglei", "Champhai"],
+        "Nagaland": ["Kohima", "Dimapur", "Mokokchung"],
+        "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Berhampur", "Sambalpur", "Puri", "Balasore"],
+        "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda", "Mohali", "Pathankot", "Hoshiarpur"],
+        "Rajasthan": ["Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer", "Udaipur", "Bhilwara", "Alwar", "Sikar"],
+        "Sikkim": ["Gangtok", "Namchi", "Gyalshing"],
+        "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Tiruppur", "Erode", "Vellore", "Tirunelveli"],
+        "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Ramagundam", "Khammam", "Secunderabad"],
+        "Tripura": ["Agartala", "Udaipur", "Dharmanagar"],
+        "Uttar Pradesh": ["Lucknow", "Kanpur", "Noida", "Greater Noida", "Ghaziabad", "Varanasi", "Agra", "Prayagraj", "Meerut", "Bareilly", "Aligarh", "Moradabad"],
+        "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rishikesh", "Rudrapur"],
+        "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Bardhaman", "Kharagpur"],
+        "Andaman and Nicobar Islands": ["Port Blair"],
+        "Chandigarh": ["Chandigarh"],
+        "Dadra and Nagar Haveli and Daman and Diu": ["Daman", "Diu", "Silvassa"],
+        "Delhi (NCT)": ["New Delhi", "North Delhi", "South Delhi", "West Delhi", "East Delhi", "Dwarka", "Rohini"],
+        "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag", "Baramulla"],
+        "Ladakh": ["Leh", "Kargil"],
+        "Lakshadweep": ["Kavaratti"],
+        "Puducherry": ["Puducherry", "Karaikal", "Mahe", "Yanam"]
+    };
+
+    const DEFAULT_USER_PREFERENCES = MODULE_DEFAULT_USER_PREFERENCES;
+
+    function getUserPreferences() {
+        return getStoredUserPreferences();
+    }
+
+    function saveUserPreferences(prefs) {
+        return storeUserPreferences(prefs);
+    }
+
+    function renderPersonalizedWelcome(prefs) {
+        const headline = document.querySelector('#welcomeContainer .hero-headline');
+        const subtitle = document.querySelector('#welcomeContainer .hero-subtitle');
+        if (!headline || !subtitle) return;
+
+        switch (prefs?.role) {
+            case 'Manufacturer':
+                headline.textContent = "Welcome, Manufacturer";
+                subtitle.textContent = "Navigate Indian Standards, mandatory QCOs, testing scopes, and certification pathways from one focused workspace.";
+                break;
+            case 'Importer / Exporter':
+                headline.textContent = "Welcome, Importer / Exporter";
+                subtitle.textContent = "Verify border compliance, mandatory certification schemes, and foreign manufacturer regulations (FMCS).";
+                break;
+            case 'Business / Seller':
+                headline.textContent = "Welcome, Business & Seller";
+                subtitle.textContent = "Check product standards, licence validity, and mandatory quality control regulations.";
+                break;
+            case 'Testing Laboratory':
+                headline.textContent = "Welcome, Laboratory Professional";
+                subtitle.textContent = "Inspect normative test parameters, testing fee schedules, and recognized laboratory scopes.";
+                break;
+            case 'Compliance / Regulatory Professional':
+                headline.textContent = "Welcome, Compliance Professional";
+                subtitle.textContent = "Explore statutory clauses, gazette QCO mandates, and regulatory conformity procedures.";
+                break;
+            case 'Consumer':
+                headline.textContent = "Welcome, Consumer";
+                subtitle.textContent = "Verify Gold Hallmarking (HUID), ISI marks, and product safety standards.";
+                break;
+            case 'Student / Researcher':
+                headline.textContent = "Welcome, Researcher";
+                subtitle.textContent = "Explore Indian Standards repository, technical clauses, and normative test methodologies.";
+                break;
+            default:
+                headline.textContent = t('assistant.headline', 'What would you like to research?');
+                subtitle.textContent = t('assistant.subtitle', 'Search Indian Standards, testing requirements, laboratory scopes, and evidence from one focused workspace.');
+                break;
+        }
+    }
+
+    const BIS_ROLE_SUGGESTIONS = {
+        'Manufacturer': [
+            { query: "What is IS 4985 and its testing scope?", label: "IS 4985 PVC pipes compliance" },
+            { query: "What are mandatory QCO regulations for manufacturing?", label: "Mandatory QCO regulations" },
+            { query: "What is the BIS Scheme I certification process?", label: "BIS Scheme I Certification" },
+            { query: "Which laboratories have scope for IS 4985?", label: "Laboratories for IS 4985" }
+        ],
+        'Importer / Exporter': [
+            { query: "What is the Foreign Manufacturers Certification Scheme (FMCS)?", label: "FMCS import requirements" },
+            { query: "Which products have mandatory QCOs for import into India?", label: "Import mandatory QCOs" },
+            { query: "How to verify BIS licence validity for customs clearance?", label: "Verify licence for customs" },
+            { query: "Which BIS recognized laboratories test imported goods?", label: "Laboratories for imported goods" }
+        ],
+        'Business / Seller': [
+            { query: "How to check if a product requires mandatory BIS certification?", label: "Mandatory certification check" },
+            { query: "How to verify valid BIS ISI licence on products?", label: "Verify BIS ISI licence" },
+            { query: "What are mandatory Quality Control Orders for electronics?", label: "Electronics QCO list" },
+            { query: "What are penalties for selling non-BIS compliant goods?", label: "BIS Act compliance rules" }
+        ],
+        'Testing Laboratory': [
+            { query: "What is the testing fee and parameter scope for IS 8978?", label: "IS 8978 scope & fees" },
+            { query: "What are BIS laboratory recognition and empanelment criteria?", label: "BIS Lab recognition criteria" },
+            { query: "What are the normative test methods under IS 4985?", label: "Normative test methods IS 4985" },
+            { query: "Find testing laboratories using verified testing scope", label: "Find 580+ BIS Lab records" }
+        ],
+        'Compliance / Regulatory Professional': [
+            { query: "What are the latest Quality Control Orders (QCOs) issued by DPIIT?", label: "Latest Gazette QCO mandates" },
+            { query: "What are the conformity assessment procedures under BIS Act 2016?", label: "Conformity assessment schemes" },
+            { query: "What is the statutory penalty under Section 29 of the BIS Act?", label: "Section 29 penal provisions" },
+            { query: "Show authoritative evidence for standard specifications", label: "Evidence-grounded standards" }
+        ],
+        'Consumer': [
+            { query: "How do I verify a 6-digit Gold Hallmark (HUID)?", label: "Verify Gold Hallmark (HUID)" },
+            { query: "Is ISI mark mandatory for packaged drinking water (IS 14543)?", label: "ISI mark for drinking water" },
+            { query: "How to check if an ISI licence number on a product is genuine?", label: "Check genuine ISI licence" },
+            { query: "Find accredited testing laboratories nearby", label: "Find laboratories nearby" }
+        ],
+        'Student / Researcher': [
+            { query: "What is the IS 10500 standard for drinking water quality?", label: "IS 10500 Drinking water standard" },
+            { query: "How are Indian Standards formulated and amended by BIS?", label: "Standards formulation process" },
+            { query: "What is the testing methodology in IS 8978?", label: "IS 8978 Test methodology" },
+            { query: "How to trace normative clauses to verified BIS sources?", label: "Trace normative clauses" }
+        ],
+        'default': [
+            { query: "What is IS 8978?", label: "IS 8978 requirements" },
+            { query: "Which laboratories have scope for IS 8978?", label: "Laboratories for IS 8978" },
+            { query: "What is the testing fee for IS 8978?", label: "Testing fees for IS 8978" },
+            { query: "Is there authoritative evidence for this requirement?", label: "Answers grounded in verified BIS evidence" }
+        ]
+    };
+
+    const BIS_USECASE_SUGGESTIONS = {
+        'Finding Indian Standards': {
+            'Manufacturer': { query: "What is IS 4985 and its testing scope?", label: "IS 4985 PVC pipes compliance" },
+            'Consumer': { query: "What is the IS 10500 standard for drinking water quality?", label: "IS 10500 Drinking water standard" },
+            'Testing Laboratory': { query: "What is IS 8978 for electric water heaters?", label: "IS 8978 water heater standard" },
+            'Student / Researcher': { query: "What is the IS 10500 standard for drinking water quality?", label: "IS 10500 Drinking water standard" },
+            '_default': { query: "What is IS 4985 and what does it cover?", label: "Search IS 4985 standard" }
+        },
+        'Checking compliance requirements': {
+            'Manufacturer': { query: "What are the mandatory compliance requirements under IS 4985?", label: "IS 4985 manufacturing compliance" },
+            'Importer / Exporter': { query: "What are the mandatory import compliance requirements for electronics under CRS?", label: "Import CRS compliance rules" },
+            'Business / Seller': { query: "How to check if a product requires mandatory BIS certification?", label: "Mandatory certification check" },
+            'Compliance / Regulatory Professional': { query: "What are the conformity assessment procedures under BIS Act 2016?", label: "Conformity assessment schemes" },
+            '_default': { query: "What are the statutory compliance requirements under the BIS Act?", label: "BIS statutory compliance" }
+        },
+        'Understanding QCOs': {
+            'Manufacturer': { query: "What are mandatory QCO regulations for manufacturing?", label: "Mandatory manufacturing QCOs" },
+            'Importer / Exporter': { query: "Which products have mandatory QCOs for import into India?", label: "Import mandatory QCOs" },
+            'Business / Seller': { query: "What are mandatory Quality Control Orders for electronics?", label: "Electronics QCO list" },
+            'Compliance / Regulatory Professional': { query: "What are the latest Quality Control Orders (QCOs) issued by DPIIT?", label: "Latest Gazette QCO mandates" },
+            '_default': { query: "What is a Quality Control Order (QCO) and which products are covered?", label: "Understanding QCO mandates" }
+        },
+        'BIS Certification / Licensing': {
+            'Manufacturer': { query: "What is the BIS Scheme I certification process?", label: "BIS Scheme I Certification" },
+            'Importer / Exporter': { query: "What is the Foreign Manufacturers Certification Scheme (FMCS)?", label: "FMCS certification scheme" },
+            'Business / Seller': { query: "How to apply for a BIS licence under Scheme I?", label: "BIS Licence application" },
+            'Compliance / Regulatory Professional': { query: "What are the conformity assessment procedures under BIS Act 2016?", label: "Conformity assessment schemes" },
+            '_default': { query: "What are the steps to obtain a BIS certification licence?", label: "BIS Certification process" }
+        },
+        'Testing Requirements': {
+            'Testing Laboratory': { query: "What are the normative test methods under IS 4985?", label: "Normative test methods IS 4985" },
+            'Manufacturer': { query: "What are the key testing requirements for IS 4985?", label: "IS 4985 testing requirements" },
+            'Student / Researcher': { query: "What is the testing methodology in IS 8978?", label: "IS 8978 Test methodology" },
+            '_default': { query: "What are the testing requirements for IS 8978?", label: "IS 8978 testing requirements" }
+        },
+        'Finding Testing Laboratories': {
+            'Testing Laboratory': { query: "Which laboratories have scope for IS 8978?", label: "Laboratories for IS 8978" },
+            'Consumer': { query: "Find accredited testing laboratories nearby", label: "Find laboratories nearby" },
+            'Importer / Exporter': { query: "Which BIS recognized laboratories test imported goods?", label: "Laboratories for imported goods" },
+            '_default': { query: "Which laboratories explicitly have scope for IS 4985?", label: "Laboratories for IS 4985" }
+        },
+        'Hallmarking / HUID': {
+            'Consumer': { query: "How do I verify a 6-digit Gold Hallmark (HUID)?", label: "Verify Gold Hallmark (HUID)" },
+            'Business / Seller': { query: "What are the hallmarking registration requirements for jewellers?", label: "Jeweller hallmarking rules" },
+            '_default': { query: "How do I verify a 6-digit Gold Hallmark (HUID)?", label: "Verify Gold Hallmark (HUID)" }
+        },
+        'Verifying BIS Licence / Certification': {
+            'Consumer': { query: "How to check if an ISI licence number on a product is genuine?", label: "Check genuine ISI licence" },
+            'Business / Seller': { query: "How to verify valid BIS ISI licence on products?", label: "Verify BIS ISI licence" },
+            'Importer / Exporter': { query: "How to verify BIS licence validity for customs clearance?", label: "Verify licence for customs" },
+            '_default': { query: "How to verify the validity of a BIS licence or certificate?", label: "Verify BIS licence" }
+        },
+        'Understanding Standards & Clauses': {
+            'Compliance / Regulatory Professional': { query: "How to trace normative clauses to verified BIS sources?", label: "Trace normative clauses" },
+            'Student / Researcher': { query: "How are Indian Standards formulated and amended by BIS?", label: "Standards formulation process" },
+            '_default': { query: "What are the normative clauses and specifications in IS 8978?", label: "IS 8978 clauses & specs" }
+        },
+        'Other': {
+            '_default': { query: "What are the core functions of the Bureau of Indian Standards?", label: "Overview of BIS functions" }
+        }
+    };
+
+    function getPersonalizedSuggestions(role, useCases) {
+        const selectedUseCases = Array.isArray(useCases) ? useCases.filter(Boolean) : [];
+        const result = [];
+        const seenQueries = new Set();
+
+        function addSuggestion(s) {
+            if (!s || !s.query) return;
+            const key = s.query.toLowerCase().trim();
+            if (!seenQueries.has(key)) {
+                seenQueries.add(key);
+                result.push(s);
+            }
+        }
+
+        // 1. Prioritize suggestions matching selected use cases (contextualized by role)
+        for (const uc of selectedUseCases) {
+            const ucCatalog = BIS_USECASE_SUGGESTIONS[uc];
+            if (ucCatalog) {
+                const item = (role && ucCatalog[role]) ? ucCatalog[role] : ucCatalog['_default'];
+                if (item) addSuggestion(item);
+            }
+            if (result.length >= 4) break;
+        }
+
+        // 2. Role-based fallback suggestions
+        const roleList = BIS_ROLE_SUGGESTIONS[role] || BIS_ROLE_SUGGESTIONS['default'];
+        for (const s of roleList) {
+            if (result.length >= 4) break;
+            addSuggestion(s);
+        }
+
+        // 3. Generic fallback suggestions
+        const genericList = BIS_ROLE_SUGGESTIONS['default'];
+        for (const s of genericList) {
+            if (result.length >= 4) break;
+            addSuggestion(s);
+        }
+
+        return result.slice(0, 4);
+    }
+
+    function renderPersonalizedSuggestions(roleOrPrefs, maybeUseCases) {
+        const wrap = document.querySelector('#welcomeContainer .hero-suggestions-wrap');
+        if (!wrap) return;
+
+        let role = null;
+        let useCases = [];
+
+        if (roleOrPrefs && typeof roleOrPrefs === 'object') {
+            role = roleOrPrefs.role;
+            useCases = roleOrPrefs.useCases || [];
+        } else {
+            role = roleOrPrefs;
+            useCases = Array.isArray(maybeUseCases) ? maybeUseCases : [];
+        }
+
+        const suggestions = getPersonalizedSuggestions(role, useCases);
+
+        wrap.innerHTML = suggestions.map(s => `
+            <button type="button" class="hero-suggestion-pill" data-query="${escapeHtml(s.query)}">
+                ${escapeHtml(s.label)}
+            </button>
+        `).join('');
+    }
+
+    function applyPersonalization(prefs) {
+        if (!prefs) prefs = getUserPreferences();
+
+        renderPersonalizedWelcome(prefs);
+        renderPersonalizedSuggestions(prefs.role, prefs.useCases);
+
+        // Language synchronization:
+        // 1. If explicit user preference with completed onboarding specifies a language, apply it
+        // 2. Otherwise retain the current stored UI language preference (bis_ui_language)
+        const targetLang = (prefs && prefs.onboarding_completed && prefs.language)
+            ? prefs.language
+            : (localStorage.getItem('bis_ui_language') || currentLanguage || 'en');
+
+        if (targetLang && targetLang !== currentLanguage) {
+            applyLanguage(targetLang);
+        }
+
+        if (prefs.location?.city) {
+            const labInput = document.getElementById('labInputQuery');
+            if (labInput && !labInput.value.trim()) {
+                labInput.placeholder = `Search standards, or labs in ${prefs.location.city}...`;
+            }
+        }
+    }
+
+    let currentOnboardingStep = 1;
+    let tempPreferences = { ...DEFAULT_USER_PREFERENCES };
+    let isOnboardingEditMode = false;
+
+    function populateLocationDatalists() {
+        if (obStateList && obStateList.children.length === 0) {
+            Object.keys(INDIA_STATES_AND_CITIES).sort().forEach(state => {
+                const opt = document.createElement('option');
+                opt.value = state;
+                obStateList.appendChild(opt);
+            });
+        }
+    }
+
+    function updateCityDatalist(stateName) {
+        if (!obCityList) return;
+        obCityList.innerHTML = '';
+        const cities = INDIA_STATES_AND_CITIES[stateName] || [];
+        cities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            obCityList.appendChild(opt);
+        });
+    }
+
+    function renderStateDropdown(filterText = '') {
+        if (!obStateDropdown) return;
+        const query = (filterText || '').trim().toLowerCase();
+        const allStates = Object.keys(INDIA_STATES_AND_CITIES).sort();
+        const filtered = query
+            ? allStates.filter(s => s.toLowerCase().includes(query))
+            : allStates;
+
+        if (filtered.length === 0) {
+            obStateDropdown.innerHTML = `<div class="ob-dropdown-empty">No matching states or UTs found</div>`;
+            return;
+        }
+
+        const currentState = tempPreferences.location?.state || (obStateInput ? obStateInput.value.trim() : '');
+        obStateDropdown.innerHTML = filtered.map(state => {
+            const isSelected = state === currentState;
+            return `
+                <button type="button" class="ob-dropdown-item ${isSelected ? 'selected' : ''}" data-value="${escapeHtml(state)}" role="option" aria-selected="${isSelected ? 'true' : 'false'}">
+                    <span>${escapeHtml(state)}</span>
+                    <svg class="item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </button>
+            `;
+        }).join('');
+    }
+
+    function renderCityDropdown(stateName, filterText = '') {
+        if (!obCityDropdown) return;
+        const query = (filterText || '').trim().toLowerCase();
+        const allCities = INDIA_STATES_AND_CITIES[stateName] || [];
+        const filtered = query
+            ? allCities.filter(c => c.toLowerCase().includes(query))
+            : allCities;
+
+        let html = '';
+        const currentCity = tempPreferences.location?.city || (obCityInput ? obCityInput.value.trim() : '');
+
+        if (filtered.length > 0) {
+            html += filtered.map(city => {
+                const isSelected = city === currentCity;
+                return `
+                    <button type="button" class="ob-dropdown-item ${isSelected ? 'selected' : ''}" data-value="${escapeHtml(city)}" role="option" aria-selected="${isSelected ? 'true' : 'false'}">
+                        <span>${escapeHtml(city)}</span>
+                        <svg class="item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        if (query && !allCities.some(c => c.toLowerCase() === query)) {
+            const rawTyped = (filterText || '').trim();
+            html += `
+                <button type="button" class="ob-dropdown-item" data-value="${escapeHtml(rawTyped)}" role="option">
+                    <span>Use &ldquo;${escapeHtml(rawTyped)}&rdquo;</span>
+                    <span style="font-size:10.5px;color:#8b80f7;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(139,128,247,0.15);">Custom</span>
+                </button>
+            `;
+        } else if (filtered.length === 0) {
+            html = `<div class="ob-dropdown-empty">Type any city name</div>`;
+        }
+
+        obCityDropdown.innerHTML = html;
+    }
+
+    function openStateDropdown() {
+        closeCityDropdown();
+        if (!obStateDropdown) return;
+        renderStateDropdown('');
+        obStateDropdown.classList.remove('hidden');
+        if (obStateComboboxWrap) obStateComboboxWrap.classList.add('is-open');
+        if (obStateInput) obStateInput.setAttribute('aria-expanded', 'true');
+        const sel = obStateDropdown.querySelector('.ob-dropdown-item.selected');
+        if (sel) sel.scrollIntoView({ block: 'nearest' });
+    }
+
+    function closeStateDropdown() {
+        if (!obStateDropdown) return;
+        obStateDropdown.classList.add('hidden');
+        if (obStateComboboxWrap) obStateComboboxWrap.classList.remove('is-open');
+        if (obStateInput) obStateInput.setAttribute('aria-expanded', 'false');
+    }
+
+    function openCityDropdown() {
+        closeStateDropdown();
+        if (!obCityDropdown) return;
+        const stateName = obStateInput ? obStateInput.value.trim() : 'Delhi (NCT)';
+        renderCityDropdown(stateName, '');
+        obCityDropdown.classList.remove('hidden');
+        if (obCityComboboxWrap) obCityComboboxWrap.classList.add('is-open');
+        if (obCityInput) obCityInput.setAttribute('aria-expanded', 'true');
+        const sel = obCityDropdown.querySelector('.ob-dropdown-item.selected');
+        if (sel) sel.scrollIntoView({ block: 'nearest' });
+    }
+
+    function closeCityDropdown() {
+        if (!obCityDropdown) return;
+        obCityDropdown.classList.add('hidden');
+        if (obCityComboboxWrap) obCityComboboxWrap.classList.remove('is-open');
+        if (obCityInput) obCityInput.setAttribute('aria-expanded', 'false');
+    }
+
+    function selectStateOption(stateName) {
+        if (!stateName) return;
+        if (obStateInput) obStateInput.value = stateName;
+        if (!tempPreferences.location) tempPreferences.location = {};
+        tempPreferences.location.state = stateName;
+        closeStateDropdown();
+        updateCityDatalist(stateName);
+
+        const cities = INDIA_STATES_AND_CITIES[stateName] || [];
+        const currCity = obCityInput ? obCityInput.value.trim() : '';
+        if (!cities.includes(currCity)) {
+            const nextCity = cities[0] || '';
+            if (obCityInput) obCityInput.value = nextCity;
+            tempPreferences.location.city = nextCity;
+        }
+
+        syncPopularCityPills(stateName, tempPreferences.location.city);
+    }
+
+    function selectCityOption(cityName) {
+        if (!cityName) return;
+        if (obCityInput) obCityInput.value = cityName;
+        if (!tempPreferences.location) tempPreferences.location = {};
+        tempPreferences.location.city = cityName;
+        closeCityDropdown();
+
+        const stateName = tempPreferences.location.state || (obStateInput ? obStateInput.value.trim() : '');
+        syncPopularCityPills(stateName, cityName);
+    }
+
+    function syncPopularCityPills(stateName, cityName) {
+        document.querySelectorAll('#obPopularCitiesWrap .ob-quick-city-pill').forEach(pill => {
+            const ps = pill.getAttribute('data-state');
+            const pc = pill.getAttribute('data-city');
+            const isMatch = (ps === stateName && pc === cityName) || pc === cityName;
+            pill.classList.toggle('active', isMatch);
+        });
+    }
+
+    function syncOnboardingUIFromState() {
+        // Step 1: Role cards
+        document.querySelectorAll('#onboardingRolesGrid .onboarding-option-card').forEach(card => {
+            const role = card.getAttribute('data-role');
+            const isSelected = role === tempPreferences.role;
+            card.classList.toggle('selected', isSelected);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+
+        // Step 2: Use Cases chips
+        document.querySelectorAll('#onboardingUseCasesGrid .onboarding-chip-card').forEach(chip => {
+            const uc = chip.getAttribute('data-usecase');
+            const isSelected = Array.isArray(tempPreferences.useCases) && tempPreferences.useCases.includes(uc);
+            chip.classList.toggle('selected', isSelected);
+            chip.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+
+        // Step 3: Location
+        if (obCountrySelect) {
+            obCountrySelect.value = tempPreferences.location?.country || 'India';
+            const isIndia = obCountrySelect.value === 'India';
+            if (obIndiaLocationWrap) obIndiaLocationWrap.classList.toggle('hidden', !isIndia);
+            if (obPopularCitiesWrap) obPopularCitiesWrap.classList.toggle('hidden', !isIndia);
+        }
+        if (obStateInput) {
+            obStateInput.value = tempPreferences.location?.state || 'Delhi (NCT)';
+            updateCityDatalist(obStateInput.value);
+            renderStateDropdown('');
+        }
+        if (obCityInput) {
+            obCityInput.value = tempPreferences.location?.city || 'New Delhi';
+            renderCityDropdown(obStateInput ? obStateInput.value : 'Delhi (NCT)', '');
+        }
+
+        // Highlight matching quick city pill
+        syncPopularCityPills(tempPreferences.location?.state, tempPreferences.location?.city);
+
+        // Step 4: Languages & Styles
+        document.querySelectorAll('#onboardingLangGrid .onboarding-lang-card').forEach(card => {
+            const lang = card.getAttribute('data-lang');
+            const isSelected = lang === tempPreferences.language;
+            card.classList.toggle('selected', isSelected);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+
+        document.querySelectorAll('#onboardingStylesGrid .onboarding-style-card').forEach(card => {
+            const style = card.getAttribute('data-style');
+            const isSelected = style === tempPreferences.responseStyle;
+            card.classList.toggle('selected', isSelected);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+    }
+
+    function setOnboardingStep(step) {
+        closeStateDropdown();
+        closeCityDropdown();
+        currentOnboardingStep = Math.max(1, Math.min(4, step));
+
+        for (let i = 1; i <= 4; i++) {
+            const pane = document.getElementById(`onboardingStep${i}`);
+            if (pane) {
+                pane.classList.toggle('hidden', i !== currentOnboardingStep);
+            }
+        }
+
+        if (onboardingStepBadge) {
+            onboardingStepBadge.textContent = `Step ${currentOnboardingStep} of 4`;
+        }
+        if (onboardingProgressFill) {
+            onboardingProgressFill.style.width = `${(currentOnboardingStep / 4) * 100}%`;
+        }
+        if (onboardingProgressFill?.parentElement) {
+            onboardingProgressFill.parentElement.setAttribute('aria-valuenow', (currentOnboardingStep / 4) * 100);
+        }
+
+        if (btnOnboardingBack) {
+            btnOnboardingBack.classList.toggle('hidden', currentOnboardingStep === 1);
+        }
+
+        if (onboardingNextText) {
+            if (currentOnboardingStep === 4) {
+                onboardingNextText.textContent = isOnboardingEditMode ? t('onboarding.btn_save', 'Save Changes') : t('onboarding.btn_finish', 'Complete & Start Exploring');
+            } else {
+                onboardingNextText.textContent = t('onboarding.btn_continue', 'Continue');
+            }
+        }
+    }
+
+    function openOnboarding(isEditMode = false) {
+        isOnboardingEditMode = isEditMode;
+        tempPreferences = getUserPreferences();
+
+        if (onboardingKicker) {
+            onboardingKicker.textContent = isEditMode ? 'USER PREFERENCES' : t('onboarding.badge', 'BIS PERSONALIZATION');
+        }
+        if (onboardingModalTitle) {
+            onboardingModalTitle.textContent = isEditMode ? t('onboarding.edit_title', 'Personalization Preferences') : t('onboarding.title', 'Welcome to BIS AI Assistant');
+        }
+        if (onboardingModalSubtitle) {
+            onboardingModalSubtitle.textContent = isEditMode ? t('onboarding.edit_subtitle', 'Update your role, objectives, and interface settings anytime.') : t('onboarding.subtitle', 'Personalize your workspace for faster, evidence-grounded standards intelligence.');
+        }
+        if (btnOnboardingSkip) {
+            btnOnboardingSkip.textContent = isEditMode ? 'Cancel' : t('onboarding.btn_skip', 'Skip for now');
+        }
+
+        populateLocationDatalists();
+        syncOnboardingUIFromState();
+        setOnboardingStep(1);
+
+        if (onboardingModalBackdrop) {
+            onboardingModalBackdrop.classList.remove('hidden');
+            onboardingModalBackdrop.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function closeOnboarding() {
+        if (onboardingModalBackdrop) {
+            onboardingModalBackdrop.classList.add('hidden');
+            onboardingModalBackdrop.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    function handleOnboardingNext() {
+        if (currentOnboardingStep === 1) {
+            // Strictly preserve null/empty role if not selected; do not invent or default to Manufacturer
+            setOnboardingStep(2);
+        } else if (currentOnboardingStep === 2) {
+            if (!tempPreferences.useCases || tempPreferences.useCases.length === 0) {
+                tempPreferences.useCases = ['Finding Indian Standards'];
+            }
+            setOnboardingStep(3);
+        } else if (currentOnboardingStep === 3) {
+            const country = obCountrySelect ? obCountrySelect.value : 'India';
+            const state = obStateInput ? obStateInput.value.trim() : 'Delhi (NCT)';
+            const city = obCityInput ? obCityInput.value.trim() : 'New Delhi';
+            tempPreferences.location = { country, state, city };
+            setOnboardingStep(4);
+        } else if (currentOnboardingStep === 4) {
+            tempPreferences.completedAt = new Date().toISOString();
+            tempPreferences.onboarding_completed = true;
+            saveUserPreferences(tempPreferences);
+            applyPersonalization(tempPreferences);
+            closeOnboarding();
+        }
+    }
+
+    // Quick Tour Controller
+    let currentTourSlide = 1;
+
+    function setTourSlide(slideIndex) {
+        currentTourSlide = Math.max(1, Math.min(4, slideIndex));
+
+        document.querySelectorAll('#tourSlidesContainer .tour-slide').forEach(slide => {
+            const sNum = parseInt(slide.getAttribute('data-slide'), 10);
+            slide.classList.toggle('hidden', sNum !== currentTourSlide);
+            slide.classList.toggle('active', sNum === currentTourSlide);
+        });
+
+        document.querySelectorAll('#tourDots .tour-dot').forEach(dot => {
+            const dNum = parseInt(dot.getAttribute('data-slide'), 10);
+            dot.classList.toggle('active', dNum === currentTourSlide);
+        });
+
+        if (btnTourPrev) {
+            btnTourPrev.disabled = currentTourSlide === 1;
+        }
+
+        if (btnTourNext) {
+            if (currentTourSlide === 4) {
+                btnTourNext.innerHTML = 'Start Exploring &rarr;';
+            } else {
+                btnTourNext.innerHTML = 'Next &rarr;';
+            }
+        }
+    }
+
+    function openQuickTour() {
+        setTourSlide(1);
+        if (quickTourModalBackdrop) {
+            quickTourModalBackdrop.classList.remove('hidden');
+            quickTourModalBackdrop.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function closeQuickTour() {
+        if (quickTourModalBackdrop) {
+            quickTourModalBackdrop.classList.add('hidden');
+            quickTourModalBackdrop.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 8. Mobile Sidebar & Drawer Controls
     // -------------------------------------------------------------------------
     function openMobileSidebar() {
@@ -1536,6 +2375,332 @@ function initApp() {
             systemModalBackdrop.addEventListener('click', (e) => {
                 if (e.target === systemModalBackdrop) {
                     closeSystemModal();
+                }
+            });
+        }
+
+        // Onboarding & Personalization Triggers & Controls
+        if (btnSidebarPreferences) {
+            btnSidebarPreferences.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openOnboarding(true);
+            });
+        }
+
+        if (btnSidebarTour) {
+            btnSidebarTour.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openQuickTour();
+            });
+        }
+
+        if (btnSystemModalTour) {
+            btnSystemModalTour.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeSystemModal();
+                openQuickTour();
+            });
+        }
+
+        if (btnOnboardingClose) {
+            btnOnboardingClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isOnboardingEditMode && !localStorage.getItem('bis_onboarding_completed')) {
+                    const completed = { ...DEFAULT_USER_PREFERENCES, completedAt: new Date().toISOString(), onboarding_completed: true };
+                    saveUserPreferences(completed);
+                    applyPersonalization(completed);
+                }
+                closeOnboarding();
+            });
+        }
+
+        if (btnOnboardingSkip) {
+            btnOnboardingSkip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isOnboardingEditMode) {
+                    const completed = { ...DEFAULT_USER_PREFERENCES, completedAt: new Date().toISOString(), onboarding_completed: true };
+                    saveUserPreferences(completed);
+                    applyPersonalization(completed);
+                }
+                closeOnboarding();
+            });
+        }
+
+        if (btnOnboardingBack) {
+            btnOnboardingBack.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentOnboardingStep > 1) {
+                    setOnboardingStep(currentOnboardingStep - 1);
+                }
+            });
+        }
+
+        if (btnOnboardingNext) {
+            btnOnboardingNext.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleOnboardingNext();
+            });
+        }
+
+        // Step 1: Role card click
+        const rolesGrid = document.getElementById('onboardingRolesGrid');
+        if (rolesGrid) {
+            rolesGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.onboarding-option-card');
+                if (card) {
+                    const role = card.getAttribute('data-role');
+                    if (role) {
+                        tempPreferences.role = role;
+                        document.querySelectorAll('#onboardingRolesGrid .onboarding-option-card').forEach(c => {
+                            const isThis = c === card;
+                            c.classList.toggle('selected', isThis);
+                            c.setAttribute('aria-checked', isThis ? 'true' : 'false');
+                        });
+                    }
+                }
+            });
+        }
+
+        // Step 2: Use Cases multi-select click
+        const useCasesGrid = document.getElementById('onboardingUseCasesGrid');
+        if (useCasesGrid) {
+            useCasesGrid.addEventListener('click', (e) => {
+                const chip = e.target.closest('.onboarding-chip-card');
+                if (chip) {
+                    const uc = chip.getAttribute('data-usecase');
+                    if (uc) {
+                        if (!Array.isArray(tempPreferences.useCases)) {
+                            tempPreferences.useCases = [];
+                        }
+                        const idx = tempPreferences.useCases.indexOf(uc);
+                        if (idx > -1) {
+                            if (tempPreferences.useCases.length > 1) {
+                                tempPreferences.useCases.splice(idx, 1);
+                                chip.classList.remove('selected');
+                                chip.setAttribute('aria-checked', 'false');
+                            }
+                        } else {
+                            tempPreferences.useCases.push(uc);
+                            chip.classList.add('selected');
+                            chip.setAttribute('aria-checked', 'true');
+                        }
+                    }
+                }
+            });
+        }
+
+        // Step 3: Location changes
+        if (obCountrySelect) {
+            obCountrySelect.addEventListener('change', () => {
+                const isIndia = obCountrySelect.value === 'India';
+                if (obIndiaLocationWrap) obIndiaLocationWrap.classList.toggle('hidden', !isIndia);
+                if (obPopularCitiesWrap) obPopularCitiesWrap.classList.toggle('hidden', !isIndia);
+            });
+        }
+
+        // State Combobox Listeners
+        if (obStateInput) {
+            obStateInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openStateDropdown();
+            });
+            obStateInput.addEventListener('focus', () => {
+                openStateDropdown();
+            });
+            obStateInput.addEventListener('input', () => {
+                if (obStateDropdown && obStateDropdown.classList.contains('hidden')) {
+                    openStateDropdown();
+                }
+                renderStateDropdown(obStateInput.value.trim());
+                if (!tempPreferences.location) tempPreferences.location = {};
+                tempPreferences.location.state = obStateInput.value.trim();
+                updateCityDatalist(obStateInput.value.trim());
+            });
+        }
+
+        if (btnToggleStateDropdown) {
+            btnToggleStateDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (obStateDropdown && !obStateDropdown.classList.contains('hidden')) {
+                    closeStateDropdown();
+                } else {
+                    openStateDropdown();
+                }
+            });
+        }
+
+        if (obStateDropdown) {
+            obStateDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = e.target.closest('.ob-dropdown-item');
+                if (item) {
+                    const val = item.getAttribute('data-value');
+                    selectStateOption(val);
+                }
+            });
+        }
+
+        // City Combobox Listeners
+        if (obCityInput) {
+            obCityInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openCityDropdown();
+            });
+            obCityInput.addEventListener('focus', () => {
+                openCityDropdown();
+            });
+            obCityInput.addEventListener('input', () => {
+                if (obCityDropdown && obCityDropdown.classList.contains('hidden')) {
+                    openCityDropdown();
+                }
+                const st = obStateInput ? obStateInput.value.trim() : 'Delhi (NCT)';
+                renderCityDropdown(st, obCityInput.value.trim());
+                if (!tempPreferences.location) tempPreferences.location = {};
+                tempPreferences.location.city = obCityInput.value.trim();
+            });
+        }
+
+        if (btnToggleCityDropdown) {
+            btnToggleCityDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (obCityDropdown && !obCityDropdown.classList.contains('hidden')) {
+                    closeCityDropdown();
+                } else {
+                    openCityDropdown();
+                }
+            });
+        }
+
+        if (obCityDropdown) {
+            obCityDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const item = e.target.closest('.ob-dropdown-item');
+                if (item) {
+                    const val = item.getAttribute('data-value');
+                    selectCityOption(val);
+                }
+            });
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', (e) => {
+            if (obStateComboboxWrap && !obStateComboboxWrap.contains(e.target)) {
+                closeStateDropdown();
+            }
+            if (obCityComboboxWrap && !obCityComboboxWrap.contains(e.target)) {
+                closeCityDropdown();
+            }
+        });
+
+        // Close dropdowns on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeStateDropdown();
+                closeCityDropdown();
+            }
+        });
+
+        if (obPopularCitiesWrap) {
+            obPopularCitiesWrap.addEventListener('click', (e) => {
+                const pill = e.target.closest('.ob-quick-city-pill');
+                if (pill) {
+                    const state = pill.getAttribute('data-state');
+                    const city = pill.getAttribute('data-city');
+                    selectStateOption(state);
+                    selectCityOption(city);
+                }
+            });
+        }
+
+        // Step 4: Language & Response Style selection
+        const langGrid = document.getElementById('onboardingLangGrid');
+        if (langGrid) {
+            langGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.onboarding-lang-card');
+                if (card) {
+                    const lang = card.getAttribute('data-lang');
+                    if (lang) {
+                        tempPreferences.language = lang;
+                        document.querySelectorAll('#onboardingLangGrid .onboarding-lang-card').forEach(c => {
+                            const isThis = c === card;
+                            c.classList.toggle('selected', isThis);
+                            c.setAttribute('aria-checked', isThis ? 'true' : 'false');
+                        });
+                    }
+                }
+            });
+        }
+
+        const stylesGrid = document.getElementById('onboardingStylesGrid');
+        if (stylesGrid) {
+            stylesGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.onboarding-style-card');
+                if (card) {
+                    const style = card.getAttribute('data-style');
+                    if (style) {
+                        tempPreferences.responseStyle = style;
+                        document.querySelectorAll('#onboardingStylesGrid .onboarding-style-card').forEach(c => {
+                            const isThis = c === card;
+                            c.classList.toggle('selected', isThis);
+                            c.setAttribute('aria-checked', isThis ? 'true' : 'false');
+                        });
+                    }
+                }
+            });
+        }
+
+        // Quick Tour Controls
+        if (btnTourClose) {
+            btnTourClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeQuickTour();
+            });
+        }
+
+        if (btnTourPrev) {
+            btnTourPrev.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentTourSlide > 1) {
+                    setTourSlide(currentTourSlide - 1);
+                }
+            });
+        }
+
+        if (btnTourNext) {
+            btnTourNext.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentTourSlide < 4) {
+                    setTourSlide(currentTourSlide + 1);
+                } else {
+                    closeQuickTour();
+                    switchView('assistant');
+                }
+            });
+        }
+
+        if (tourDots) {
+            tourDots.addEventListener('click', (e) => {
+                const dot = e.target.closest('.tour-dot');
+                if (dot) {
+                    const s = parseInt(dot.getAttribute('data-slide'), 10);
+                    if (s) setTourSlide(s);
+                }
+            });
+        }
+
+        // Modal Backdrops Click to Dismiss
+        if (onboardingModalBackdrop) {
+            onboardingModalBackdrop.addEventListener('click', (e) => {
+                if (e.target === onboardingModalBackdrop) {
+                    closeOnboarding();
+                }
+            });
+        }
+
+        if (quickTourModalBackdrop) {
+            quickTourModalBackdrop.addEventListener('click', (e) => {
+                if (e.target === quickTourModalBackdrop) {
+                    closeQuickTour();
                 }
             });
         }
@@ -2221,6 +3386,8 @@ function initApp() {
                         svg.innerHTML = '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>';
                     }
                 }
+                clearAuthenticatedPreferences();
+                applyPersonalization(DEFAULT_USER_PREFERENCES);
             }
         }
 
@@ -2314,11 +3481,60 @@ function initApp() {
         if (authLoadingScreen) {
             authLoadingScreen.classList.add('hidden');
         }
+
+        if (authState.isGuest) {
+            // Guest mode: LocalStorage persistence only
+            const guestPrefs = getUserPreferences();
+            applyPersonalization(guestPrefs);
+            if (!localStorage.getItem('bis_onboarding_completed')) {
+                openOnboarding(false);
+            }
+            return;
+        }
+
+        // Authenticated user:
+        const user = authState.user;
+        const userId = user?.id;
+
+        if (userId) {
+            // Render from user-scoped local cache immediately without blocking
+            const cachedUserPrefs = getUserPreferences(userId);
+            applyPersonalization(cachedUserPrefs);
+
+            // Asynchronously query Supabase (max 3000ms timeout, does not freeze UI)
+            loadUserPreferencesFromSupabase(userId).then((dbPrefs) => {
+                if (dbPrefs) {
+                    // Valid database preference record exists: database wins over local cache!
+                    applyPersonalization(dbPrefs);
+                    if (dbPrefs.onboarding_completed) {
+                        closeOnboarding();
+                    } else {
+                        openOnboarding(false);
+                    }
+                } else {
+                    // No database record exists yet for this authenticated user -> open onboarding
+                    openOnboarding(false);
+                }
+            }).catch((err) => {
+                console.warn('[BIS Preferences] Async Supabase load error, retaining local cache:', err?.message || err);
+                const currentPrefs = getUserPreferences(userId);
+                if (!currentPrefs.onboarding_completed && !localStorage.getItem('bis_onboarding_completed_' + userId)) {
+                    openOnboarding(false);
+                }
+            });
+        } else {
+            if (!localStorage.getItem('bis_onboarding_completed')) {
+                openOnboarding(false);
+            } else {
+                applyPersonalization();
+            }
+        }
     }).catch((err) => {
         console.warn('[BIS Auth Guard] Validation error:', err);
         if (authLoadingScreen) {
             authLoadingScreen.classList.add('hidden');
         }
+        applyPersonalization(getUserPreferences());
     });
 
     // Check backend health asynchronously

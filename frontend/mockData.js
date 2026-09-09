@@ -701,11 +701,21 @@ export class AssistantService {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 25000);
         const extraHeaders = options.headers || {};
+        const reqPayload = {
+            query: cleanQuery,
+            language: options.language || 'en',
+            target_language: options.language || options.target_language || 'en',
+            response_style: options.responseStyle || options.response_style || 'Detailed & Explanatory'
+        };
+        // Normalize to canonical database value ('quick', 'detailed', 'professional') for POST /api/assistant/query
+        if (reqPayload.response_style === 'Quick & Simple') reqPayload.response_style = 'quick';
+        else if (reqPayload.response_style === 'Detailed & Explanatory') reqPayload.response_style = 'detailed';
+        else if (reqPayload.response_style === 'Professional & Compliance-focused') reqPayload.response_style = 'professional';
         try {
             let res = await fetch(apiUrl('/api/assistant/query'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...extraHeaders },
-                body: JSON.stringify({ query: cleanQuery, language: options.language || 'auto' }),
+                body: JSON.stringify(reqPayload),
                 signal: controller.signal
             });
 
@@ -714,7 +724,7 @@ export class AssistantService {
                 res = await fetch(apiUrl('/api/phase12e/query'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...extraHeaders },
-                    body: JSON.stringify({ query: cleanQuery, language: options.language || 'auto' }),
+                    body: JSON.stringify(reqPayload),
                     signal: controller.signal
                 });
             }
@@ -724,7 +734,7 @@ export class AssistantService {
             if (res.ok) {
                 const data = await res.json();
                 this.backendAvailable = true;
-                return this._normalizeResponse(data, cleanQuery);
+                return this._normalizeResponse(data, cleanQuery, options);
             }
 
             // Extract real backend error details if available
@@ -820,13 +830,14 @@ export class AssistantService {
         );
     }
 
-    static _normalizeResponse(backendData, query) {
+    static _normalizeResponse(backendData, query, options = {}) {
         // Map backend schema cleanly to the frontend contract
         const status = backendData.status || "INSUFFICIENT";
-        const answer = backendData.answer || (status === "INSUFFICIENT" ? "I could not verify this from the available BIS evidence." : "");
+        const answer = backendData.answer || "";
         const generation_mode = backendData.generation_mode || (status === "SUFFICIENT" ? "GROUNDED" : "LLM_FALLBACK");
-        const ragData = backendData.rag || backendData;
         const llmData = backendData.llm || { used: false, role: null, answer: null, verified_by_bis_rag: (status === "SUFFICIENT") };
+        const ragData = backendData.rag || {};
+        const response_style = backendData.response_style || options.responseStyle || options.response_style || "Detailed & Explanatory";
 
         const rawEvidence = ragData.evidence || backendData.evidence || [];
         const rawClaims = ragData.claims || backendData.claims || [];
@@ -913,6 +924,7 @@ export class AssistantService {
             query,
             answer,
             generation_mode,
+            response_style,
             rag: backendData.rag || null,
             llm: llmData,
             claims,

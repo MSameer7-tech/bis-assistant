@@ -121,12 +121,34 @@
                 <div class="sidebar-lang-row" id="sidebarLangRow">
                     <span class="sidebar-lang-label" data-i18n="nav.language">Language</span>
                     <div class="lang-selector-group" id="sidebarLangSelectorGroup" role="group" aria-label="Language selector">
-                        <button type="button" class="btn-lang-toggle active" data-lang="en">EN</button>
-                        <span class="lang-divider">|</span>
-                        <button type="button" class="btn-lang-toggle" data-lang="hi">हिन्दी</button>
+                        <svg class="lang-globe-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <select class="lang-select" id="sidebarLangSelect" aria-label="Select Assistant Language">
+                            <option value="en">English (EN)</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
+                            <option value="bn">বাংলা (Bengali)</option>
+                            <option value="te">తెలుగు (Telugu)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                            <option value="gu">ગુજરાતી (Gujarati)</option>
+                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                            <option value="ml">മലയാളം (Malayalam)</option>
+                            <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                            <option value="as">অসমীয়া (Assamese)</option>
+                            <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        </select>
                     </div>
                     <button type="button" class="btn-lang-collapsed" id="btnCollapsedLangToggle" title="Switch language to हिन्दी / भाषा बदलें" aria-label="Switch language">
                         <span class="collapsed-lang-code" id="collapsedLangCode">EN</span>
+                    </button>
+                </div>
+                <div class="sidebar-user-actions-row">
+                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarPreferences" title="Personalization preferences" aria-label="Preferences">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <span data-i18n="nav.preferences">Preferences</span>
+                    </button>
+                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarTour" title="Quick workspace tour" aria-label="Quick Tour">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                        <span data-i18n="nav.quick_tour">Quick Tour</span>
                     </button>
                 </div>
                 <div class="sidebar-profile-card">
@@ -168,9 +190,21 @@
 
                     <div class="topbar-right" id="topbarRight">
                         <div class="lang-selector-group" id="topbarLangSelectorGroup" role="group" aria-label="Language selector">
-                            <button type="button" class="btn-lang-toggle active" data-lang="en">EN</button>
-                            <span class="lang-divider">|</span>
-                            <button type="button" class="btn-lang-toggle" data-lang="hi">हिन्दी</button>
+                            <svg class="lang-globe-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            <select class="lang-select" id="topbarLangSelect" aria-label="Select Assistant Language">
+                                <option value="en">English (EN)</option>
+                                <option value="hi">हिन्दी (Hindi)</option>
+                                <option value="bn">বাংলা (Bengali)</option>
+                                <option value="te">తెలుగు (Telugu)</option>
+                                <option value="mr">मराठी (Marathi)</option>
+                                <option value="ta">தமிழ் (Tamil)</option>
+                                <option value="gu">ગુજરાતી (Gujarati)</option>
+                                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                                <option value="ml">മലയാളം (Malayalam)</option>
+                                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                                <option value="as">অসমীয়া (Assamese)</option>
+                                <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                            </select>
                         </div>
                         <button type="button" class="btn-auth-signin" id="btnOpenAuthModal" aria-label="Sign in to your account">
                             <span data-i18n="nav.sign_in">Sign in</span>
@@ -579,10 +613,11 @@
                     </div>
                 </div>
                 <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;">
-                    <strong>Immutability Status:</strong> Frozen v22 corpus, BM25 indices, vector embeddings, and zero-hallucination verification gate strictly preserved.
+                    <strong>Immutability Status:</strong> Frozen v22 corpus, BM25 indices, vector embeddings, and evidence-grounded verification gate strictly preserved.
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" id="btnSystemModalTour" class="btn-modal-secondary" style="margin-right: 8px;">Workspace Tour</button>
                 <button type="button" id="modalOkBtn" class="btn-modal-ack">Acknowledge</button>
             </div>
         </div>
@@ -692,10 +727,400 @@
         </div>
     </div>
 
+    <!-- ======================================================= -->
+    <!-- ONBOARDING & PERSONALIZATION MODAL                     -->
+    <!-- ======================================================= -->
+    <div id="onboardingModalBackdrop" class="modal-overlay hidden" aria-hidden="true">
+        <div id="onboardingModal" class="onboarding-modal-card" role="dialog" aria-labelledby="onboardingModalTitle" aria-modal="true">
+            <!-- Modal Header -->
+            <div class="onboarding-modal-header">
+                <div class="onboarding-brand-header">
+                    <span class="onboarding-kicker" id="onboardingKicker" data-i18n="onboarding.badge">BIS PERSONALIZATION</span>
+                    <div class="onboarding-title-row">
+                        <h3 id="onboardingModalTitle" class="onboarding-modal-title" data-i18n="onboarding.title">Welcome to BIS AI Assistant</h3>
+                        <span class="onboarding-step-badge" id="onboardingStepBadge">Step 1 of 4</span>
+                    </div>
+                    <p id="onboardingModalSubtitle" class="onboarding-modal-subtitle" data-i18n="onboarding.subtitle">Personalize your workspace for faster, evidence-grounded standards intelligence.</p>
+                </div>
+                <button type="button" id="btnOnboardingClose" class="drawer-close-icon" aria-label="Close modal">✕</button>
+            </div>
+
+            <!-- Visual Progress Bar -->
+            <div class="onboarding-progress-track" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">
+                <div class="onboarding-progress-fill" id="onboardingProgressFill" style="width: 25%;"></div>
+            </div>
+
+            <!-- Modal Steps Body (Step 1 to 4) -->
+            <div class="onboarding-modal-body">
+                <!-- STEP 1: Role Selection -->
+                <section class="onboarding-step-pane" id="onboardingStep1" data-step="1">
+                    <div class="step-question-header">
+                        <h4 class="step-question-title" data-i18n="onboarding.step1.title">What best describes you?</h4>
+                        <p class="step-question-sub" data-i18n="onboarding.step1.subtitle">Select the profile that best matches your workflow to customize your experience.</p>
+                    </div>
+                    <div class="onboarding-options-grid roles-grid" id="onboardingRolesGrid" role="radiogroup" aria-label="Role selection">
+                        <button type="button" class="onboarding-option-card" data-role="Manufacturer" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.manufacturer">Manufacturer</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Importer / Exporter" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.importer_exporter">Importer / Exporter</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Business / Seller" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.business_seller">Business / Seller</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Testing Laboratory" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 2v7.31M14 2v7.31"/><path d="M8.5 2h7"/><path d="M14 9.3 18.2 16c1.3 2 .2 4.7-2.2 4.7H8c-2.4 0-3.5-2.7-2.2-4.7L10 9.3"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.testing_laboratory">Testing Laboratory</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Compliance / Regulatory Professional" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.compliance_professional">Compliance / Regulatory Professional</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Consumer" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.consumer">Consumer</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Student / Researcher" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.student_researcher">Student / Researcher</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                        <button type="button" class="onboarding-option-card" data-role="Other" role="radio" aria-checked="false">
+                            <div class="option-icon-wrap">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            </div>
+                            <div class="option-content">
+                                <span class="option-title" data-i18n="onboarding.step1.roles.other">Other</span>
+                            </div>
+                            <div class="option-check-circle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- STEP 2: Use Cases (Multi-Select) -->
+                <section class="onboarding-step-pane hidden" id="onboardingStep2" data-step="2">
+                    <div class="step-question-header">
+                        <div class="header-with-hint">
+                            <h4 class="step-question-title" data-i18n="onboarding.step2.title">What do you mainly use BIS services for?</h4>
+                            <span class="multi-select-pill" data-i18n="onboarding.step2.multi_hint">Select all that apply</span>
+                        </div>
+                        <p class="step-question-sub" data-i18n="onboarding.step2.subtitle">Select one or more primary objectives to customize quick actions and references.</p>
+                    </div>
+                    <div class="onboarding-usecases-grid" id="onboardingUseCasesGrid">
+                        <button type="button" class="onboarding-chip-card" data-usecase="Finding Indian Standards" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.finding_standards">Finding Indian Standards</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Checking compliance requirements" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.checking_compliance">Checking compliance requirements</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Understanding QCOs" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.understanding_qcos">Understanding QCOs</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="BIS Certification / Licensing" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.certification_licensing">BIS Certification / Licensing</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Testing Requirements" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.testing_requirements">Testing Requirements</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Finding Testing Laboratories" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.finding_labs">Finding Testing Laboratories</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Hallmarking / HUID" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.hallmarking_huid">Hallmarking / HUID</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Verifying BIS Licence / Certification" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.verifying_licence">Verifying BIS Licence / Certification</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Understanding Standards & Clauses" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.understanding_clauses">Understanding Standards & Clauses</span>
+                        </button>
+                        <button type="button" class="onboarding-chip-card" data-usecase="Other" role="checkbox" aria-checked="false">
+                            <span class="chip-check-box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="chip-label" data-i18n="onboarding.step2.use_cases.other">Other</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- STEP 3: Location Selection -->
+                <section class="onboarding-step-pane hidden" id="onboardingStep3" data-step="3">
+                    <div class="step-question-header">
+                        <h4 class="step-question-title" data-i18n="onboarding.step3.title">Where are you based?</h4>
+                        <p class="step-question-sub" data-i18n="onboarding.step3.subtitle">Helps anchor testing laboratory searches and regional compliance data.</p>
+                    </div>
+                    <div class="onboarding-location-form">
+                        <div class="form-row-location">
+                            <!-- Country Selection -->
+                            <div class="onboarding-field-group">
+                                <label for="obCountrySelect" class="ob-field-label" data-i18n="onboarding.step3.country">Country</label>
+                                <select id="obCountrySelect" class="ob-select-input">
+                                    <option value="India" selected data-i18n="onboarding.step3.india">India</option>
+                                    <option value="Other" data-i18n="onboarding.step3.other_country">Other Country</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row-location-split" id="obIndiaLocationWrap">
+                            <!-- Searchable State Selection -->
+                            <div class="onboarding-field-group">
+                                <label for="obStateInput" class="ob-field-label" data-i18n="onboarding.step3.state">State / Union Territory</label>
+                                <div class="ob-input-with-icon ob-combobox-wrap" id="obStateComboboxWrap">
+                                    <svg class="ob-leading-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <input type="text" id="obStateInput" class="ob-text-input ob-combobox-input" list="obStateList" placeholder="Search state (e.g. Maharashtra, Delhi)..." autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                                    <button type="button" class="ob-dropdown-toggle-btn" id="btnToggleStateDropdown" aria-label="Toggle state dropdown" tabindex="-1">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                    <div class="ob-combobox-dropdown hidden" id="obStateDropdown" role="listbox"></div>
+                                    <datalist id="obStateList"></datalist>
+                                </div>
+                            </div>
+
+                            <!-- Searchable City Selection -->
+                            <div class="onboarding-field-group">
+                                <label for="obCityInput" class="ob-field-label" data-i18n="onboarding.step3.city">City / Town</label>
+                                <div class="ob-input-with-icon ob-combobox-wrap" id="obCityComboboxWrap">
+                                    <svg class="ob-leading-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    <input type="text" id="obCityInput" class="ob-text-input ob-combobox-input" list="obCityList" placeholder="Select or type city..." autocomplete="off" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+                                    <button type="button" class="ob-dropdown-toggle-btn" id="btnToggleCityDropdown" aria-label="Toggle city dropdown" tabindex="-1">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </button>
+                                    <div class="ob-combobox-dropdown hidden" id="obCityDropdown" role="listbox"></div>
+                                    <datalist id="obCityList"></datalist>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Popular Cities Quick Select for Fast Tap -->
+                        <div class="ob-popular-cities-wrap" id="obPopularCitiesWrap">
+                            <span class="ob-popular-label">Popular anchors:</span>
+                            <div class="ob-popular-pills">
+                                <button type="button" class="ob-quick-city-pill" data-state="Delhi (NCT)" data-city="New Delhi">Delhi</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="Maharashtra" data-city="Mumbai">Mumbai</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="Karnataka" data-city="Bengaluru">Bengaluru</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="Tamil Nadu" data-city="Chennai">Chennai</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="West Bengal" data-city="Kolkata">Kolkata</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="Telangana" data-city="Hyderabad">Hyderabad</button>
+                                <button type="button" class="ob-quick-city-pill" data-state="Gujarat" data-city="Ahmedabad">Ahmedabad</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- STEP 4: Interaction Language & Response Style -->
+                <section class="onboarding-step-pane hidden" id="onboardingStep4" data-step="4">
+                    <div class="step-question-header">
+                        <h4 class="step-question-title" data-i18n="onboarding.step4.title">How would you like to interact with BIS Assistant?</h4>
+                        <p class="step-question-sub" data-i18n="onboarding.step4.subtitle">Choose your preferred language and response depth.</p>
+                    </div>
+
+                    <!-- 12 Indian Languages Grid -->
+                    <div class="ob-section-subblock">
+                        <label class="ob-block-label" data-i18n="onboarding.step4.language_label">Preferred Language (12 Indian Languages)</label>
+                        <div class="onboarding-lang-grid" id="onboardingLangGrid" role="radiogroup" aria-label="Language selection">
+                            <button type="button" class="onboarding-lang-card selected" data-lang="en" role="radio" aria-checked="true">
+                                <span class="lang-native">English</span>
+                                <span class="lang-en">English</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="hi" role="radio" aria-checked="false">
+                                <span class="lang-native">हिन्दी</span>
+                                <span class="lang-en">Hindi</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="bn" role="radio" aria-checked="false">
+                                <span class="lang-native">বাংলা</span>
+                                <span class="lang-en">Bengali</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="te" role="radio" aria-checked="false">
+                                <span class="lang-native">తెలుగు</span>
+                                <span class="lang-en">Telugu</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="mr" role="radio" aria-checked="false">
+                                <span class="lang-native">मराठी</span>
+                                <span class="lang-en">Marathi</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="ta" role="radio" aria-checked="false">
+                                <span class="lang-native">தமிழ்</span>
+                                <span class="lang-en">Tamil</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="gu" role="radio" aria-checked="false">
+                                <span class="lang-native">ગુજરાતી</span>
+                                <span class="lang-en">Gujarati</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="kn" role="radio" aria-checked="false">
+                                <span class="lang-native">ಕನ್ನಡ</span>
+                                <span class="lang-en">Kannada</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="ml" role="radio" aria-checked="false">
+                                <span class="lang-native">മലയാളം</span>
+                                <span class="lang-en">Malayalam</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="pa" role="radio" aria-checked="false">
+                                <span class="lang-native">ਪੰਜਾਬੀ</span>
+                                <span class="lang-en">Punjabi</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="as" role="radio" aria-checked="false">
+                                <span class="lang-native">অসমীয়া</span>
+                                <span class="lang-en">Assamese</span>
+                            </button>
+                            <button type="button" class="onboarding-lang-card" data-lang="or" role="radio" aria-checked="false">
+                                <span class="lang-native">ଓଡ଼ିଆ</span>
+                                <span class="lang-en">Odia</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 3 Response Styles -->
+                    <div class="ob-section-subblock">
+                        <label class="ob-block-label" data-i18n="onboarding.step4.response_style_label">Response Style</label>
+                        <div class="onboarding-styles-grid" id="onboardingStylesGrid" role="radiogroup" aria-label="Response style">
+                            <button type="button" class="onboarding-style-card" data-style="Quick & Simple" role="radio" aria-checked="false">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.styles.quick_simple">Quick & Simple</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.styles.quick_simple_desc">Concise summaries, direct clauses, and key takeaways.</span>
+                                </div>
+                            </button>
+                            <button type="button" class="onboarding-style-card selected" data-style="Detailed & Explanatory" role="radio" aria-checked="true">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.styles.detailed_explanatory">Detailed & Explanatory</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.styles.detailed_explanatory_desc">Comprehensive breakdowns with context and normative references.</span>
+                                </div>
+                            </button>
+                            <button type="button" class="onboarding-style-card" data-style="Professional & Compliance-focused" role="radio" aria-checked="false">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.styles.professional_compliance">Professional & Compliance-focused</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.styles.professional_compliance_desc">Strict statutory clauses, audit rigor, and regulatory obligations.</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Modal Footer Controls -->
+            <div class="onboarding-modal-footer">
+                <button type="button" class="btn-ob-secondary" id="btnOnboardingSkip" data-i18n="onboarding.btn_skip">Skip for now</button>
+                <div class="ob-footer-right">
+                    <button type="button" class="btn-ob-back hidden" id="btnOnboardingBack" data-i18n="onboarding.btn_back">Back</button>
+                    <button type="button" class="btn-ob-primary" id="btnOnboardingNext">
+                        <span id="onboardingNextText" data-i18n="onboarding.btn_continue">Continue</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- QUICK TOUR MODAL                                        -->
+    <!-- ======================================================= -->
+    <div id="quickTourModalBackdrop" class="modal-overlay hidden" aria-hidden="true">
+        <div id="quickTourModal" class="quick-tour-card" role="dialog" aria-labelledby="quickTourTitle" aria-modal="true">
+            <div class="tour-header">
+                <span class="tour-kicker" data-i18n="onboarding.tour.badge">WORKSPACE TOUR</span>
+                <button type="button" id="btnTourClose" class="drawer-close-icon" aria-label="Close tour">✕</button>
+            </div>
+            <div class="tour-body" id="tourSlidesContainer">
+                <div class="tour-slide active" data-slide="1">
+                    <div class="tour-icon-box">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    </div>
+                    <h3 class="tour-slide-title" data-i18n="onboarding.tour.step1_title">Evidence-Grounded Intelligence</h3>
+                    <p class="tour-slide-desc" data-i18n="onboarding.tour.step1_desc">Answers grounded in verified BIS evidence. Every response provides traceable standard clauses, official document IDs, and SHA-256 verified source provenance.</p>
+                </div>
+                <div class="tour-slide hidden" data-slide="2">
+                    <div class="tour-icon-box">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                    </div>
+                    <h3 class="tour-slide-title" data-i18n="onboarding.tour.step2_title">580+ BIS Laboratory Records</h3>
+                    <p class="tour-slide-desc" data-i18n="onboarding.tour.step2_desc">Find laboratories using verified testing scope. Search across 580+ BIS-owned, recognized, and empanelled laboratories with specific parameter capabilities.</p>
+                </div>
+                <div class="tour-slide hidden" data-slide="3">
+                    <div class="tour-icon-box">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                    <h3 class="tour-slide-title" data-i18n="onboarding.tour.step3_title">Normative Standards & Fee Inspection</h3>
+                    <p class="tour-slide-desc" data-i18n="onboarding.tour.step3_desc">Inspect official testing fees, normative parameter clauses, and accredited testing scopes in real-time.</p>
+                </div>
+                <div class="tour-slide hidden" data-slide="4">
+                    <div class="tour-icon-box">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                    </div>
+                    <h3 class="tour-slide-title" data-i18n="onboarding.tour.step4_title">Multilingual & Voice Interaction</h3>
+                    <p class="tour-slide-desc" data-i18n="onboarding.tour.step4_desc">Access support across 12 Indian languages and utilize microphone voice input on both Assistant and Lab Finder search bars.</p>
+                </div>
+            </div>
+            <div class="tour-footer">
+                <div class="tour-dots" id="tourDots">
+                    <span class="tour-dot active" data-slide="1"></span>
+                    <span class="tour-dot" data-slide="2"></span>
+                    <span class="tour-dot" data-slide="3"></span>
+                    <span class="tour-dot" data-slide="4"></span>
+                </div>
+                <div class="tour-actions">
+                    <button type="button" class="btn-tour-nav" id="btnTourPrev" disabled>Previous</button>
+                    <button type="button" class="btn-tour-nav primary" id="btnTourNext">Next &rarr;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaflet Vendor Bundle -->
     <script src="./vendor/leaflet/leaflet.js"></script>
 
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=14.4.0"></script>
+    <script type="module" src="./app.js?v=14.6.1"></script>
 </body>
 </html>
