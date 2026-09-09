@@ -164,6 +164,7 @@ class AssistantQueryRequest(BaseModel):
     as_of_date: Optional[str] = None
     conversation_id: Optional[str] = None
     response_style: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None
 
 
 class NumericalVerifyRequest(BaseModel):
@@ -533,7 +534,8 @@ async def handle_assistant_query(
         result = orchestrate_assistant_query(
             req.query,
             target_language=normalized_lang,
-            response_style=req.response_style
+            response_style=req.response_style,
+            conversation_history=req.history
         )
         if current_user and isinstance(result, dict):
             result["authenticated_user"] = {

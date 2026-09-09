@@ -705,7 +705,8 @@ export class AssistantService {
             query: cleanQuery,
             language: options.language || 'en',
             target_language: options.language || options.target_language || 'en',
-            response_style: options.responseStyle || options.response_style || 'Detailed & Explanatory'
+            response_style: options.responseStyle || options.response_style || 'Detailed & Explanatory',
+            history: options.history || []
         };
         // Normalize to canonical database value ('quick', 'detailed', 'professional') for POST /api/assistant/query
         if (reqPayload.response_style === 'Quick & Simple') reqPayload.response_style = 'quick';

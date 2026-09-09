@@ -858,11 +858,18 @@ function initApp() {
         try {
             const userPrefs = typeof getUserPreferences === 'function' ? getUserPreferences() : null;
             const effectiveLang = userPrefs?.language || currentLanguage || 'en';
+            // Build conversation history for context resolution
+            const historyMessages = (conv.messages || []).slice(-10).map(m => ({
+                role: m.role,
+                text: m.text || '',
+                data: m.data ? { answer: m.data.answer || m.data.answer_markdown || '' } : undefined
+            }));
             const responseData = await AssistantService.query(query, {
                 mode: backendMode,
                 headers: getAuthHeaders(),
                 language: effectiveLang,
-                responseStyle: userPrefs?.responseStyle || 'Detailed & Explanatory'
+                responseStyle: userPrefs?.responseStyle || 'Detailed & Explanatory',
+                history: historyMessages
             });
 
             thinkingRow.remove();

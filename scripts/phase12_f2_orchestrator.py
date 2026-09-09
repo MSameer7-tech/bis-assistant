@@ -270,16 +270,309 @@ def is_conversational_query(query_text: str) -> bool:
             return True
     return False
 
+# -----------------------------------------------------------------------------
+# Phase 14: 12 Discrete Intent Categories & Safety Contracts
+# -----------------------------------------------------------------------------
+INTENT_DEFINITION = "DEFINITION"
+INTENT_SCOPE = "SCOPE"
+INTENT_TECHNICAL_REQUIREMENTS = "TECHNICAL_REQUIREMENTS"
+INTENT_TESTING = "TESTING"
+INTENT_CERTIFICATION = "CERTIFICATION"
+INTENT_QCO = "QCO"
+INTENT_AMENDMENT_HISTORY = "AMENDMENT_HISTORY"
+INTENT_STANDARD_COMPARISON = "STANDARD_COMPARISON"
+INTENT_LAB_SEARCH = "LAB_SEARCH"
+INTENT_PROCESS = "PROCESS"
+INTENT_GENERAL = "GENERAL"
+INTENT_AMBIGUOUS = "AMBIGUOUS"
+
+VALID_INTENTS = {
+    INTENT_DEFINITION, INTENT_SCOPE, INTENT_TECHNICAL_REQUIREMENTS,
+    INTENT_TESTING, INTENT_CERTIFICATION, INTENT_QCO,
+    INTENT_AMENDMENT_HISTORY, INTENT_STANDARD_COMPARISON,
+    INTENT_LAB_SEARCH, INTENT_PROCESS, INTENT_GENERAL, INTENT_AMBIGUOUS
+}
+
+AMENDMENT_CONSERVATIVE_MAP = {
+    "en": "I could verify {std}:{year} as the {rev}, but I could not verify the latest amendment number or date from the available BIS evidence.",
+    "hi": "उपलब्ध बीआईएस साक्ष्यों से {std}:{year} को {rev} के रूप में सत्यापित किया जा सका, लेकिन उपलब्ध बीआईएस साक्ष्यों से नवीनतम संशोधन संख्या या तिथि का सत्यापन नहीं किया जा सका।",
+    "bn": "উপলব্ধ বিআইএস প্রমাণ থেকে {std}:{year} {rev} হিসেবে যাচাই করা সম্ভব হয়েছে, তবে উপলব্ধ তথ্য থেকে সর্বশেষ সংশোধনী নম্বর বা তারিখ যাচাই করা যায়নি।",
+    "te": "అందుబాటులో ఉన్న BIS ఆధారాల నుండి {std}:{year}ని {rev}గా ధృవీకరించడం జరిగింది, కానీ తాజా సవరణ సంఖ్య లేదా తేదీని ధృవీకరించలేకపోయాము.",
+    "mr": "उपलब्ध बीआयएस पुराव्यांवरून {std}:{year} हे {rev} म्हणून पडताळले गेले आहे, परंतु नवीनतम दुरुस्ती क्रमांक किंवा तारीख पडताळता आली नाही.",
+    "ta": "கிடைக்கக்கூடிய BIS ஆதாரங்களிலிருந்து {std}:{year} {rev} என சரிபார்க்க முடிந்தது, ஆனால் சமீபத்திய திருத்த எண் அல்லது தேதியை சரிபார்க்க முடியவில்லை.",
+    "gu": "ઉપલબ્ધ BIS પુરાવા પરથી {std}:{year} {rev} તરીકે ચકાસી શકાયું, પરંતુ નવીનતમ સુધારા નંબર અથવા તારીખની ચકાસણી થઈ શકી નથી.",
+    "kn": "ಲಭ್ಯವಿರುವ BIS ಪುರಾವೆಗಳಿಂದ {std}:{year} ಅನ್ನು {rev} ಎಂದು ಪರಿಶೀಲಿಸಲಾಗಿದೆ, ಆದರೆ ಇತ್ತೀಚಿನ ತಿದ್ದುಪಡಿ ಸಂಖ್ಯೆ ಅಥವಾ ದಿನಾಂಕವನ್ನು ಪರಿಶೀಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    "ml": "ലഭ്യമായ BIS തെളിവുകളിൽ നിന്ന് {std}:{year} {rev} ആയി പരിശോധിച്ചു, എന്നാൽ ഏറ്റവും പുതിയ ഭേദഗതി നമ്പറോ തീയതിയോ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല.",
+    "pa": "ਉਪਲਬਧ BIS ਸਬੂਤਾਂ ਤੋਂ {std}:{year} ਦੀ {rev} ਵਜੋਂ ਪੁਸ਼ਟੀ ਕੀਤੀ ਜਾ ਸਕੀ, ਪਰ ਨਵੀਨਤਮ ਸੋਧ ਨੰਬਰ ਜਾਂ ਮਿਤੀ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ।",
+    "as": "উপলব্ধ বিআইএছ তথ্যৰ পৰা {std}:{year} {rev} হিচাপে সত্যাপন কৰা হৈছে, কিন্তু শেহতীয়া সংশোধনী নম্বৰ বা তাৰিখ সত্যাপন কৰিব পৰা নগ'ল।",
+    "or": "ଉପଲବ୍ଧ BIS ପ୍ରମାଣରୁ {std}:{year} କୁ {rev} ଭାବରେ ଯାଞ୍ଚ କରାଯାଇଛି, କିନ୍ତୁ ନୂତନ ସଂଶୋଧନ ସଂଖ୍ୟା କିମ୍ବା ତାରିଖ ଯାଞ୍ଚ କରାଯାଇ ପାରିଲା ନାହିଁ।"
+}
+
+MANDATORY_CONSERVATIVE_MAP = {
+    "en": "While {std} provides the normative specification and testing requirements for {prod}, mandatory certification status could not be verified from the available BIS records. The existence of an Indian Standard specifies product benchmarks, but does not itself establish mandatory certification unless notified by the Government of India through an authoritative Quality Control Order (QCO) or statutory regulation.",
+    "hi": "यद्यपि {std} {prod} के लिए मानक विनिर्देश और परीक्षण आवश्यकताएं निर्धारित करता है, लेकिन उपलब्ध बीआईएस साक्ष्यों से अनिवार्य प्रमाणन स्थिति का सत्यापन नहीं किया जा सका। किसी भारतीय मानक का अस्तित्व तकनीकी मानक निर्धारित करता है, लेकिन जब तक भारत सरकार द्वारा गुणवत्ता नियंत्रण आदेश (QCO) या वैधानिक विनियमन के माध्यम से अधिसूचित न किया गया हो, तब तक प्रमाणन अनिवार्य नहीं माना जा सकता।",
+    "bn": "যদিও {std} {prod}-এর জন্য নির্দেশিত মান ও পরীক্ষার প্রয়োজনীয়তা নির্ধারণ করে, তবে উপলব্ধ বিআইএস রেকর্ড থেকে বাধ্যতামূলক শংসাপত্র (mandatory certification) স্থিতি যাচাই করা যায়নি। কোয়ালিটি কন্ট্রোল অর্ডার (QCO) ছাড়া কোনো भारतीय মান নিজে থেকেই বাধ্যতামূলক হয় না।",
+    "te": "{std} {prod} కోసం ప్రామాణిక నిర్దేశాలు మరియు పరీక్ష అవసరాలను నిర్దేశించినప్పటికీ, అందుబాటులో ఉన్న BIS రికార్డుల నుండి తప్పనిసరి ధృవీకరణ స్థితిని నిర్ధారించలేము. ప్రభుత్వం నుండి అధికారిక క్వాలిటీ కంట్రోల్ ఆర్డర్ (QCO) ఉంటేనే ఇది తప్పనిసరి అవుతుంది.",
+    "mr": "जरी {std} {prod} साठी मानक तपशील आणि चाचणी आवश्यकता निर्दिष्ट करत असले, तरी उपलब्ध बीआयएस नोंदींवरून अनिवार्य प्रमाणीकरण स्थिती पडताळली जाऊ शकली नाही. जोपर्यंत शासनाद्वारे गुणवत्ता नियंत्रण आदेश (QCO) जारी केला जात नाही, तोपर्यंत प्रमाणीकरण अनिवार्य मानले जात नाही.",
+    "ta": "{std} {prod}க்கான தரநிலைகள் மற்றும் சோதனைத் தேவைகளைக் குறிப்பிட்டாலும், கிடைக்கக்கூடிய BIS பதிவுகளிலிருந்து கட்டாயச் சான்றிதழ் நிலையை உறுதிப்படுத்த முடியவில்லை. அரசாங்கத்தின் தரக் கட்டுப்பாட்டு ஆணை (QCO) இல்லாமல் ஒரு தரநிலை தானாகவே கட்டாயமாகாது.",
+    "gu": "જો કે {std} {prod} માટે ધોરણો અને પરીક્ષણ આવશ્યકતાઓ પૂરી પાડે છે, છતાં ઉપલબ્ધ BIS રેકોર્ડ્સમાંથી ફરજિયાત પ્રમાણપત્ર સ્થિતિ ચકાસી શકાઈ નથી. ગુણવત્તા નિયંત્રણ આદેશ (QCO) વિના કોઈ ધોરણ આપમેળે ફરજિયાત બનતું નથી.",
+    "kn": "{std} {prod}ಗಾಗಿ ಮಾನದಂಡಗಳು ಮತ್ತು ಪರೀಕ್ಷಾ ಅವಶ್ಯಕತೆಗಳನ್ನು ನಿರ್ದಿಷ್ಟಪಡಿಸಿದರೂ, ಲಭ್ಯವಿರುವ BIS ದಾಖಲೆಗಳಿಂದ ಕಡ್ಡಾಯ ಪ್ರಮಾಣೀಕರಣ ಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗಲಿಲ್ಲ. ಸರ್ಕಾರದ ಗುಣಮಟ್ಟ ನಿಯಂತ್ರಣ ಆದೇಶ (QCO) ಇಲ್ಲದೆ ಮಾನದಂಡವು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಡ್ಡಾಯವಾಗುವುದಿಲ್ಲ.",
+    "ml": "{std} {prod}-ന് മാനദണ്ഡങ്ങളും പരിശോധനാ ആവശ്യകതകളും വ്യക്തമാക്കുന്നുണ്ടെങ്കിലും, ലഭ്യമായ BIS രേഖകളിൽ നിന്ന് നിർബന്ധിത സർട്ടിഫിക്കേഷൻ സ്ഥിതി പരിശോധിക്കാൻ കഴിഞ്ഞില്ല. സർക്കാർ ഗുണനിലവാര നിയന്ത്രണ ഉത്തരവ് (QCO) വഴി വിജ്ഞാപനം ചെയ്യാത്തപക്ഷം ഒരു മാനദണ്ഡവും സ്വയമേവ നിർബന്ധിതമാകില്ല.",
+    "pa": "ਹਾਲਾਂਕਿ {std} {prod} ਲਈ ਮਿਆਰਾਂ ਅਤੇ ਟੈਸਟਿੰਗ ਲੋੜਾਂ ਨੂੰ ਦਰਸਾਉਂਦਾ ਹੈ, ਉਪਲਬਧ BIS ਰਿਕਾਰਡਾਂ ਤੋਂ ਲਾਜ਼ਮੀ ਪ੍ਰਮਾਣੀਕਰਣ ਸਥਿਤੀ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋ ਸਕੀ। ਸਰਕਾਰ ਵੱਲੋਂ ਕੁਆਲਿਟੀ ਕੰਟਰੋਲ ਆਰਡਰ (QCO) ਤੋਂ ਬਿਨਾਂ ਕੋਈ ਵੀ ਮਿਆਰ ਖੁਦ ਲਾਜ਼ਮੀ ਨਹੀਂ ਹੁੰਦਾ।",
+    "as": "যদিও {std} {prod}-ৰ বাবে নিৰ্দিষ্ট মান নিৰ্ধাৰণ কৰে, কিন্তু উপলব্ধ বিআইএছ তথ্যৰ পৰা বাধ্যতামূলক প্ৰমাণীকৰণ স্থিতি সত্যাপন কৰিব পৰা নগ'ল। চৰকাৰী গুণমান নিয়ন্ত্ৰণ আদেশ (QCO) অবিহনে কোনো মানদণ্ড নিজে নিজে বাধ্যতামূলক নহয়।",
+    "or": "ଯଦିଓ {std} {prod} ପାଇଁ ମାନକ ନିର୍ଦ୍ଦିଷ୍ଟ କରେ, ଉପଲବ୍ଧ BIS ରେକର୍ଡରୁ ବାଧ୍ୟତାମୂଳକ ପ୍ରମାଣୀକରଣ ସ୍ଥିତି ଯାଞ୍ଚ କରାଯାଇ ପାରିଲା ନାହିଁ। କ୍ୱାଲିଟି କଣ୍ଟ୍ରୋଲ୍ ଅର୍ଡର (QCO) ବିନା କୌଣସି ମାନକ ନିଜେ ବାଧ୍ୟତାମୂଳକ ହୁଏ ନାହିଁ।"
+}
+
+COMPLETENESS_CAVEAT_MAP = {
+    "en": "Note: The retrieved BIS records provide an excerpt of key verified test requirements ({tests}). A complete exhaustive list of all tests cannot be verified from the retrieved evidence chunks alone; refer to the full {std} standard document for the complete test schedule.",
+    "hi": "नोट: उपलब्ध बीआईएस अभिलेख प्रमुख सत्यापित परीक्षण आवश्यकताओं ({tests}) का एक अंश प्रदान करते हैं। केवल उपलब्ध साक्ष्य अंशों से सभी परीक्षणों की संपूर्ण सूची का सत्यापन नहीं किया जा सकता; संपूर्ण परीक्षण अनुसूची के लिए आधिकारिक {std} मानक दस्तावेज़ देखें।",
+    "bn": "নোট: উপলব্ধ বিআইএস রেকর্ডগুলি প্রধান যাচাইকৃত পরীক্ষার প্রয়োজনীয়তাগুলির ({tests}) একটি অংশ সরবরাহ করে। শুধুমাত্র প্রাপ্ত প্রমাণের অংশ থেকে সমস্ত পরীক্ষার একটি সম্পূর্ণ তালিকা যাচাই করা যায় না; সম্পূর্ণ পরীক্ষার সময়সূচীর জন্য মূল {std} মান নথিটি দেখুন।",
+    "te": "గమనిక: అందుబాటులో ఉన్న BIS రికార్డులు ముఖ్యమైన పరీక్ష అవసరాల ({tests}) యొక్క సారాంశాన్ని మాత్రమే అందిస్తాయి. పూర్తి జాబితాను ఈ రికార్డుల నుండి మాత్రమే నిర్ధారించలేము; పూర్తి పరీక్ష షెడ్యూల్ కోసం అధికారిక {std} ప్రమాణ పత్రాన్ని చూడండి.",
+    "mr": "टीप: उपलब्ध बीआयएस नोंदी प्रमुख पडताळलेल्या चाचणी आवश्यकतांचा ({tests}) एक भाग प्रदान करतात. केवळ उपलब्ध पुराव्यांवरून सर्व चाचण्यांची संपूर्ण यादी पडताळली जाऊ शकत नाही; संपूर्ण चाचणी वेळापत्रकासाठी मूळ {std} मानक दस्तऐवज पहा.",
+    "ta": "குறிப்பு: பெறப்பட்ட BIS பதிவுகள் முக்கிய சோதனைத் தேவைகளின் ({tests}) ஒரு பகுதியை மட்டுமே வழங்குகின்றன. இந்த ஆதாரங்களிலிருந்து அனைத்து சோதனைகளின் முழுமையான பட்டியலையும் உறுதிப்படுத்த முடியாது; முழுமையான சோதனை அட்டவணைக்கு அதிகாரப்பூர்வ {std} தரநிலை ஆவணத்தைப் பார்க்கவும்.",
+    "gu": "નોંધ: ઉપલબ્ધ BIS રેકોર્ડ્સ મુખ્ય ચકાસાયેલ પરીક્ષણ જરૂરિયાતો ({tests}) નો એક અંશ પૂરો પાડે છે. માત્ર ઉપલબ્ધ પુરાવાઓ પરથી તમામ પરીક્ષણોની સંપૂર્ણ યાદી ચકાસી શકાતી નથી; સંપૂર્ણ પરીક્ષણ સમયપત્રક માટે મૂળ {std} માનક દસ્તાવેજ જુઓ.",
+    "kn": "ಟಿಪ್ಪಣಿ: ಲಭ್ಯವಿರುವ BIS ದಾಖಲೆಗಳು ಪ್ರಮುಖ ಪರಿಶೀಲಿಸಿದ ಪರೀಕ್ಷಾ ಅವಶ್ಯಕತೆಗಳ ({tests}) ಆಯ್ದ ಭಾಗವನ್ನು ಒದಗಿಸುತ್ತವೆ. ಸಂಪೂರ್ಣ ಪರೀಕ್ಷಾ ವೇಳಾಪಟ್ಟಿಗಾಗಿ ಅಧಿಕೃತ {std} ಪ್ರಮಾಣಿತ ದಾಖಲೆಯನ್ನು ನೋಡಿ.",
+    "ml": "ശ്രദ്ധിക്കുക: ലഭ്യമായ BIS രേഖകൾ പ്രധാന പരിശോധനാ ആവശ്യകതകളുടെ ({tests}) ഒരു ഭാഗം നൽകുന്നു. ലഭ്യമായ തെളിവുകളിൽ നിന്ന് മാത്രം എല്ലാ പരിശോധനകളുടെയും പൂർണ്ണമായ പട്ടിക സ്ഥിരീകരിക്കാൻ കഴിയില്ല; പൂർണ്ണ ഷെഡ്യൂളിനായി ഔദ്യോഗിക {std} രേഖ കാണുക.",
+    "pa": "ਨੋਟ: ਉਪਲਬਧ BIS ਰਿਕਾਰਡ ਮੁੱਖ ਪ੍ਰਮਾਣਿਤ ਟੈਸਟਿੰਗ ਲੋੜਾਂ ({tests}) ਦਾ ਇੱਕ ਅੰਸ਼ ਪ੍ਰਦਾਨ ਕਰਦੇ ਹਨ। ਪੂਰੀ ਟੈਸਟਿੰਗ ਸੂਚੀ ਦੀ ਪੁਸ਼ਟੀ ਲਈ ਅਧਿਕਾਰਤ {std} ਦਸਤਾਵੇਜ਼ ਵੇਖੋ।",
+    "as": "টোকা: উপলব্ধ বিআইএছ নথিসমূহে মুখ্য পৰীক্ষণ প্ৰয়োজনীয়তাসমূহৰ ({tests}) এটা অংশ প্ৰদান কৰে। সম্পূৰ্ণ পৰীক্ষণ সূচীৰ বাবে মূল {std} মানদণ্ড নথিপত্ৰ চাওক।",
+    "or": "ଟିପ୍ପଣୀ: ଉପଲବ୍ଧ BIS ରେକର୍ଡଗୁଡିକ ମୁଖ୍ୟ ପରୀକ୍ଷଣ ଆବଶ୍ୟକତାଗୁଡିକର ({tests}) ଏକ ଅଂଶ ପ୍ରଦାନ କରେ। ସମ୍ପୂର୍ଣ୍ଣ ପରୀକ୍ଷଣ ତାଲିକା ପାଇଁ ଅଫିସିଆଲ୍ {std} ମାନକ ଦଲିଲ ଦେଖନ୍ତୁ।"
+}
+
+def resolve_conversational_context(
+    query_text: str,
+    conversation_history: Optional[List[Dict[str, Any]]] = None
+) -> Tuple[str, Optional[str], Optional[str], bool]:
+    """
+    Resolves conversational pronouns and anaphora (e.g. 'it', 'these tests', 'where can I get these tests done')
+    from recent conversation turns.
+    Returns (resolved_query, resolved_standard, resolved_product, was_resolved).
+    """
+    q = (query_text or "").strip()
+    if not q or not conversation_history:
+        return q, None, None, False
+
+    q_lower = q.lower()
+    is_explicit_std = bool(re.search(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+)', q, re.IGNORECASE))
+    if is_explicit_std:
+        return q, None, None, False
+
+    resolved_std = None
+    resolved_prod = None
+
+    for msg in reversed(conversation_history):
+        txt = ""
+        if isinstance(msg, dict):
+            txt = msg.get("text") or msg.get("query") or ""
+            data = msg.get("data")
+            if isinstance(data, dict):
+                txt += " " + (data.get("answer") or data.get("answer_markdown") or "")
+                std_cand = data.get("rag", {}).get("standard")
+                if std_cand and not resolved_std:
+                    resolved_std = std_cand
+        elif isinstance(msg, str):
+            txt = msg
+
+        if not resolved_std and txt:
+            matches = re.findall(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+(?:\s*(?:Part|Pt\.?|भाग)\s*\d+)?)', txt, re.IGNORECASE)
+            if matches:
+                c_num = re.sub(r'^(?:IS|is|आईएस|आई\.एस\.)\s*', '', matches[0]).strip()
+                resolved_std = f"IS {c_num}"
+
+        if not resolved_prod and txt:
+            p_m = re.search(r'\b(upvc\s*pipes?|led\s*(?:lamps?|bulbs?)|water\s*heaters?|geysers?|drinking\s*water|cement|steel)\b', txt, re.IGNORECASE)
+            if p_m:
+                resolved_prod = p_m.group(1)
+
+        if resolved_std:
+            break
+
+    if not resolved_std:
+        return q, None, resolved_prod, False
+
+    resolved_query = q
+    if re.search(r'\b(it|this\s+standard|the\s+standard)\b', q_lower):
+        resolved_query = re.sub(r'\b(it|this\s+standard|the\s+standard)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
+    elif re.search(r'\b(where\s+can\s+i\s+get\s+(?:these|the)?\s*tests?\s*done|where\s+to\s+test|which\s+labs?|who\s+tests?)\b', q_lower):
+        resolved_query = f"Find laboratories for testing according to {resolved_std}"
+    elif re.search(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', q_lower):
+        resolved_query = re.sub(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', f"tests under {resolved_std}", resolved_query, flags=re.IGNORECASE)
+    elif re.search(r'\b(where|lab|labs|laboratory|laboratories)\b', q_lower):
+        resolved_query = f"{q} for {resolved_std}"
+    else:
+        resolved_query = f"{q} for {resolved_std}"
+
+    return resolved_query, resolved_std, resolved_prod, True
+
+def classify_orchestrator_intent(
+    query_text: str,
+    clean_stds: List[str],
+    product: Optional[str] = None,
+    entities: Optional[Dict[str, Any]] = None,
+    is_general: bool = False,
+    is_conv: bool = False
+) -> str:
+    """
+    Classifies user query into one of the 12 discrete intent categories:
+    DEFINITION, SCOPE, TECHNICAL_REQUIREMENTS, TESTING, CERTIFICATION, QCO,
+    AMENDMENT_HISTORY, STANDARD_COMPARISON, LAB_SEARCH, PROCESS, GENERAL, AMBIGUOUS.
+    """
+    q_lower = (query_text or "").strip().lower()
+
+    if is_conv or is_general:
+        return INTENT_GENERAL
+
+    # 1. STANDARD_COMPARISON
+    comp_cues = ["difference between", "differ between", "differences between", "compare", "comparison", "versus", "vs", "vs.", "अन्तर", "अंतर", "तुलना", "फरक"]
+    if len(clean_stds) >= 2 or (clean_stds and any(c in q_lower for c in comp_cues)):
+        if any(c in q_lower for c in comp_cues) or len(clean_stds) >= 2:
+            return INTENT_STANDARD_COMPARISON
+
+    # 2. LAB_SEARCH
+    lab_cues = [
+        "lab", "labs", "laboratory", "laboratories", "where to test", "where can i test",
+        "where can i get", "testing facility", "testing facilities", "test center",
+        "recognized lab", "recognized laboratories", "who tests", "empanelled lab",
+        "find bis-recognized laboratories", "find laboratories",
+        "प्रयोगशाला", "प्रयोगशालाएं", "परीक्षण केंद्र", "परीक्षण सुविधा", "कहाँ परीक्षण कराएं",
+        "कहाँ टेस्ट कराएं"
+    ]
+    if any(c in q_lower for c in lab_cues):
+        return INTENT_LAB_SEARCH
+
+    # 3. AMENDMENT_HISTORY
+    amend_cues = [
+        "amendment", "amendments", "latest amendment", "recent amendment", "amendment date",
+        "revision", "revisions", "corrigendum", "corrigenda", "edition", "version",
+        "संशोधन", "नवीनतम संशोधन", "संस्करण", "पुनरीक्षण", "नवीनतम संस्करण"
+    ]
+    if any(c in q_lower for c in amend_cues):
+        return INTENT_AMENDMENT_HISTORY
+
+    # 4. QCO
+    qco_cues = [
+        "qco", "quality control order", "गुणवत्ता नियंत्रण आदेश", "gazette notification",
+        "rajpatra", "राजपत्र"
+    ]
+    if any(c in q_lower for c in qco_cues):
+        return INTENT_QCO
+
+    # 5. PROCESS
+    process_cues = [
+        "how do i get", "how to get", "how to apply", "how do i apply", "process for",
+        "procedure for", "steps to get", "steps for", "documentation needed", "documents required",
+        "documents and requirements", "what documents", "आवेदन कैसे करें", "प्रक्रिया", "दस्तावेज़",
+        "चरण"
+    ]
+    if any(c in q_lower for c in process_cues):
+        return INTENT_PROCESS
+
+    # 6. CERTIFICATION
+    cert_cues = [
+        "mandatory", "compulsory", "legally required", "is bis certification mandatory",
+        "is certification mandatory", "is it mandatory", "is isi mark mandatory",
+        "mandatory certification", "licence required", "license required",
+        "अनिवार्य", "बाध्यकारी", "प्रमाणन अनिवार्य", "लाइसेंस अनिवार्य"
+    ]
+    if any(c in q_lower for c in cert_cues):
+        return INTENT_CERTIFICATION
+
+    # 7. TESTING
+    test_cues = [
+        "what tests", "which tests", "tests specified", "tests required", "test requirements",
+        "all the tests", "all tests", "types of test", "testing requirements",
+        "परीक्षण", "जांच", "टेस्ट", "कौन से परीक्षण"
+    ]
+    if any(c in q_lower for c in test_cues):
+        return INTENT_TESTING
+
+    # 8. SCOPE
+    scope_cues = [
+        "scope of", "scope", "what is the scope", "what does it cover", "applicability",
+        "covered under", "कार्यक्षेत्र", "दायरा"
+    ]
+    if any(c in q_lower for c in scope_cues):
+        return INTENT_SCOPE
+
+    # 9. TECHNICAL_REQUIREMENTS
+    req_cues = [
+        "specification", "specifications", "tolerance", "tolerances", "dimensions",
+        "thickness", "diameter", "nominal", "pressure rating", "technical parameters",
+        "requirements", "requirement", "आवश्यकता", "आवश्यकताएं", "विनिर्देश"
+    ]
+    if any(c in q_lower for c in req_cues):
+        return INTENT_TECHNICAL_REQUIREMENTS
+
+    # 10. DEFINITION
+    def_cues = [
+        "what is", "tell me about", "about", "what standard is", "definition of",
+        "क्या है", "के बारे में बताएं", "विवरण"
+    ]
+    if any(c in q_lower for c in def_cues) or clean_stds or product:
+        if clean_stds or product:
+            return INTENT_DEFINITION
+
+    return INTENT_AMBIGUOUS
+
+def check_statutory_mandatory_certification(evidence: List[Dict[str, Any]], claims: List[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
+    """
+    Checks whether authoritative retrieved evidence contains an explicit statutory mandate
+    or Quality Control Order (QCO) requiring mandatory BIS certification.
+    Distinguishes normative clause requirements ('Normative Force: MANDATORY') from statutory QCO mandates.
+    """
+    for ev in evidence:
+        heading = (ev.get("heading") or "").lower()
+        title = (ev.get("standard_title") or "").lower()
+        text = (ev.get("text") or "").lower()
+        
+        if "quality control order" in heading or "quality control order" in title or "quality control order" in text:
+            m = re.search(r'([A-Za-z0-9\s,\(\)]+Quality Control Order[A-Za-z0-9\s,\(\)]*)', (ev.get("text") or ev.get("standard_title") or ""), re.IGNORECASE)
+            qco_name = m.group(1).strip() if m else "Quality Control Order"
+            return True, qco_name
+        if "qco" in heading or "qco" in title or re.search(r'\bQCO\b', ev.get("text") or ""):
+            return True, "Quality Control Order"
+        if "compulsory registration order" in text or "compulsory registration order" in heading:
+            return True, "Compulsory Registration Order (CRO)"
+            
+    return False, None
+
+def check_amendment_evidence(evidence: List[Dict[str, Any]]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Scans evidence to extract: (verified_revision, verified_amendment).
+    Distinguishes revision (e.g. 'Fourth Revision', 'First Revision') from explicit amendment (e.g. 'Amendment No. 1').
+    """
+    verified_rev = None
+    verified_amend = None
+
+    for ev in evidence:
+        full_text = ((ev.get("text") or "") + " " + (ev.get("heading") or "") + " " + (ev.get("standard_title") or ""))
+        rev_m = re.search(r'\b((?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|\d+(?:st|nd|rd|th)?)\s+Revision)\b', full_text, re.IGNORECASE)
+        if rev_m and not verified_rev:
+            verified_rev = rev_m.group(1).title()
+        
+        amend_m = re.search(r'\b(Amendment\s*(?:No\.?|Number)?\s*\d+(?:\s*(?:dated|of)?\s*[A-Za-z0-9,\s]+)?)\b', full_text, re.IGNORECASE)
+        if amend_m and not verified_amend:
+            verified_amend = amend_m.group(1).strip()
+
+    return verified_rev, verified_amend
+
 def analyze_query_context(
     query_text: str,
     groq_client: Optional[Any] = None,
-    target_language: Optional[str] = None
+    target_language: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Analyzes user query to extract product entities, user role, requested scheme,
-    language signals, and detect potential domain mismatches generically.
+    language signals, detect potential domain mismatches, resolve conversational context,
+    extract rich domain entities, and classify intent into one of 12 discrete categories.
     """
-    q = (query_text or "").strip()
+    q_orig = (query_text or "").strip()
+
+    # Conversational Context & Anaphora Resolution
+    resolved_query, resolved_std, resolved_prod, was_resolved = resolve_conversational_context(
+        q_orig, conversation_history=conversation_history
+    )
+    q = resolved_query
     q_lower = q.lower()
 
     # Detect language & input style
@@ -292,6 +585,9 @@ def analyze_query_context(
         c_num = re.sub(r'^(?:IS|is|आईएस|आई\.एस\.)\s*', '', num).strip()
         c_num = re.sub(r'भाग', 'Part', c_num)
         clean_stds.append(f"IS {c_num}")
+
+    if not clean_stds and resolved_std:
+        clean_stds.append(resolved_std)
 
     # User role extraction (English, Devanagari, and Hinglish)
     user_role = None
@@ -331,9 +627,7 @@ def analyze_query_context(
 
     product = None
     # 1. Explicit user persona product declaration
-    # English persona:
     m_role_prod = re.search(r'\b(?:i\s+am\s+(?:a\s+|an\s+)?|we\s+are\s+(?:a\s+|an\s+)?)([a-zA-Z0-9\s]+?)\s+(?:manufacturer|maker|producer|importer|distributor)\b', q_lower)
-    # Hindi persona:
     m_role_prod_hi = re.search(r'(?:मैं|हम)\s+(?:एक\s+)?([a-zA-Z0-9\s\u0900-\u097F]+?)\s+(?:निर्माता|उत्पादक|manufacturer)\s+हूँ', q)
 
     if m_role_prod:
@@ -371,7 +665,6 @@ def analyze_query_context(
                 product = norm_name
                 break
     else:
-        # Normalize extracted persona product if it matches known taxonomy
         p_lower = product.lower()
         if "led" in p_lower or "एलईडी" in product:
             product = "led lamp"
@@ -381,6 +674,63 @@ def analyze_query_context(
             product = "upvc pipes"
         elif "steel" in p_lower or "स्टील" in product:
             product = "steel"
+
+    if not product and resolved_prod:
+        product = resolved_prod
+
+    # 3. Multi-Entity Extraction
+    app_m = re.search(r'\b(potable\s*water|drinking\s*water|soil\s*and\s*waste|waste\s*discharge|drainage|sewerage|plumbing|electrical|commercial|domestic)\b', q_lower)
+    application = app_m.group(1) if app_m else None
+
+    clauses = re.findall(r'\b(?:clause|cl\.?|खण्ड|खंड)\s*([0-9]+(?:\.[0-9]+)*)\b', q, re.IGNORECASE)
+    
+    qco_entity = None
+    if re.search(r'\b(qco|quality\s+control\s+order)\b', q_lower):
+        qco_entity = "Quality Control Order"
+
+    cert_entity = None
+    if re.search(r'\b(mandatory|compulsory|isi\s*mark|crs|license|licence|certification)\b', q_lower):
+        cert_entity = "BIS Certification"
+
+    lab_entity = None
+    if re.search(r'\b(laboratory|laboratories|lab|labs|testing\s+facility)\b', q_lower):
+        lab_entity = "Testing Laboratory"
+
+    # Location extraction (e.g. "Delhi", "near Delhi", "Mumbai", etc.)
+    location_entity = None
+    loc_cities = ["delhi", "mumbai", "kolkata", "chennai", "bengaluru", "bangalore", "hyderabad", "ahmedabad", "pune", "jaipur", "lucknow", "chandigarh", "noida", "gurgaon", "gurugram", "faridabad", "ghaziabad", "patna", "bhopal", "indore", "surat", "vadodara", "nagpur", "kochi", "coimbatore"]
+    for city in loc_cities:
+        if re.search(r'\b' + city + r'\b', q_lower):
+            location_entity = city.title()
+            break
+    if not location_entity:
+        loc_m = re.search(r'\b(?:in|near|at|around|के\s*पास|में)\s+([A-Za-z]+)\b', q)
+        if loc_m and loc_m.group(1).lower() not in ["bis", "is", "standard", "testing", "india", "laboratory"]:
+            location_entity = loc_m.group(1).title()
+
+    version_entity = None
+    v_m = re.search(r'\b(latest\s*amendment|amendment|revision|fourth\s*revision|first\s*revision|edition|corrigendum)\b', q_lower)
+    if v_m:
+        version_entity = v_m.group(1)
+
+    entities = {
+        "standards": clean_stds,
+        "product": product,
+        "application": application,
+        "clause": clauses,
+        "qco": qco_entity,
+        "certification": cert_entity,
+        "laboratory": lab_entity,
+        "location": location_entity,
+        "amendment_version": version_entity
+    }
+
+    is_comprehensive = bool(re.search(r'\b(all|every|complete\s+list|full\s+list|entire|all\s+the\s+tests|all\s+tests|सभी|सारे|पूरा|पूरी\s+सूची)\b', q_lower))
+
+    # Intent Classification (12 discrete intents)
+    intent = classify_orchestrator_intent(
+        q, clean_stds=clean_stds, product=product, entities=entities
+    )
 
     candidate_domain_mismatch = False
     domain_clarification = None
@@ -411,7 +761,6 @@ def analyze_query_context(
     if not candidate_domain_mismatch:
         if clean_stds:
             std_candidate = clean_stds[0]
-            # Check intent cues in English, Devanagari, or Hinglish
             req_cues = ["requirement", "requirements", "require", "आवश्यकता", "आवश्यकताएं", "परीक्षण", "specs", "specification", "test", "testing", "param"]
             lab_cues = ["lab", "laboratory", "laboratories", "प्रयोगशाला", "प्रयोगशालाएं", "scope"]
             fee_cues = ["fee", "fees", "cost", "charge", "charges", "price", "शुल्क", "फीस"]
@@ -438,7 +787,12 @@ def analyze_query_context(
         "language": lang_info["language"],
         "language_confidence": lang_info["language_confidence"],
         "input_style": lang_info["input_style"],
-        "response_language": lang_info["response_language"]
+        "response_language": lang_info["response_language"],
+        "intent": intent,
+        "entities": entities,
+        "is_comprehensive": is_comprehensive,
+        "resolved_query": resolved_query,
+        "was_context_resolved": was_resolved
     }
 
 def is_general_bis_query(query_text: str, rag_result: Optional[Dict[str, Any]] = None, query_ctx: Optional[Dict[str, Any]] = None) -> bool:
@@ -2592,7 +2946,8 @@ def orchestrate_assistant_query(
     engine=None,
     groq_client: Optional[GroqClient] = None,
     target_language: Optional[str] = None,
-    response_style: Optional[str] = None
+    response_style: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Executes the mandatory two-stage Assistant orchestration:
@@ -2632,11 +2987,104 @@ def orchestrate_assistant_query(
     # =========================================================================
     # STAGE 1: Query Context Analysis & Phase 13 BIS RAG (MANDATORY FIRST)
     # =========================================================================
-    query_ctx = analyze_query_context(clean_query, groq_client=groq_client, target_language=target_language)
+    query_ctx = analyze_query_context(clean_query, groq_client=groq_client, target_language=target_language, conversation_history=conversation_history)
+
+    # Use resolved query if conversational context was resolved
+    if query_ctx.get("was_context_resolved") and query_ctx.get("resolved_query"):
+        clean_query = query_ctx["resolved_query"]
 
     search_query = query_ctx.get("search_intent") or clean_query
 
     rag_result = query_production_rag(search_query, engine=engine)
+
+    # ---- Phase 14: Intent-Specific Dispatch ----
+    detected_intent = query_ctx.get("intent", INTENT_AMBIGUOUS)
+    resp_lang_early = query_ctx.get("response_language", "en")
+
+    # LAB_SEARCH: Route to F3 Lab Finder
+    if detected_intent == INTENT_LAB_SEARCH:
+        try:
+            from backend.lab_finder_api import execute_natural_search, LabNaturalSearchRequest
+            lab_query_parts = []
+            stds = query_ctx.get("is_numbers", [])
+            prod = query_ctx.get("product")
+            loc = query_ctx.get("entities", {}).get("location")
+            if stds:
+                lab_query_parts.append(f"Find BIS-recognized laboratories that can test according to {stds[0]}")
+            elif prod:
+                lab_query_parts.append(f"Find BIS-recognized laboratories for testing {prod}")
+            else:
+                lab_query_parts.append(clean_query)
+            if loc:
+                lab_query_parts.append(f"in {loc}")
+            lab_search_query = " ".join(lab_query_parts)
+            lab_response = execute_natural_search(LabNaturalSearchRequest(query=lab_search_query))
+            if lab_response.status in ("success", "MATCH") and lab_response.search_results and lab_response.search_results.total_matching > 0:
+                candidates = lab_response.search_results.candidates
+                total = lab_response.search_results.total_matching
+                std_label = stds[0] if stds else (prod or "the specified standard")
+                lab_lines = []
+                if resp_lang_early == "hi":
+                    lab_lines.append(f"### {std_label} \u0915\u0947 \u0932\u093f\u090f BIS-\u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u0930\u0940\u0915\u094d\u0937\u0923 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\n")
+                    lab_lines.append(f"\u0915\u0941\u0932 **{total}** \u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902 \u092e\u093f\u0932\u0940\u0902\u0964\n")
+                else:
+                    lab_lines.append(f"### BIS-Recognized Testing Laboratories for {std_label}\n")
+                    lab_lines.append(f"Found **{total}** recognized laboratories.\n")
+                shown = candidates[:10]
+                for i, cand in enumerate(shown, 1):
+                    name = getattr(cand, 'laboratory_name', 'Unknown')
+                    code = getattr(cand, 'public_lab_code', '')
+                    addr = getattr(cand, 'address', None)
+                    city = getattr(addr, 'city', '') if addr else ''
+                    state = getattr(addr, 'state', '') if addr else ''
+                    city = city if city and city != 'None' else ''
+                    state = state if state and state != 'None' else ''
+                    location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
+                    lab_lines.append(f"{i}. **{name}**" + (f" ({code})" if code else "") + (f" \u2014 {location_str}" if location_str else ""))
+                if total > 10:
+                    remaining = total - 10
+                    if resp_lang_early == "hi":
+                        lab_lines.append(f"\n...\u0914\u0930 {remaining} \u0905\u0928\u094d\u092f \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\u0964 \u0935\u093f\u0938\u094d\u0924\u0943\u0924 \u0938\u0942\u091a\u0940 \u0915\u0947 \u0932\u093f\u090f BIS Lab Finder \u0926\u0947\u0916\u0947\u0902\u0964")
+                    else:
+                        lab_lines.append(f"\n...and {remaining} more. Use the BIS Lab Finder for the full list.")
+                lab_answer = "\n".join(lab_lines)
+                return {
+                    "status": "SUFFICIENT",
+                    "answer": lab_answer,
+                    "generation_mode": "GROUNDED",
+                    "response_style": returned_style,
+                    "rag": rag_result,
+                    "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
+                    "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
+                    "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
+                    "intent": detected_intent
+                }
+        except Exception as e:
+            logger.warning(f"F3 Lab Finder dispatch failed, falling back to RAG: {e}")
+
+    # STANDARD_COMPARISON: Isolated retrieval per standard, then merge
+    if detected_intent == INTENT_STANDARD_COMPARISON:
+        comp_stds = query_ctx.get("is_numbers", [])
+        if len(comp_stds) >= 2:
+            try:
+                merged_evidence = []
+                merged_answer_parts = []
+                for std in comp_stds:
+                    std_rag = query_production_rag(std, engine=engine)
+                    if std_rag.get("evidence"):
+                        merged_evidence.extend(std_rag["evidence"])
+                    std_answer = std_rag.get("answer", "")
+                    if std_answer:
+                        merged_answer_parts.append(f"### {std}\n{std_answer}")
+                if merged_evidence:
+                    rag_result["evidence"] = rag_result.get("evidence", []) + merged_evidence
+                    rag_result["status"] = "SUFFICIENT"
+                    if merged_answer_parts:
+                        comp_header = f"Comparison of {' and '.join(comp_stds)}" if resp_lang_early != "hi" else f"{' \u0914\u0930 '.join(comp_stds)} \u0915\u0940 \u0924\u0941\u0932\u0928\u093e"
+                        rag_result["answer"] = f"## {comp_header}\n\n" + "\n\n".join(merged_answer_parts)
+            except Exception as e:
+                logger.warning(f"Standard comparison dispatch failed, using single RAG result: {e}")
+
     rag_status = rag_result.get("status", "INSUFFICIENT")
 
     # Snapshot original retrieved evidence for byte-equivalence verification
@@ -2799,12 +3247,59 @@ def orchestrate_assistant_query(
         active_source_layer = source_layer
         active_verified_by_bis = verified_by_bis_rag
 
+    # ---- Phase 14: Intent-Specific Safety Post-Processing ----
+    # Amendment Safety
+    if detected_intent == INTENT_AMENDMENT_HISTORY and not (is_conv or is_general):
+        evidence_list = rag_result.get("evidence", [])
+        verified_rev, verified_amend = check_amendment_evidence(evidence_list)
+        if not verified_amend:
+            stds = query_ctx.get("is_numbers", [])
+            std_label = stds[0] if stds else "this standard"
+            year_m = re.search(r':\s*(\d{4})', std_label)
+            year = year_m.group(1) if year_m else ""
+            rev_label = verified_rev if verified_rev else "a revision"
+            caveat = AMENDMENT_CONSERVATIVE_MAP.get(resp_lang, AMENDMENT_CONSERVATIVE_MAP["en"]).format(
+                std=std_label, year=year, rev=rev_label
+            )
+            final_answer = final_answer + "\n\n" + caveat
+
+    # Certification / Mandatory Safety
+    if detected_intent == INTENT_CERTIFICATION and not (is_conv or is_general):
+        evidence_list = rag_result.get("evidence", [])
+        claims_list = rag_result.get("claims", [])
+        has_qco, qco_name = check_statutory_mandatory_certification(evidence_list, claims_list)
+        if not has_qco:
+            stds = query_ctx.get("is_numbers", [])
+            std_label = stds[0] if stds else "this standard"
+            prod = query_ctx.get("product") or "this product"
+            caveat = MANDATORY_CONSERVATIVE_MAP.get(resp_lang, MANDATORY_CONSERVATIVE_MAP["en"]).format(
+                std=std_label, prod=prod
+            )
+            final_answer = final_answer + "\n\n" + caveat
+
+    # Completeness Caveat for comprehensive queries
+    if query_ctx.get("is_comprehensive") and not (is_conv or is_general):
+        evidence_list = rag_result.get("evidence", [])
+        test_names = []
+        for ev in evidence_list:
+            heading = ev.get("heading") or ""
+            if re.search(r'(?:test|clause|requirement|specification)', heading, re.IGNORECASE):
+                test_names.append(heading.strip())
+        tests_summary = ", ".join(test_names[:5]) if test_names else "retrieved tests"
+        stds = query_ctx.get("is_numbers", [])
+        std_label = stds[0] if stds else "this standard"
+        caveat = COMPLETENESS_CAVEAT_MAP.get(resp_lang, COMPLETENESS_CAVEAT_MAP["en"]).format(
+            tests=tests_summary, std=std_label
+        )
+        final_answer = final_answer + "\n\n" + caveat
+
     # Build structured response contract
     response = {
         "status": final_status,
         "answer": final_answer,
         "generation_mode": active_generation_mode,
         "response_style": returned_style,
+        "intent": detected_intent,
         "rag": rag_result,
         "llm": {
             "used": llm_used,

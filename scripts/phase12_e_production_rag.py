@@ -432,7 +432,8 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
                 result = orchestrate_assistant_query(
                     query_text,
                     target_language=normalized_lang,
-                    response_style=data.get("response_style")
+                    response_style=data.get("response_style"),
+                    conversation_history=data.get("history")
                 )
                 if current_user and isinstance(result, dict):
                     result["authenticated_user"] = {
