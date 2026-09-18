@@ -57,7 +57,7 @@
     "description": "Navigate Indian Standards, certification requirements, testing pathways, and recognized laboratories from one authoritative research workspace.",
     "start_research": "Start research",
     "explore_labs": "Explore laboratories",
-    "grounded_note": "Grounded in available BIS evidence",
+    "grounded_note": "Built around authoritative BIS sources",
     "preview": {
       "standard_record": "STANDARD RECORD",
       "live": "LIVE",
@@ -73,17 +73,18 @@
       "last_review": "LAST REVIEW",
       "source_backed": "Source-backed",
       "evidence_attached": "Evidence trail attached",
-      "evidence_sub": "Bureau of Indian Standards · source context available"
+      "evidence_sub": "Bureau of Indian Standards · source context available",
+      "open_record": "Open standard record →"
     },
     "proof": {
       "standards_title": "Standards",
-      "standards_desc": "Requirements and specifications",
+      "standards_desc": "Applicable Indian Standards",
       "testing_title": "Testing",
-      "testing_desc": "Parameters, methods, and fees",
+      "testing_desc": "Tests, methods & requirements",
       "labs_title": "Laboratories",
-      "labs_desc": "Recognized scope discovery",
+      "labs_desc": "BIS-recognized testing labs",
       "evidence_title": "Evidence",
-      "evidence_desc": "Traceable source context"
+      "evidence_desc": "Source-backed answers"
     },
     "pathways": {
       "kicker": "RESEARCH PATHWAYS",

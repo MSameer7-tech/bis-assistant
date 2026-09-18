@@ -2703,6 +2703,15 @@ function initApp() {
         if (homeStartResearch) homeStartResearch.addEventListener('click', () => switchView('assistant'));
         if (homeOpenLabs) homeOpenLabs.addEventListener('click', () => switchView('labfinder'));
 
+        // Interactive Preview Card standard record affordance
+        const previewEvidenceBtn = document.getElementById('previewEvidenceBtn');
+        if (previewEvidenceBtn) {
+            previewEvidenceBtn.addEventListener('click', () => {
+                switchView('assistant');
+                submitQuery('What are the requirements in IS 8978?');
+            });
+        }
+
         // Home View Explore Cards
         document.querySelectorAll('.home-explore-card').forEach(card => {
             card.addEventListener('click', () => {

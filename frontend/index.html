@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=12.f.5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
-    <link rel="stylesheet" href="./styles.css?v=14.7.4" id="appStyles">
+    <link rel="stylesheet" href="./styles.css?v=14.7.5" id="appStyles">
     <!-- Dev backend auto-resolution when served on local dev port -->
     <script>
         (function() {
@@ -379,10 +379,9 @@
                                 </button>
                                 <button type="button" class="home-secondary-cta" id="homeOpenLabs">
                                     <span data-i18n="home.explore_labs">Explore laboratories</span>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v7.31a2 2 0 0 1-.37 1.17L4.22 18.4A2 2 0 0 0 5.86 21h12.28a2 2 0 0 0 1.64-2.6l-5.41-7.92A2 2 0 0 1 14 9.31V2"/><line x1="8" y1="2" x2="16" y2="2"/></svg>
                                 </button>
                             </div>
-                            <div class="home-hero-note"><span class="home-note-check" aria-hidden="true">✓</span> <span data-i18n="home.grounded_note">Grounded in available BIS evidence</span></div>
+                            <div class="home-hero-note"><span class="home-note-check" aria-hidden="true">✓</span> <span data-i18n="home.grounded_note">Built around authoritative BIS sources</span></div>
                         </header>
 
                         <div class="home-product-preview" aria-label="BIS evidence workspace preview">
@@ -407,23 +406,29 @@
                                     <div class="preview-record-cell"><span data-i18n="home.preview.laboratories">LABORATORIES</span><strong data-i18n="home.preview.matched_count">7 matched</strong></div>
                                     <div class="preview-record-cell"><span data-i18n="home.preview.last_review">LAST REVIEW</span><strong data-i18n="home.preview.source_backed">Source-backed</strong></div>
                                 </div>
-                                <div class="preview-evidence-row">
+                                <button type="button" class="preview-evidence-row" id="previewEvidenceBtn" title="Open standard record in research workspace" aria-label="Open standard record for IS 8978">
                                     <span class="preview-evidence-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg></span>
-                                    <div><strong data-i18n="home.preview.evidence_attached">Evidence trail attached</strong><span data-i18n="home.preview.evidence_sub">Bureau of Indian Standards · source context available</span></div>
+                                    <div class="preview-evidence-body">
+                                        <div class="preview-evidence-title-row">
+                                            <strong data-i18n="home.preview.evidence_attached">Evidence trail attached</strong>
+                                            <span class="preview-open-affordance" data-i18n="home.preview.open_record">Open standard record &rarr;</span>
+                                        </div>
+                                        <span data-i18n="home.preview.evidence_sub">Bureau of Indian Standards · source context available</span>
+                                    </div>
                                     <svg class="preview-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                </div>
+                                </button>
                             </div>
                         </div>
                     </div>
 
                     <div class="home-proof-strip" aria-label="Workspace capabilities">
-                        <div class="home-proof-item"><strong data-i18n="home.proof.standards_title">Standards</strong><span data-i18n="home.proof.standards_desc">Requirements and specifications</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.standards_title">Standards</strong><span data-i18n="home.proof.standards_desc">Applicable Indian Standards</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong data-i18n="home.proof.testing_title">Testing</strong><span data-i18n="home.proof.testing_desc">Parameters, methods, and fees</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.testing_title">Testing</strong><span data-i18n="home.proof.testing_desc">Tests, methods & requirements</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong data-i18n="home.proof.labs_title">Laboratories</strong><span data-i18n="home.proof.labs_desc">Recognized scope discovery</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.labs_title">Laboratories</strong><span data-i18n="home.proof.labs_desc">BIS-recognized testing labs</span></div>
                         <div class="home-proof-divider" aria-hidden="true"></div>
-                        <div class="home-proof-item"><strong data-i18n="home.proof.evidence_title">Evidence</strong><span data-i18n="home.proof.evidence_desc">Traceable source context</span></div>
+                        <div class="home-proof-item"><strong data-i18n="home.proof.evidence_title">Evidence</strong><span data-i18n="home.proof.evidence_desc">Source-backed answers</span></div>
                     </div>
 
                     <section class="home-section home-capabilities-section" aria-labelledby="homeCapabilitiesHeading">
@@ -1218,6 +1223,6 @@
     <script src="./vendor/leaflet/leaflet.js"></script>
 
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=14.7.4"></script>
+    <script type="module" src="./app.js?v=14.7.5"></script>
 </body>
 </html>
