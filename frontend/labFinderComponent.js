@@ -191,8 +191,10 @@ export class LabFinderComponent {
                         <!-- Results Status Bar -->
                         <div class="results-status-bar" id="resultsStatusBar">
                             <span id="resultsCountTotal" class="results-count" data-i18n="lab_finder.initial_count">Find a laboratory</span>
-                            <span id="searchInterpretationNotice" class="search-interpretation-notice hidden"></span>
                         </div>
+
+                        <!-- Natural-Language Search Interpretation Strip -->
+                        <div id="searchInterpretationNotice" class="search-interpretation-notice hidden"></div>
 
                         <!-- Results Content Area (Cards, Empty State, or Spinner) -->
                         <div class="results-scroll-container no-scrollbar" id="resultsListContainer">
@@ -733,15 +735,19 @@ export class LabFinderComponent {
             if (noticeElem && data.parsed_query && data.parsed_query.factual_summary) {
                 this.lastParsedSummary = data.parsed_query.factual_summary;
                 const summary = data.parsed_query.factual_summary;
+                let displayText = summary;
                 if (this.getLanguage() === 'hi') {
                     const interpLabel = this.t('lab_finder.interpreted_as', 'व्याख्या:');
                     const searchLabel = this.t('lab_finder.searching_for', 'खोज रहे हैं:');
-                    noticeElem.textContent = summary
+                    displayText = summary
                         .replace(/^Interpreted as:\s*/i, `${interpLabel} `)
                         .replace(/^Searching for:\s*/i, `${searchLabel} `);
-                } else {
-                    noticeElem.textContent = summary;
                 }
+                noticeElem.innerHTML = `
+                    <svg class="notice-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span class="notice-text">${this.escapeHtml(displayText)}</span>
+                `;
+                noticeElem.title = displayText;
                 noticeElem.classList.remove('hidden');
             }
 
@@ -802,6 +808,12 @@ export class LabFinderComponent {
         this.isLoading = true;
         this.lastQuery = options;
         this.renderLoadingState(options.standard);
+
+        const noticeElem = this.container.querySelector('#searchInterpretationNotice');
+        if (noticeElem) {
+            noticeElem.classList.add('hidden');
+            noticeElem.innerHTML = '';
+        }
 
         try {
             const targetEndpoint = this.apiEndpoint.startsWith('http') ? this.apiEndpoint : apiUrl(this.apiEndpoint);
@@ -1554,15 +1566,19 @@ export class LabFinderComponent {
         // Re-format interpretation notice
         const noticeElem = this.container ? this.container.querySelector('#searchInterpretationNotice') : null;
         if (noticeElem && !noticeElem.classList.contains('hidden') && this.lastParsedSummary) {
+            let displayText = this.lastParsedSummary;
             if (lang === 'hi') {
                 const interpLabel = this.t('lab_finder.interpreted_as', 'व्याख्या:');
                 const searchLabel = this.t('lab_finder.searching_for', 'खोज रहे हैं:');
-                noticeElem.textContent = this.lastParsedSummary
+                displayText = this.lastParsedSummary
                     .replace(/^Interpreted as:\s*/i, `${interpLabel} `)
                     .replace(/^Searching for:\s*/i, `${searchLabel} `);
-            } else {
-                noticeElem.textContent = this.lastParsedSummary;
             }
+            noticeElem.innerHTML = `
+                <svg class="notice-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span class="notice-text">${this.escapeHtml(displayText)}</span>
+            `;
+            noticeElem.title = displayText;
         }
 
         // Re-render open detail drawer if present

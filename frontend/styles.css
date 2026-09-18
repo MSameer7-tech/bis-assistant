@@ -4818,20 +4818,34 @@ html, body {
 }
 
 .search-interpretation-notice {
-    display: inline-flex;
-    align-items: center;
-    font-size: 11.5px;
-    font-family: 'JetBrains Mono', monospace;
-    color: #94A3B8;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    padding: 3px 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #c5ccff;
+    background: rgba(141, 155, 243, 0.09);
+    border-bottom: 1px solid rgba(141, 155, 243, 0.18);
+    padding: 9px 16px;
     font-weight: 500;
-    max-width: 250px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.45;
+    word-break: break-word;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.search-interpretation-notice.hidden {
+    display: none !important;
+}
+
+.search-interpretation-notice .notice-icon {
+    flex-shrink: 0;
+    color: #a5b4fc;
+    margin-top: 2px;
+}
+
+.search-interpretation-notice .notice-text {
+    flex: 1;
 }
 
 .results-scroll-container {
@@ -11448,9 +11462,13 @@ html, body {
 }
 
 [data-theme="light"] .search-interpretation-notice {
-    background: #F2F2F5;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    color: #4B5563;
+    background: rgba(99, 102, 241, 0.08) !important;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.16) !important;
+    color: #4338CA !important;
+}
+
+[data-theme="light"] .search-interpretation-notice .notice-icon {
+    color: #6366F1 !important;
 }
 
 /* Lab Candidate Cards in Light Mode */
