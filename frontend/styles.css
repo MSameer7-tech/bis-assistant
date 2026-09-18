@@ -6016,31 +6016,45 @@ html, body {
 
 /* Empty States & Loading Skeletons */
 .results-empty-state, .results-error-state {
-    padding: 36px 20px;
+    padding: 48px 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
-    gap: 12px;
+    gap: 14px;
+    max-width: 400px;
+    margin: 20px auto;
+    box-sizing: border-box;
 }
 
 .empty-state-emblem, .error-state-emblem {
-    font-size: 32px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.24);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #A5B4FC;
+    margin-bottom: 2px;
 }
 
 .empty-state-title, .error-state-title {
     margin: 0;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     color: #FFFFFF;
+    letter-spacing: -0.2px;
 }
 
 .empty-state-desc, .error-state-desc {
     margin: 0;
     font-size: 12.5px;
-    color: var(--text-secondary);
+    color: #94A3B8;
     line-height: 1.5;
-    max-width: 360px;
+    max-width: 320px;
 }
 
 .empty-state-shortcuts {
@@ -6048,24 +6062,30 @@ html, body {
     flex-wrap: wrap;
     gap: 8px;
     justify-content: center;
-    margin-top: 8px;
+    max-width: 380px;
+    margin-top: 10px;
 }
 
 .shortcut-pill {
-    background: #181C28;
-    border: 1px solid var(--border-card);
-    color: var(--text-secondary);
-    border-radius: 6px;
-    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #CBD5E1;
+    border-radius: 9999px;
+    padding: 7px 14px;
     font-size: 11.5px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
 .shortcut-pill:hover {
-    background: #23293D;
-    border-color: var(--accent-purple);
+    background: rgba(99, 102, 241, 0.14);
+    border-color: rgba(134, 120, 249, 0.5);
     color: #FFFFFF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .empty-state-actions {
@@ -6136,313 +6156,35 @@ html, body {
     color: #1E293B;
 }
 
-/* Rich Initial Guide Landing State */
-.results-empty-state.guide-rich-state {
-    padding: 10px 8px 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    text-align: left;
-    gap: 12px;
-    min-height: auto;
-    animation: fadeInGuide 0.22s ease-out;
-}
 
-@keyframes fadeInGuide {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
 
-.guide-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 2px 4px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    gap: 5px;
-}
-
-.guide-hero .empty-state-emblem {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #A5B4FC;
-    margin-bottom: 2px;
-}
-
-.guide-hero .empty-state-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #FFFFFF;
-    letter-spacing: -0.2px;
-    margin: 0;
-}
-
-.guide-hero .empty-state-desc {
-    font-size: 11px;
-    color: #94A3B8;
-    line-height: 1.4;
-    max-width: 360px;
-    margin: 0;
-}
-
-/* Guide Sections */
-.guide-section {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.guide-section-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #A5B4FC;
-}
-
-.guide-section-icon {
-    font-size: 12px;
-}
-
-/* 2-Column Grid of Quick Standard Cards */
-.guide-grid-cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-}
-
-.guide-card.shortcut-pill {
-    background: #141824;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 7px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.guide-card.shortcut-pill:hover {
-    background: #1D2336;
-    border-color: rgba(139, 92, 246, 0.45);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.guide-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.guide-std-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    color: #818CF8;
-    background: rgba(99, 102, 241, 0.12);
-    padding: 2px 5px;
-    border-radius: 4px;
-    border: 1px solid rgba(99, 102, 241, 0.22);
-}
-
-.guide-card-arrow {
-    font-size: 11px;
-    color: #64748B;
-    transition: transform 0.15s ease, color 0.15s ease;
-}
-
-.guide-card.shortcut-pill:hover .guide-card-arrow {
-    color: #A5B4FC;
-    transform: translateX(2px);
-}
-
-.guide-card-name {
-    font-size: 11px;
-    font-weight: 500;
-    color: #E2E8F0;
-    line-height: 1.25;
-}
-
-/* Guide Steps / Workflow Cards */
-.guide-steps-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.guide-step-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 7px;
-    padding: 6px 9px;
-}
-
-.guide-step-num {
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    background: rgba(99, 102, 241, 0.16);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    color: #C7D2FE;
-    font-size: 9.5px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.guide-step-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-
-.guide-step-heading {
-    font-size: 10.5px;
-    font-weight: 600;
-    color: #F1F5F9;
-}
-
-.guide-step-detail {
-    font-size: 10px;
-    color: #94A3B8;
-    line-height: 1.35;
-}
-
-.guide-step-detail code {
-    background: rgba(255, 255, 255, 0.07);
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px;
-    color: #C7D2FE;
-}
-
-/* Directory Footer Badge */
-.guide-footer-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
-    padding: 5px 10px;
-    margin-top: 1px;
-    font-size: 10px;
-    color: #94A3B8;
-    font-weight: 500;
-}
-
-.guide-badge-sep {
-    color: rgba(255, 255, 255, 0.18);
-}
-
-/* Light Theme Overrides for Rich Guide */
-[data-theme="light"] .guide-hero {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .guide-hero .empty-state-emblem {
-    background: rgba(99, 102, 241, 0.08) !important;
-    border: 1px solid rgba(99, 102, 241, 0.22) !important;
-    color: #4F46E5 !important;
-}
-
-[data-theme="light"] .guide-hero .empty-state-title {
-    color: #111827 !important;
-}
-
-[data-theme="light"] .guide-hero .empty-state-desc {
-    color: #6B7280 !important;
-}
-
-[data-theme="light"] .guide-section-header {
-    color: #4F46E5 !important;
-}
-
-[data-theme="light"] .guide-card.shortcut-pill {
-    background: #FFFFFF !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
-}
-
-[data-theme="light"] .guide-card.shortcut-pill:hover {
-    background: #F8FAFC !important;
-    border-color: rgba(99, 102, 241, 0.35) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .guide-std-tag {
-    color: #4338CA !important;
+/* Light Theme Overrides for Empty State */
+[data-theme="light"] .empty-state-emblem {
     background: rgba(99, 102, 241, 0.08) !important;
     border: 1px solid rgba(99, 102, 241, 0.2) !important;
-}
-
-[data-theme="light"] .guide-card-arrow {
-    color: #9CA3AF !important;
-}
-
-[data-theme="light"] .guide-card.shortcut-pill:hover .guide-card-arrow {
     color: #4F46E5 !important;
 }
 
-[data-theme="light"] .guide-card-name {
-    color: #1F2937 !important;
-}
-
-[data-theme="light"] .guide-step-item {
-    background: #F9FAFB !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .guide-step-num {
-    background: rgba(99, 102, 241, 0.1) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    color: #4F46E5 !important;
-}
-
-[data-theme="light"] .guide-step-heading {
+[data-theme="light"] .empty-state-title {
     color: #111827 !important;
 }
 
-[data-theme="light"] .guide-step-detail {
+[data-theme="light"] .empty-state-desc {
     color: #6B7280 !important;
 }
 
-[data-theme="light"] .guide-step-detail code {
-    background: rgba(0, 0, 0, 0.05) !important;
-    color: #3730A3 !important;
+[data-theme="light"] .shortcut-pill {
+    background: #F3F4F6 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #374151 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
 }
 
-[data-theme="light"] .guide-footer-badge {
-    background: #F9FAFB !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
-    color: #6B7280 !important;
-}
-
-[data-theme="light"] .guide-badge-sep {
-    color: rgba(0, 0, 0, 0.15) !important;
+[data-theme="light"] .shortcut-pill:hover {
+    background: #FFFFFF !important;
+    border-color: #6366F1 !important;
+    color: #4F46E5 !important;
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.14) !important;
 }
 
 .error-type-badge {
