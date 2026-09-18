@@ -66,6 +66,12 @@ import {
     deleteConversationFromSupabase
 } from './conversations.js?v=15.0.0';
 
+import {
+    ConversationManager,
+    deriveDeterministicTitle,
+    requestGroqTitle
+} from './conversationManager.js?v=15.0.0';
+
 function initApp() {
     // -------------------------------------------------------------------------
     // DOM Element References
@@ -134,6 +140,9 @@ function initApp() {
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const mobileSidebarClose = document.getElementById('mobileSidebarClose');
     const btnNewChat = document.getElementById('btnNewChat');
+    const btnCollapsedNewChat = document.getElementById('btnCollapsedNewChat');
+    const navCollapsedConversations = document.getElementById('navCollapsedConversations');
+    const collapsedConvPopover = document.getElementById('collapsedConvPopover');
     const chatSearchInput = document.getElementById('chatSearchInput');
     const conversationList = document.getElementById('conversationList');
     const btnSystemInfo = document.getElementById('btnSystemInfo');
@@ -626,6 +635,16 @@ function initApp() {
         try {
             const remoteConvs = await loadConversationsFromSupabase(authUserId);
             if (remoteConvs && Array.isArray(remoteConvs)) {
+                // Preserve local device metadata (is_pinned, title_source)
+                const localMetaMap = new Map((conversations || []).map(c => [c.id, { is_pinned: c.is_pinned, title_source: c.title_source }]));
+                remoteConvs.forEach(rc => {
+                    const local = localMetaMap.get(rc.id);
+                    if (local) {
+                        rc.is_pinned = Boolean(local.is_pinned);
+                        rc.title_source = local.title_source || 'default';
+                    }
+                });
+
                 if (remoteConvs.length > 0) {
                     const activeLocal = getCurrentConversation();
                     const matchingRemote = remoteConvs.find(c => c.id === activeLocal?.id);
@@ -667,11 +686,52 @@ function initApp() {
         }
     }
 
+    const conversationManager = new ConversationManager({
+        onSelect: (convId) => {
+            switchConversation(convId);
+            if (collapsedConvPopover) collapsedConvPopover.classList.add('hidden');
+        },
+        onNewChat: () => {
+            createNewConversation(true);
+            if (collapsedConvPopover) collapsedConvPopover.classList.add('hidden');
+        },
+        onRename: (convId, newTitle) => {
+            const conv = conversations.find(c => c.id === convId);
+            if (conv) {
+                conv.title = newTitle;
+                conv.title_source = 'user';
+                conv.updatedAt = Date.now();
+                saveConversations();
+                renderConversationList();
+                if (currentConversationId === convId && currentChatTitle) {
+                    currentChatTitle.textContent = newTitle;
+                }
+                const authUserId = getAuthenticatedUserId();
+                if (authUserId) {
+                    upsertConversationToSupabase(conv, authUserId);
+                }
+            }
+        },
+        onTogglePin: (convId) => {
+            const conv = conversations.find(c => c.id === convId);
+            if (conv) {
+                conv.is_pinned = !conv.is_pinned;
+                saveConversations();
+                renderConversationList();
+            }
+        },
+        onDelete: (convId) => {
+            deleteConversation(convId);
+        }
+    });
+
     function createNewConversation(switchViewToAssistant = true) {
         const newConv = {
             id: generateUUID(),
             title: 'New Session',
             messages: [],
+            is_pinned: false,
+            title_source: 'default',
             createdAt: Date.now(),
             updatedAt: Date.now()
         };
@@ -702,7 +762,7 @@ function initApp() {
     }
 
     function deleteConversation(convId, e) {
-        if (e) e.stopPropagation();
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
         const authUserId = getAuthenticatedUserId();
         if (authUserId) {
             deleteConversationFromSupabase(convId, authUserId);
@@ -718,80 +778,14 @@ function initApp() {
         renderActiveConversation();
     }
 
-    function renderConversationList(filterQuery = '') {
-        const query = (filterQuery || '').toLowerCase().trim();
-        const filtered = conversations.filter(c => !query || (c.title || 'New Session').toLowerCase().includes(query));
-
-        if (filtered.length === 0) {
-            conversationList.innerHTML = `
-                <div class="conv-empty-message">No conversations found</div>
-            `;
-            return;
+    function renderConversationList(filterQuery = null) {
+        const query = (filterQuery !== null && filterQuery !== undefined) 
+            ? filterQuery 
+            : (chatSearchInput ? chatSearchInput.value : '');
+        conversationManager.renderList(conversationList, conversations, currentConversationId, query);
+        if (collapsedConvPopover && !collapsedConvPopover.classList.contains('hidden')) {
+            conversationManager.renderPopover(collapsedConvPopover, conversations, currentConversationId);
         }
-
-        // Group into Today and Earlier
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
-        const todayList = [];
-        const earlierList = [];
-
-        filtered.forEach(c => {
-            const time = c.createdAt || 0;
-            if (time >= startOfToday) {
-                todayList.push(c);
-            } else {
-                earlierList.push(c);
-            }
-        });
-
-        let html = '';
-
-        if (todayList.length > 0) {
-            html += `<div class="conv-group-heading">Today</div>`;
-            html += todayList.map(c => renderConvItem(c)).join('');
-        }
-
-        if (earlierList.length > 0) {
-            html += `<div class="conv-group-heading">Earlier</div>`;
-            html += earlierList.map(c => renderConvItem(c)).join('');
-        }
-
-        conversationList.innerHTML = html;
-
-        // Attach event listeners
-        conversationList.querySelectorAll('.conv-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const id = item.getAttribute('data-id');
-                switchConversation(id);
-            });
-        });
-
-        conversationList.querySelectorAll('.conv-btn-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = btn.getAttribute('data-id');
-                deleteConversation(id, e);
-            });
-        });
-    }
-
-    function renderConvItem(c) {
-        const isActive = c.id === currentConversationId;
-        const title = escapeHtml(c.title || 'New Session');
-
-        return `
-            <div class="conv-item ${isActive ? 'active' : ''}" data-id="${c.id}">
-                <div class="conv-item-left">
-                    <svg class="conv-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <span class="conv-title">${title}</span>
-                </div>
-                <button type="button" class="conv-btn-delete" data-id="${c.id}" title="Delete session" aria-label="Delete session">
-                    ✕
-                </button>
-            </div>
-        `;
     }
 
     function switchConversation(convId) {
@@ -966,8 +960,29 @@ function initApp() {
 
         // Set title from first query if new
         if (!conv.messages || conv.messages.length === 0) {
-            conv.title = deriveConversationTitle(query);
+            conv.title = deriveDeterministicTitle(query);
+            conv.title_source = 'fallback';
             currentChatTitle.textContent = conv.title;
+
+            // Trigger asynchronous Groq title generation in background once
+            requestGroqTitle(query, conv.id, (convId, groqTitle, source) => {
+                const targetConv = conversations.find(c => c.id === convId);
+                // Guard: Never overwrite user rename
+                if (targetConv && targetConv.title_source !== 'user') {
+                    targetConv.title = groqTitle;
+                    targetConv.title_source = source || 'groq';
+                    targetConv.updatedAt = Date.now();
+                    saveConversations();
+                    renderConversationList();
+                    if (currentConversationId === convId && currentChatTitle) {
+                        currentChatTitle.textContent = targetConv.title;
+                    }
+                    const authUserId = getAuthenticatedUserId();
+                    if (authUserId) {
+                        upsertConversationToSupabase(targetConv, authUserId);
+                    }
+                }
+            });
         }
 
         const userMsg = {
@@ -2634,8 +2649,14 @@ function initApp() {
         if (!sidebar) return;
         const isCollapsed = sidebar.classList.toggle('collapsed');
         if (btnSidebarCollapse) {
-            btnSidebarCollapse.setAttribute('title', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
-            btnSidebarCollapse.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            const label = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+            btnSidebarCollapse.setAttribute('title', label);
+            btnSidebarCollapse.setAttribute('aria-label', label);
+            btnSidebarCollapse.setAttribute('data-tooltip', label);
+        }
+        if (!isCollapsed && collapsedConvPopover) {
+            collapsedConvPopover.classList.add('hidden');
+            if (navCollapsedConversations) navCollapsedConversations.setAttribute('aria-expanded', 'false');
         }
     }
 
@@ -2733,6 +2754,47 @@ function initApp() {
         // New Chat
         if (btnNewChat) {
             btnNewChat.addEventListener('click', () => createNewConversation(true));
+        }
+
+        if (btnCollapsedNewChat) {
+            btnCollapsedNewChat.addEventListener('click', () => {
+                createNewConversation(true);
+                if (collapsedConvPopover) collapsedConvPopover.classList.add('hidden');
+            });
+        }
+
+        // Collapsed mode Conversations popover toggle
+        if (navCollapsedConversations && collapsedConvPopover) {
+            navCollapsedConversations.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = collapsedConvPopover.classList.contains('hidden');
+                if (isHidden) {
+                    conversationManager.renderPopover(collapsedConvPopover, conversations, currentConversationId);
+                    collapsedConvPopover.classList.remove('hidden');
+                    navCollapsedConversations.setAttribute('aria-expanded', 'true');
+                } else {
+                    collapsedConvPopover.classList.add('hidden');
+                    navCollapsedConversations.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Dismiss popover on outside click
+            document.addEventListener('click', (e) => {
+                if (!collapsedConvPopover.classList.contains('hidden') &&
+                    !collapsedConvPopover.contains(e.target) &&
+                    !navCollapsedConversations.contains(e.target)) {
+                    collapsedConvPopover.classList.add('hidden');
+                    navCollapsedConversations.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Dismiss popover on Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !collapsedConvPopover.classList.contains('hidden')) {
+                    collapsedConvPopover.classList.add('hidden');
+                    navCollapsedConversations.setAttribute('aria-expanded', 'false');
+                }
+            });
         }
 
         // Search in conversations

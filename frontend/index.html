@@ -108,52 +108,64 @@
             </div>
 
             <!-- Primary Nav Links -->
-            <nav class="sidebar-nav">
-                <button type="button" class="nav-link" id="navAssistant" title="Assistant Workspace">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            <nav class="sidebar-nav" aria-label="Main Navigation">
+                <button type="button" class="nav-link" id="navAssistant" data-tooltip="Assistant" title="Assistant Workspace" aria-label="Assistant Workspace">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     <span data-i18n="nav.assistant">Assistant</span>
                 </button>
-                <button type="button" class="nav-link" id="navComplianceJourney" title="Product Compliance Journey">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                <button type="button" class="nav-link" id="navComplianceJourney" data-tooltip="Compliance Journey" title="Product Compliance Journey" aria-label="Product Compliance Journey">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
                     <span data-i18n="nav.compliance_journey">Compliance Journey</span>
                 </button>
-                <button type="button" class="nav-link" id="navLabFinder" title="BIS Laboratory Finder">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <button type="button" class="nav-link" id="navLabFinder" data-tooltip="Lab Finder" title="BIS Laboratory Finder" aria-label="BIS Laboratory Finder">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                     <span data-i18n="nav.lab_finder">Lab Finder</span>
                 </button>
-                <button type="button" class="nav-link active" id="navHome" title="Standards Overview">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <button type="button" class="nav-link active" id="navHome" data-tooltip="Home" title="Standards Overview" aria-label="Standards Overview">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     <span data-i18n="nav.home">Home</span>
                 </button>
             </nav>
 
-            <!-- Conversations Section -->
+            <div class="sidebar-divider" role="separator" aria-hidden="true"></div>
+
+            <!-- Collapsed Rail Action Buttons (Visible only in Collapsed Mode) -->
+            <div class="collapsed-rail-actions" id="collapsedRailActions" aria-label="Quick Session Actions">
+                <button type="button" class="collapsed-rail-btn" id="btnCollapsedNewChat" data-tooltip="New conversation" aria-label="New conversation" title="New conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button type="button" class="collapsed-rail-btn" id="navCollapsedConversations" data-tooltip="Conversations" aria-label="Open conversations browser" aria-haspopup="true" aria-expanded="false" title="Conversations">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
+            </div>
+
+            <!-- Conversations Section (Expanded Mode) -->
             <div class="sidebar-conversations-wrap">
                 <div class="conv-section-header">
                     <span class="conv-section-label" data-i18n="nav.conversations">CONVERSATIONS</span>
-                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" title="Start new session" aria-label="Start new session" data-i18n-title="nav.new_chat">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <button type="button" class="btn-new-chat-icon" id="btnNewChat" data-tooltip="New conversation" title="Start new conversation" aria-label="Start new conversation" data-i18n-title="nav.new_chat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                 </div>
 
                 <!-- Search Input -->
                 <div class="sidebar-search-box">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input type="text" id="chatSearchInput" class="sidebar-search-input" placeholder="Search conversations" aria-label="Search conversations" data-i18n-placeholder="nav.search_placeholder">
                 </div>
 
-                <!-- Scrollable Conversation History (Grouped: Today, Earlier) -->
-                <div class="sidebar-conv-list no-scrollbar" id="conversationList">
-                    <!-- Populated dynamically -->
+                <!-- Scrollable Conversation History (Dynamic Groups: Pinned, Today, Yesterday, Previous 7 Days, Older) -->
+                <div class="sidebar-conv-list no-scrollbar" id="conversationList" role="region" aria-label="Saved conversations">
+                    <!-- Populated dynamically by ConversationManager -->
                 </div>
             </div>
 
-            <!-- Sidebar Footer (AI-Hub-2.0 UserProfileFooter style) -->
+            <!-- Sidebar Footer -->
             <div class="sidebar-footer">
                 <div class="sidebar-lang-row" id="sidebarLangRow">
                     <span class="sidebar-lang-label" data-i18n="nav.language">Language</span>
                     <div class="lang-selector-group" id="sidebarLangSelectorGroup" role="group" aria-label="Language selector">
-                        <svg class="lang-globe-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <svg class="lang-globe-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                         <select class="lang-select" id="sidebarLangSelect" aria-label="Select Assistant Language">
                             <option value="en">English (EN)</option>
                             <option value="hi">हिन्दी (Hindi)</option>
@@ -169,28 +181,28 @@
                             <option value="or">ଓଡ଼ିଆ (Odia)</option>
                         </select>
                     </div>
-                    <button type="button" class="btn-lang-collapsed" id="btnCollapsedLangToggle" title="Switch language to हिन्दी / भाषा बदलें" aria-label="Switch language">
+                    <button type="button" class="btn-lang-collapsed" id="btnCollapsedLangToggle" data-tooltip="Switch language" title="Switch language to हिन्दी / भाषा बदलें" aria-label="Switch language">
                         <span class="collapsed-lang-code" id="collapsedLangCode">EN</span>
                     </button>
                 </div>
                 <div class="sidebar-user-actions-row">
-                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarPreferences" title="Personalization preferences" aria-label="Preferences">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarPreferences" data-tooltip="Preferences" title="Personalization preferences" aria-label="Personalization preferences">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                         <span data-i18n="nav.preferences">Preferences</span>
                     </button>
-                    <button type="button" class="btn-sidebar-user-action" id="btnThemeToggle" title="Switch Theme (Light / Dark / System)" aria-label="Toggle theme">
-                        <svg class="theme-icon-sun hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                        <svg class="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <button type="button" class="btn-sidebar-user-action" id="btnThemeToggle" data-tooltip="Theme" title="Switch Theme (Light / Dark / System)" aria-label="Toggle theme">
+                        <svg class="theme-icon-sun hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        <svg class="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                         <span id="themeToggleText">Theme</span>
                     </button>
-                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarTour" title="Quick workspace tour" aria-label="Quick Tour">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    <button type="button" class="btn-sidebar-user-action" id="btnSidebarTour" data-tooltip="Tour" title="Quick workspace tour" aria-label="Quick tour">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
                         <span data-i18n="nav.quick_tour">Quick Tour</span>
                     </button>
                 </div>
                 <div class="sidebar-profile-card">
-                    <div class="profile-avatar-group" id="btnSystemInfo" role="button" tabindex="0" title="System Status">
-                        <div class="profile-avatar-circle" id="sidebarAvatar">
+                    <div class="profile-avatar-group" id="btnSystemInfo" role="button" tabindex="0" title="System Status" aria-label="System Status">
+                        <div class="profile-avatar-circle" id="sidebarAvatar" data-tooltip="Status: Operational">
                             <img id="sidebarAvatarImg" class="avatar-img hidden" alt="Profile" referrerpolicy="no-referrer" />
                             <span id="sidebarAvatarInitial">U</span>
                         </div>
@@ -199,16 +211,19 @@
                             <span class="profile-role" id="sidebarUserRole"><span class="status-indicator-dot"></span><span id="sidebarUserSubText" data-i18n="nav.status_operational">Operational</span></span>
                         </div>
                     </div>
-                    <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" title="Collapse sidebar" aria-label="Collapse sidebar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    <button type="button" class="profile-collapse-toggle" id="btnSidebarCollapse" data-tooltip="Toggle sidebar" title="Collapse sidebar" aria-label="Toggle sidebar collapse">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                     </button>
                 </div>
-                <button type="button" class="btn-sidebar-signout" id="btnSidebarSignOut" title="Sign in to your account">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <button type="button" class="btn-sidebar-signout" id="btnSidebarSignOut" title="Sign in to your account" aria-label="Sign in to account">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
                     <span data-i18n="nav.sign_in">Sign in</span>
                 </button>
             </div>
         </aside>
+
+        <!-- Collapsed Mode Conversations Flyout Popover Panel -->
+        <div class="collapsed-conv-popover hidden" id="collapsedConvPopover" role="dialog" aria-label="Conversations browser" aria-modal="false"></div>
 
         <!-- ======================================================= -->
         <!-- WORKSPACE CONTAINER                                     -->
@@ -1223,6 +1238,6 @@
     <script src="./vendor/leaflet/leaflet.js"></script>
 
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=14.8.0"></script>
+    <script type="module" src="./app.js?v=15.0.0"></script>
 </body>
 </html>

@@ -37,6 +37,7 @@ from backend.auth import (
 )
 from backend.lab_finder_api import router as lab_finder_router
 from backend.compliance_journey_api import router as compliance_journey_router
+from backend.conversation_api import router as conversation_router
 
 
 @asynccontextmanager
@@ -156,6 +157,9 @@ async def get_product_compliance_journey_v2(
 
 # Mount Phase PC-5 Product Compliance Journey Router (Health, Metadata, Clarify)
 app.include_router(compliance_journey_router)
+
+# Mount Conversation API (AI Title Generation & Metadata)
+app.include_router(conversation_router, prefix="/api/v1")
 
 
 
