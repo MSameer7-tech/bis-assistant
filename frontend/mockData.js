@@ -730,6 +730,20 @@ export class AssistantService {
                 });
             }
 
+            // Seamless guest fallback if 401 (e.g. expired session token)
+            if (res.status === 401 && (extraHeaders['Authorization'] || extraHeaders['authorization'])) {
+                console.warn('[Assistant API] 401 with auth token. Retrying seamlessly in guest mode...');
+                const guestHeaders = { ...extraHeaders };
+                delete guestHeaders['Authorization'];
+                delete guestHeaders['authorization'];
+                res = await fetch(apiUrl('/api/assistant/query'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...guestHeaders },
+                    body: JSON.stringify(reqPayload),
+                    signal: controller.signal
+                });
+            }
+
             clearTimeout(timeoutId);
 
             if (res.ok) {
@@ -920,10 +934,21 @@ export class AssistantService {
             }
         }
 
+        const source_layer = backendData.provenance?.source_layer || 
+            (backendData.llm?.role === "LAB_SEARCH_DISPATCH" ? "F3_LAB_FINDER" : undefined);
+        const resolved_standard = backendData.standard || 
+            (backendData.rag && backendData.rag.standard) || 
+            (answer.match(/\bIS\s*\d+\b/i) || [])[0] || undefined;
+        const resolved_intent = backendData.intent || 
+            (backendData.rag && backendData.rag.intent) || undefined;
+
         return {
             status,
             query,
             answer,
+            intent: resolved_intent,
+            standard: resolved_standard,
+            source_layer: source_layer,
             generation_mode,
             response_style,
             rag: backendData.rag || null,
@@ -940,6 +965,7 @@ export class AssistantService {
             confidence: "BASELINE_UNCALIBRATED",
             provenance: backendData.provenance || {
                 source: "Bureau of Indian Standards Official Normative Data (v22 Frozen Baseline)",
+                source_layer: source_layer || "RAG",
                 configuration: { rrf_k: 20, boost_factor: 2.5, top_k: 10 }
             }
         };

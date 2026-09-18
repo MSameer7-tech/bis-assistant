@@ -1,0 +1,44 @@
+{
+  "manifest_version": "PC-2.0",
+  "generated_at": "2026-09-12T05:24:38.340208+00:00",
+  "input_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/raw",
+  "output_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/normalized",
+  "input_record_counts": {
+    "qcos": 313,
+    "product_standard": 665,
+    "certification_schemes": 12,
+    "testing": 120,
+    "product_manuals": 763,
+    "certification_process": 28,
+    "total_core_inputs": 1901,
+    "document_artifacts": 1076
+  },
+  "normalized_record_counts": {
+    "qco_registry": 313,
+    "product_standard_map": 665,
+    "certification_scheme_map": 12,
+    "testing_requirements": 120,
+    "product_manual_registry": 763,
+    "certification_process": 28,
+    "document_registry": 1076,
+    "total_normalized_records": 2977
+  },
+  "source_verification_summary": {
+    "SOURCE_VERIFIED": 1607,
+    "SOURCE_UNVERIFIED": 294,
+    "verification_ratio": 0.8453445554971067
+  },
+  "lineage_summary": {
+    "total_core_normalized": 1901,
+    "traceable_to_pc1": 1901,
+    "lineage_coverage_percent": 100.0,
+    "orphan_records": 0
+  },
+  "conflict_summary": {
+    "total_conflicts_and_duplicates": 105,
+    "conflicts_disclosed_file": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/normalized/metadata/conflicts.jsonl",
+    "unresolved_conflicts": 105
+  },
+  "rejected_records": 0,
+  "parsing_failures": 0
+}

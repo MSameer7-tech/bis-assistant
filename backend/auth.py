@@ -305,14 +305,27 @@ async def get_current_user_optional(
     FastAPI dependency for endpoints with OPTIONAL authentication (e.g. BIS RAG query).
     - If Authorization header is absent -> Returns None (continues as Guest).
     - If Authorization header is valid -> Returns verified user dictionary.
-    - If Authorization header is malformed/invalid -> Raises HTTP 401.
-    Preserves 100% guest access while preventing spoofed/tampered tokens.
+    - If Authorization header is expired or JWKS network is unreachable -> Logs warning and returns None (continues as Guest).
+    - If Authorization header is malformed/tampered -> Raises HTTP 401.
+    Preserves 100% guest access and ensures search queries never fail due to upstream auth/JWKS network hiccups.
     """
     if not auth_creds:
         return None
 
     token = auth_creds.credentials
-    return verify_supabase_jwt(token)
+    try:
+        return verify_supabase_jwt(token)
+    except HTTPException as exc:
+        # If upstream JWKS fetch failed due to network/DNS/outage, gracefully degrade to guest
+        # so public RAG queries are never blocked by upstream infrastructure problems.
+        if "jwks" in str(exc.detail).lower() or exc.status_code >= 500:
+            logger.warning("Supabase JWKS key resolution failed during optional auth check (%s). Proceeding as Guest.", exc.detail)
+            return None
+        # If token has expired, degrade to guest so public queries are not rejected
+        if "expired" in str(exc.detail).lower():
+            logger.warning("Expired token provided on optional auth endpoint. Proceeding as Guest.")
+            return None
+        raise
 
 
 async def get_current_user_required(

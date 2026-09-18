@@ -1,0 +1,71 @@
+{
+  "audit_version": "PC-2.0",
+  "generated_at": "2026-09-12T05:24:38.340875+00:00",
+  "total_normalized_records": 2977,
+  "core_records": 1901,
+  "document_records": 1076,
+  "source_verified": 1607,
+  "source_unverified": 294,
+  "records_without_source_location": 1236,
+  "records_without_effective_date": 149,
+  "records_without_version": 763,
+  "conflicts_count": 105,
+  "duplicate_references_count": 0,
+  "conflicts_breakdown": {
+    "total_conflicts": 105,
+    "notification_conflicts": 1,
+    "qco_status_conflicts": 6,
+    "product_manual_version_conflicts": 98,
+    "duplicate_references": 0
+  },
+  "qco_reconciliation": {
+    "total_qcos": 313,
+    "by_verification_state": {
+      "SOURCE_VERIFIED": 137,
+      "SOURCE_UNVERIFIED": 176
+    },
+    "by_status": {
+      "UNKNOWN": 149,
+      "AMENDED": 5,
+      "ACTIVE": 159
+    },
+    "note": "Authoritative raw qcos.jsonl and normalized qco_registry.jsonl counts: Verification (SOURCE_VERIFIED: 137, SOURCE_UNVERIFIED: 176), Status (ACTIVE: 159, UNKNOWN: 149, AMENDED: 5)."
+  },
+  "product_manual_reconciliation": {
+    "total_product_manuals": 763,
+    "records_with_version_date": 0,
+    "records_without_version_date": 763,
+    "note": "All 763 raw and normalized Product Manual records have version_date: null. The theoretical 642 figure in PC-1 was an unverified subtraction (763 - 121 registry entries = 642) rather than actual empirical data."
+  },
+  "unresolved_records": 105,
+  "rejected_records": 0,
+  "lineage_failures": 0,
+  "null_or_unknown_fields_distribution": {
+    "notification_number": 56,
+    "issuing_authority": 40,
+    "publication_date": 149,
+    "effective_date": 149,
+    "scheme_reference": 153,
+    "amendment_reference": 308,
+    "status": 149,
+    "is_mandatory": 784,
+    "qco_reference": 665,
+    "applicable_standard": 12,
+    "applicable_product": 12,
+    "applicability_basis": 12,
+    "source_location": 911,
+    "product": 754,
+    "version": 763,
+    "version_date": 763,
+    "scope": 754,
+    "sampling": 763,
+    "tests": 754,
+    "equipment": 763,
+    "grouping": 763,
+    "marking": 763,
+    "sit_reference": 754,
+    "source_hash": 16,
+    "standard_original": 9,
+    "standard_normalized": 9
+  }
+}

@@ -36,6 +36,7 @@ from backend.auth import (
     get_current_user_required
 )
 from backend.lab_finder_api import router as lab_finder_router
+from backend.compliance_journey_api import router as compliance_journey_router
 
 
 @asynccontextmanager
@@ -61,6 +62,8 @@ app = FastAPI(
     version="13.0.0",
     lifespan=lifespan
 )
+logger = logging.getLogger("backend.app")
+
 
 # CORS Configuration for Production (Vercel) & Development (Localhost)
 # In production, strictly bind to FRONTEND_ORIGIN domains without wildcards
@@ -103,6 +106,57 @@ app.add_middleware(
 
 # Mount Phase F3 Laboratory Finder Router
 app.include_router(lab_finder_router)
+
+# Phase PC-11 E: V2 Compliance Journey Route (V2 pipeline: NLU → PC-5 → RAG → Groq → D validation)
+from backend.compliance_journey_v2_api import (
+    build_v2_journey_response,
+    V2ComplianceJourneyRequest,
+)
+
+@app.post("/api/compliance/journey")
+async def get_product_compliance_journey_v2(
+    req: V2ComplianceJourneyRequest,
+) -> Dict[str, Any]:
+    """
+    V2 Product Compliance Journey API route.
+    Executes the full V2 pipeline exactly once:
+      NLU → PC-5 → stage-specific RAG → F3 → Groq synthesis → D validation
+    Returns merged PC-5 deterministic data + V2 Groq-synthesized answers.
+    """
+    try:
+        return build_v2_journey_response(
+            query=req.query,
+            product=req.product,
+            standard=req.standard,
+            location=req.location,
+            conversation_history=req.conversation_history,
+        )
+    except Exception as e:
+        logger.error(f"V2 compliance journey pipeline error: {e}", exc_info=True)
+        # Emergency fallback: legacy ComplianceRAGSynthesizer (not the normal path)
+        try:
+            from backend.compliance_rag_synthesizer import (
+                get_compliance_rag_synthesizer,
+                ComplianceJourneyRequest as LegacyRequest,
+            )
+            legacy_req = LegacyRequest(
+                query=req.query, product=req.product,
+                standard=req.standard, location=req.location
+            )
+            return get_compliance_rag_synthesizer().process_journey(legacy_req)
+        except Exception as e2:
+            logger.error(f"Emergency legacy fallback also failed: {e2}", exc_info=True)
+            from ai.compliance.journey_orchestrator import get_compliance_orchestrator
+            from ai.compliance.journey_models import ComplianceJourneyRequest as PC5Request
+            pc5_req = PC5Request(
+                query=req.query, product=req.product,
+                standard=req.standard, location=req.location
+            )
+            return get_compliance_orchestrator().build_journey(pc5_req).model_dump()
+
+# Mount Phase PC-5 Product Compliance Journey Router (Health, Metadata, Clarify)
+app.include_router(compliance_journey_router)
+
 
 
 # Initialize lightweight singletons
@@ -559,11 +613,21 @@ async def handle_rag_query(
     current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
 ):
     """
-    Direct Phase 13 Grounded RAG query endpoint.
+    Phase 13 Grounded RAG query endpoint unified with production orchestration,
+    context resolution, and F3 lab routing.
     """
     try:
-        from scripts.phase12_e_production_rag import query_production_rag
-        result = query_production_rag(req.query)
+        target_lang = req.target_language or req.language
+        if target_lang == "auto":
+            target_lang = None
+        from scripts.phase12_f2_orchestrator import orchestrate_assistant_query, normalize_language_code
+        normalized_lang = normalize_language_code(target_lang) if target_lang else None
+        result = orchestrate_assistant_query(
+            req.query,
+            target_language=normalized_lang,
+            response_style=req.response_style,
+            conversation_history=req.history
+        )
         if current_user and isinstance(result, dict):
             result["authenticated_user"] = {
                 "user_id": current_user["user_id"],

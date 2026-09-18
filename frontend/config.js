@@ -20,9 +20,22 @@ export function getApiBaseUrl() {
         const rawUrl = window.__BIS_API_BASE_URL__ || 
                        window.BIS_API_BASE_URL || 
                        window.VITE_API_BASE_URL || 
-                       PRODUCTION_BACKEND_URL ||
-                       '';
-        return String(rawUrl).replace(/\/+$/, '');
+                       PRODUCTION_BACKEND_URL;
+        if (rawUrl) {
+            return String(rawUrl).replace(/\/+$/, '');
+        }
+
+        // Local development fallback:
+        // When running frontend on a separate static dev server (e.g. port 3000, 5173, etc.)
+        // while the FastAPI/Uvicorn backend runs on port 8000
+        const host = window.location?.hostname || '';
+        const port = window.location?.port || '';
+        if (host === 'localhost' || host === '127.0.0.1' || !host) {
+            if (port && port !== '8000' && port !== '3000') {
+                return `http://${host || '127.0.0.1'}:8000`;
+            }
+        }
+        return '';
     }
     return PRODUCTION_BACKEND_URL || '';
 }

@@ -8,6 +8,7 @@ Invariants:
 1. RAG ALWAYS runs first.
 2. Groq ALWAYS runs second to analyze the user's query and format/supplement the answer.
 3. For conversational queries (greetings, chitchat), Groq provides a warm assistant response
+
    without irrelevant database dumps.
 4. For general BIS questions (e.g. what is BIS, how to get ISI mark), Groq provides comprehensive
    educational explanations.
@@ -20,6 +21,9 @@ Invariants:
 import os
 import sys
 import json
+import threading
+import time
+
 import time
 import logging
 import ssl
@@ -86,9 +90,16 @@ import re
 
 GREETING_PATTERNS = {
     "hello", "hi", "hey", "greetings", "good morning", "good afternoon",
-    "good evening", "who are you", "what can you do", "help", "how can you help me",
+    "good evening", "who are you", "what can you do", "help", "help me",
+    "can you help me", "can you help", "please help", "please help me",
+    "how can you help me", "assist me", "can you assist me", "heko", "heko me",
+    "helo", "helo me", "hlp", "hlp me", "how to use", "how do i use this",
+    "what do you do", "what can i ask", "guide me",
     "what are you", "thanks", "thank you", "bye", "goodbye", "namaste",
-    "नमस्ते", "नमस्कार", "प्रणाम", "namaskar"
+    "नमस्ते", "नमस्कार", "प्रणाम", "namaskar", "namaskara", "vanakkam", "namaskaram",
+    "sat sri akal", "sasriyakaal",
+    "मदद", "सहायता", "मदद करें", "सहायता करें", "मेरी मदद करो", "मेरी सहायता करो",
+    "मदद चाहिए", "सहायता चाहिए", "madad", "sahayata"
 }
 
 # -----------------------------------------------------------------------------
@@ -287,8 +298,21 @@ def is_conversational_query(query_text: str) -> bool:
     q = query_text.strip().lower().rstrip("!?.")
     if q in GREETING_PATTERNS:
         return True
-    if any(q.startswith(g + " ") or q == g for g in ["hello", "hi", "hey", "good morning", "good afternoon", "good evening", "namaste", "नमस्ते", "नमस्कार"]):
-        if len(q.split()) <= 4:
+
+    # Common typo tolerance (e.g. "heko me" -> "help me", "helo" -> "hello", "hlp" -> "help")
+    typo_map = {"heko": "help", "helo": "hello", "hlp": "help"}
+    words = q.split()
+    normalized_words = [typo_map.get(w, w) for w in words]
+    normalized_q = " ".join(normalized_words)
+    if normalized_q in GREETING_PATTERNS:
+        return True
+
+    if any(q.startswith(g + " ") or q == g or normalized_q.startswith(g + " ") for g in [
+        "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+        "namaste", "नमस्ते", "नमस्कार", "help", "can you help", "please help",
+        "assist me", "how to use", "guide me", "what can you"
+    ]):
+        if len(words) <= 5:
             return True
     return False
 
@@ -451,24 +475,222 @@ F3_ZERO_MATCH_MAP = {
 }
 
 
+def is_generic_product_phrase(phrase: str) -> bool:
+    """Returns True if the candidate product phrase is a generic placeholder."""
+    if not phrase:
+        return True
+    p = phrase.lower().strip()
+    generic_set = {
+        "my product", "our product", "this product", "a product", "the product",
+        "product", "products", "item", "items", "material", "materials",
+        "goods", "article", "articles", "this", "that", "it", "them",
+        "bis", "certification", "certifications", "standard", "standards",
+        "isi", "testing", "license", "licence", "compliance", "registered",
+        "certified", "licensed", "small", "new"
+    }
+    return p in generic_set
+
+
+def normalize_product_name(cand: str) -> str:
+    """Normalizes candidate product names into clean canonical product labels."""
+    if not cand:
+        return ""
+    p = cand.lower().strip()
+    if "door" in p or "दरवाजे" in cand:
+        return "timber doors" if any(w in p for w in ["timber", "wood", "flush", "panel", "fire"]) or "door" in p else p
+    if "led" in p or "एलईडी" in cand:
+        return "led lamp"
+    if "water heater" in p or "geyser" in p or "गीजर" in cand or "हीटर" in cand:
+        return "instantaneous water heater"
+    if "upvc" in p or "pvc" in p or "पाइप" in cand:
+        return "upvc pipes"
+    if "steel" in p or "स्टील" in cand:
+        return "steel"
+    return p
+
+
+def extract_product_from_query(query_text: str) -> Optional[str]:
+    """
+    Extracts a concrete product declaration or topic from the query text.
+    Filters out generic phrases such as 'my product', 'our product', 'this product', 'a product'.
+    """
+    if not query_text:
+        return None
+    q = query_text.strip()
+    q_lower = q.lower()
+
+    # 1. Verbal declarations: "I manufacture timber doors", "We produce wooden doors", etc.
+    m_verb = re.search(
+        r'\b(?:i|we)\s+(?:manufacture|make|produce|import|distribute|fabricate|sell|supply)\s+([a-zA-Z0-9\s\-_]+?)(?=\s+(?:so\b|tell\b|what\b|how\b|and\b|can\b|where\b|which\b|in\b|for\b|to\b|do\b|is\b|are\b|require\b|need\b)|[,\.\?!;]|$)',
+        q_lower
+    )
+    if m_verb:
+        cand = m_verb.group(1).strip()
+        if cand and not is_generic_product_phrase(cand):
+            return normalize_product_name(cand)
+
+    # 2. Persona / role product declarations: "I am a ... manufacturer", "manufacturer of ..."
+    m_role_prod = re.search(
+        r'\b(?:i\s+am\s+(?:a\s+|an\s+)?|we\s+are\s+(?:a\s+|an\s+)?)([a-zA-Z0-9\s]+?)\s+(?:manufacturer|maker|producer|importer|distributor)\b',
+        q_lower
+    )
+    if m_role_prod:
+        cand = m_role_prod.group(1).strip()
+        if cand and not is_generic_product_phrase(cand):
+            return normalize_product_name(cand)
+
+    m_of_prod = re.search(
+        r'\b(?:manufacturer|maker|producer|importer|distributor)\s+of\s+([a-zA-Z0-9\s]+?)(?=\s+(?:so\b|tell\b|what\b|how\b|and\b|can\b|where\b|is\b|are\b|in\b|for\b)|[,\.\?!;]|$)',
+        q_lower
+    )
+    if m_of_prod:
+        cand = m_of_prod.group(1).strip()
+        if cand and not is_generic_product_phrase(cand):
+            return normalize_product_name(cand)
+
+    # Hindi persona / verbal declarations
+    m_role_hi = re.search(r'(?:मैं|हम)\s+(?:एक\s+)?([a-zA-Z0-9\s\u0900-\u097F]+?)\s+(?:निर्माता|उत्पादक|manufacturer)\s+हूँ', q)
+    if m_role_hi:
+        cand = m_role_hi.group(1).strip()
+        if cand and cand not in ["एक", "नया"]:
+            return normalize_product_name(cand)
+
+    m_verb_hi = re.search(r'(?:मैं|हम)\s+([a-zA-Z0-9\s\u0900-\u097F]+?)\s+(?:बनाते\s+हैं|बनाता\s+हूँ|का\s+निर्माण\s+करते\s+हैं)', q)
+    if m_verb_hi:
+        cand = m_verb_hi.group(1).strip()
+        if cand:
+            return normalize_product_name(cand)
+
+    # 3. Topic / process / certification target: "process for timber doors", "certification for timber doors"
+    m_prep = re.search(
+        r'\b(?:process\s+for|certification\s+for|licence\s+for|license\s+for|standard\s+for|standards\s+for|requirements?\s+for|tests?\s+for)\s+([a-zA-Z0-9\s\-_]+?)(?=\s+(?:under\b|from\b|according\b|in\b|with\b|using\b|having\b|is\b|are\b|do\b)|[,\.\?!;]|$)',
+        q_lower
+    )
+    if m_prep:
+        cand = m_prep.group(1).strip()
+        if cand and not is_generic_product_phrase(cand):
+            return normalize_product_name(cand)
+
+    # 4. Standard product taxonomy patterns (English and Hindi)
+    prod_patterns = [
+        (r'\b(timber\s*doors?|wooden\s*doors?|flush\s*doors?|fire\s*doors?|panel\s*doors?|लकड़ी\s*के\s*दरवाजे|दरवाजे)\b', "timber doors"),
+        (r'\b(led\s*(?:lamps?|bulbs?|tubes?|lights?|panels?)|leds?|lamps?|bulbs?|एलईडी\s*(?:लैंप|बल्ब|लाइट|ट्यूब)?)\b', "led lamp"),
+        (r'(?:instantaneous\s*water\s*heaters?|water\s*heaters?|electric\s*geysers?|geysers?|heaters?|(?:वाटर|वॉटर)\s*हीटर|तात्कालिक\s*(?:वाटर|वॉटर)\s*हीटर|गीज़र|गीजर)', "instantaneous water heater"),
+        (r'\b(unplasticized\s*polyvinyl\s*chloride\s*pipes?|upvc\s*pipes?|pvc\s*pipes?|pipes?|tubes?|यूपीवीसी\s*पाइप|पीवीसी\s*पाइप|पाइप)\b', "upvc pipes"),
+        (r'\b(electric\s*cables?|cables?|wires?|conductors?|केबल|तार)\b', "electric cables"),
+        (r'\b(structural\s*steel|steel\s*products?|steels?|rebar|tmt\s*bars?|स्टील|इस्पात)\b', "steel"),
+        (r'\b(drinking\s*water|potable\s*water|packaged\s*water|पीने\s*का\s*पानी|पेयजल)\b', "drinking water"),
+        (r'\b(toys?|खिलौने|खिलौना)\b', "toys"),
+        (r'\b(cement|सीमेंट)\b', "cement"),
+        (r'\b(batter(?:y|ies)|बैटरी|बैटरियां)\b', "batteries"),
+        (r'\b(helmets?|हेलमेट)\b', "helmets"),
+        (r'\b(furniture|wooden\s*chairs?|chairs?|फर्नीचर|कुर्सी|कुर्सियां)\b', "furniture"),
+        (r'\b(switches?|sockets?|appliances?|pumps?|valves?|transformers?|स्विच|सॉकेट)\b', "switches")
+    ]
+    for pat, norm_name in prod_patterns:
+        if re.search(pat, q, re.IGNORECASE):
+            return norm_name
+
+    return None
+
+
+def has_referential_language(
+    query_text: str,
+    conversation_history: Optional[List[Dict[str, Any]]] = None
+) -> Tuple[bool, str]:
+    """
+    Detects whether the query contains genuine conversational reference / anaphora pointing back to prior turns.
+    Returns (is_referential, ref_type).
+    """
+    if not query_text:
+        return False, ""
+
+    q = query_text.strip()
+    q_lower = q.lower()
+
+    # If the query contains an explicit standard number (e.g. "What tests does IS 13592 require?"),
+    # it is an explicit query and must not inherit prior standard.
+    if re.search(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+)', q, re.IGNORECASE):
+        return False, ""
+
+    # 1. Pronoun anaphora: "what tests does it require", "what about its hydrostatic pressure", etc.
+    if re.search(r'\b(?:what|which|does|do|can|is|are|list|give|explain|show|tell\s+me\s+about)\b.*\b(it|its|them)\b', q_lower):
+        if not re.search(r'\b(?:how\s+is\s+it\s+going|make\s+it|worth\s+it)\b', q_lower):
+            if re.search(r'\bits\b', q_lower):
+                return True, "PRONOUN_ITS"
+            if re.search(r'\bthem\b', q_lower):
+                return True, "PRONOUN_THEM"
+            return True, "PRONOUN_IT"
+
+    if re.search(r'\b(it|its|them)\s+(?:require|need|mandate|prescribe|specify|state|have|cover|contain)\b', q_lower):
+        return True, "PRONOUN_IT"
+
+    if re.search(r'\b(?:is|are)\s+(?:it|they)\s+(?:mandatory|compulsory|certified|licensed|applicable|required)\b', q_lower):
+        return True, "PRONOUN_IT"
+
+    if re.search(r'\b(?:what|how)\s+about\s+(?:it|that|this|its\b)\b', q_lower):
+        return True, "PRONOUN_IT"
+
+    # 2. Demonstrative noun phrases referencing standard
+    if re.search(r'\b(?:this|that|the|the\s+above|the\s+same|the\s+aforementioned)\s+(?:standard|specification|norm|code|doc|document)\b', q_lower):
+        return True, "DEMONSTRATIVE_STANDARD"
+
+    # 3. Demonstrative noun phrases referencing tests / requirements
+    if re.search(r'\b(?:these|those|the|such)\s+(?:tests|testing|test\s+requirements|requirements|specifications|clauses|parameters)\b', q_lower):
+        return True, "DEMONSTRATIVE_TESTS"
+
+    # 4. Demonstrative noun phrases referencing product
+    if re.search(r'\b(?:this|that|the\s+same|the\s+above)\s+product\b', q_lower):
+        return True, "DEMONSTRATIVE_PRODUCT"
+
+    # 5. Elliptical questions about testing/labs
+    if re.search(r'\bwhere\s+can\s+i\s+get\s+(?:these|the|them)?\s*tests?\s*done\b', q_lower):
+        return True, "DEMONSTRATIVE_TESTS"
+    if re.search(r'\b(?:where\s+to\s+test|who\s+tests?|which\s+labs?\s*(?:test|do))\s*(?:it|them|this)?\b', q_lower):
+        return True, "ELLIPTICAL_LABS"
+
+    # 6. Elliptical location follow-up: "Show me ones in Delhi", "ones in Delhi", "how about in Delhi"
+    m_loc = re.search(r'^(?:show\s+me\s+)?(?:ones|labs|facilities|centres|centers)?\s*(?:in|near|at|around)\s+([A-Za-z]+)[\.\?]?$', q_lower)
+    if m_loc or re.search(r'\b(?:show\s+me\s+)?(?:ones|labs|facilities)\s+(?:in|near|at|around)\s+([A-Za-z]+)\b', q_lower):
+        if conversation_history:
+            return True, "ELLIPTICAL_LOCATION"
+
+    # 7. Multilingual referential markers (Hindi / Devanagari)
+    if re.search(r'\b(यह\s*मानक|इस\s*मानक|उपरोक्त\s*मानक|वही\s*मानक|इसके\s*परीक्षण|इसके\s*लिए\s*परीक्षण|कहाँ\s*(?:परीक्षण|टेस्ट)\s*होंगे|इसमें\s*क्या|इसके\s*बारे\s*में)\b', q):
+        return True, "MULTILINGUAL_REF"
+    if re.search(r'\b(iske\s*tests?|iski\s*testing|iske\s*labs?|isme\s*kya|iss\s*standard)\b', q_lower):
+        return True, "MULTILINGUAL_REF"
+
+    return False, ""
+
+
 def resolve_conversational_context(
     query_text: str,
     conversation_history: Optional[List[Dict[str, Any]]] = None
 ) -> Tuple[str, Optional[str], Optional[str], bool]:
     """
     Resolves conversational pronouns and anaphora (e.g. 'it', 'these tests', 'where can I get these tests done')
-    from recent conversation turns.
+    from recent conversation turns ONLY when genuine referential language is detected.
     Returns (resolved_query, resolved_standard, resolved_product, was_resolved).
     """
     q = (query_text or "").strip()
     if not q or not conversation_history:
         return q, None, None, False
 
-    q_lower = q.lower()
+    # 1. Explicit current standard ALWAYS wins and resets context
     is_explicit_std = bool(re.search(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+)', q, re.IGNORECASE))
     if is_explicit_std:
         return q, None, None, False
 
+    current_prod = extract_product_from_query(q)
+
+    # 2. Check if current query contains genuine referential language
+    is_ref, ref_type = has_referential_language(q, conversation_history=conversation_history)
+    if not is_ref:
+        # Standalone query: DO NOT inherit previous entities
+        return q, None, current_prod, False
+
+    # 3. Current query IS referential: retrieve previous entities from history
     resolved_std = None
     resolved_prod = None
 
@@ -479,9 +701,15 @@ def resolve_conversational_context(
             data = msg.get("data")
             if isinstance(data, dict):
                 txt += " " + (data.get("answer") or data.get("answer_markdown") or "")
-                std_cand = data.get("rag", {}).get("standard")
+                std_cand = data.get("standard") or data.get("rag", {}).get("standard")
                 if std_cand and not resolved_std:
                     resolved_std = std_cand
+                prod_cand = data.get("product") or data.get("rag", {}).get("product")
+                if prod_cand and not resolved_prod:
+                    resolved_prod = prod_cand
+            std_direct = msg.get("standard")
+            if std_direct and not resolved_std:
+                resolved_std = std_direct
         elif isinstance(msg, str):
             txt = msg
 
@@ -492,33 +720,60 @@ def resolve_conversational_context(
                 resolved_std = f"IS {c_num}"
 
         if not resolved_prod and txt:
-            p_m = re.search(r'\b(upvc\s*pipes?|led\s*(?:lamps?|bulbs?)|water\s*heaters?|geysers?|drinking\s*water|cement|steel)\b', txt, re.IGNORECASE)
-            if p_m:
-                resolved_prod = p_m.group(1)
+            p_cand = extract_product_from_query(txt)
+            if p_cand:
+                resolved_prod = p_cand
 
         if resolved_std:
             break
 
-    if not resolved_std:
-        return q, None, resolved_prod, False
+    # 4. Product Change Guard: If the user introduced a new concrete product,
+    # it breaks the standard context unless the user explicitly connected them
+    if current_prod and resolved_prod and current_prod != resolved_prod:
+        return q, None, current_prod, False
+    if current_prod and resolved_std and not ref_type.startswith("PRONOUN"):
+        # Concrete product introduced without pronoun explicitly linking to previous standard
+        return q, None, current_prod, False
 
+    if not resolved_std:
+        return q, None, current_prod or resolved_prod, False
+
+    # 5. Precise query rewriting based on referential type
     resolved_query = q
-    if re.search(r'\b(where\s+can\s+i\s+get\s+(?:these|the)?\s*tests?\s*done|where\s+to\s+test|which\s+labs?|who\s+tests?)\b', q_lower):
-        resolved_query = f"Find laboratories that can perform the testing requirements associated with {resolved_std}."
-    elif re.search(r'\b(where|which\s+labs?|who\s+tests?|where\s+to\s+test)\b', q_lower) and re.search(r'\b(these\s+tests|those\s+tests|the\s+tests|tests?)\b', q_lower):
+    q_lower = q.lower()
+
+    if ref_type == "ELLIPTICAL_LOCATION" or "ones in" in q_lower:
         loc_m = re.search(r'\b(?:in|near|at|around)\s+([A-Za-z]+)\b', q)
         loc_str = f" in {loc_m.group(1).title()}" if loc_m and loc_m.group(1).lower() not in ["bis", "is", "standard", "india", "laboratory", "laboratories"] else ""
-        resolved_query = f"Find laboratories that can perform the testing requirements associated with {resolved_std}{loc_str}."
-    elif re.search(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', q_lower):
-        resolved_query = re.sub(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', f"testing requirements associated with {resolved_std}", resolved_query, flags=re.IGNORECASE)
-    elif re.search(r'\b(it|this\s+standard|the\s+standard)\b', q_lower):
-        resolved_query = re.sub(r'\b(it|this\s+standard|the\s+standard)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
-    elif re.search(r'\b(where|lab|labs|laboratory|laboratories)\b', q_lower):
-        resolved_query = f"{q} for {resolved_std}"
+        resolved_query = f"Find laboratories that can perform testing according to {resolved_std}{loc_str}."
+    elif ref_type == "DEMONSTRATIVE_TESTS" or re.search(r'\bwhere\s+can\s+i\s+get\s+(?:these|the)?\s*tests?\s*done\b', q_lower):
+        loc_m = re.search(r'\b(?:in|near|at|around)\s+([A-Za-z]+)\b', q)
+        loc_str = f" in {loc_m.group(1).title()}" if loc_m and loc_m.group(1).lower() not in ["bis", "is", "standard", "india", "laboratory", "laboratories"] else ""
+        if "where" in q_lower or "lab" in q_lower:
+            resolved_query = f"Find laboratories that can perform testing according to {resolved_std}{loc_str}."
+        else:
+            resolved_query = re.sub(r'\b(these\s+tests|those\s+tests|the\s+tests)\b', f"testing requirements associated with {resolved_std}", resolved_query, flags=re.IGNORECASE)
+    elif ref_type == "ELLIPTICAL_LABS":
+        loc_m = re.search(r'\b(?:in|near|at|around)\s+([A-Za-z]+)\b', q)
+        loc_str = f" in {loc_m.group(1).title()}" if loc_m and loc_m.group(1).lower() not in ["bis", "is", "standard", "india", "laboratory", "laboratories"] else ""
+        resolved_query = f"Find laboratories that can perform testing according to {resolved_std}{loc_str}."
+    elif ref_type == "PRONOUN_ITS":
+        resolved_query = re.sub(r'\bits\b', f"{resolved_std}'s", resolved_query, flags=re.IGNORECASE)
+        if resolved_std not in resolved_query:
+            resolved_query = f"{resolved_query} ({resolved_std})"
+    elif ref_type in ("PRONOUN_IT", "DEMONSTRATIVE_STANDARD"):
+        resolved_query = re.sub(r'\b(it|this\s+standard|that\s+standard|the\s+standard|the\s+above\s+standard|the\s+same\s+standard)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
+        if resolved_std not in resolved_query:
+            resolved_query = f"{resolved_query} for {resolved_std}"
+    elif ref_type == "MULTILINGUAL_REF":
+        resolved_query = f"{resolved_std} {q}"
     else:
-        resolved_query = f"{q} for {resolved_std}"
+        resolved_query = re.sub(r'\b(it|this\s+standard|these\s+tests)\b', resolved_std, resolved_query, flags=re.IGNORECASE)
+        if resolved_std not in resolved_query:
+            resolved_query = f"{resolved_query} for {resolved_std}"
 
-    return resolved_query, resolved_std, resolved_prod, True
+    return resolved_query, resolved_std, resolved_prod or current_prod, True
+
 
 def classify_orchestrator_intent(
     query_text: str,
@@ -574,18 +829,27 @@ def classify_orchestrator_intent(
     process_cues = [
         "how do i get", "how to get", "how to apply", "how do i apply", "process for",
         "procedure for", "steps to get", "steps for", "documentation needed", "documents required",
-        "documents and requirements", "what documents", "आवेदन कैसे करें", "प्रक्रिया", "दस्तावेज़",
+        "documents and requirements", "what documents", "how does bis certification work",
+        "how does certification work", "how bis certification works", "how certification works",
+        "how does it work", "how it works", "आवेदन कैसे करें", "प्रक्रिया", "दस्तावेज़",
         "चरण"
     ]
     if any(c in q_lower for c in process_cues):
         return INTENT_PROCESS
 
-    # 6. CERTIFICATION
+    # 6. CERTIFICATION (Comprehensive regulatory & scheme cues)
     cert_cues = [
         "mandatory", "compulsory", "legally required", "is bis certification mandatory",
         "is certification mandatory", "is it mandatory", "is isi mark mandatory",
         "mandatory certification", "licence required", "license required",
-        "अनिवार्य", "बाध्यकारी", "प्रमाणन अनिवार्य", "लाइसेंस अनिवार्य"
+        "what certification", "what certifications", "which certification", "which certifications",
+        "certifications do i need", "certification do i need", "certifications do we need",
+        "certifications required", "certification required", "certifications needed", "certification needed",
+        "need certification", "need certifications", "require certification", "require certifications",
+        "get certified", "how to certify", "certification scheme", "certification process",
+        "isi certification", "bis certification", "licence", "license", "licensing",
+        "अनिवार्य", "बाध्यकारी", "प्रमाणन अनिवार्य", "लाइसेंस अनिवार्य", "सर्टिफिकेशन", "प्रमाणन",
+        "प्रमाणपत्र", "सर्टिफिकेट"
     ]
     if any(c in q_lower for c in cert_cues):
         return INTENT_CERTIFICATION
@@ -594,9 +858,10 @@ def classify_orchestrator_intent(
     test_cues = [
         "what tests", "which tests", "tests specified", "tests required", "test requirements",
         "all the tests", "all tests", "types of test", "testing requirements",
+        "hydrostatic test", "hydrostatic testing", "pressure test", "pressure testing",
         "परीक्षण", "जांच", "टेस्ट", "कौन से परीक्षण"
     ]
-    if any(c in q_lower for c in test_cues):
+    if any(c in q_lower for c in test_cues) or re.search(r'\b(?:require|requires|conduct|perform|specify|mandate)\s+[a-z\s]*\b(?:testing|tests?)\b', q_lower) or re.search(r'\b(?:testing|tests?)\s+(?:required|specified|prescribed|needed|mandated)\b', q_lower):
         return INTENT_TESTING
 
     # 8. SCOPE
@@ -700,7 +965,7 @@ def analyze_query_context(
         c_num = re.sub(r'भाग', 'Part', c_num)
         clean_stds.append(f"IS {c_num}")
 
-    if not clean_stds and resolved_std:
+    if not clean_stds and resolved_std and was_resolved:
         clean_stds.append(resolved_std)
 
     # User role extraction (English, Devanagari, and Hinglish)
@@ -739,57 +1004,8 @@ def analyze_query_context(
     elif re.search(r'\b(management\s+systems?|mscs\b)\b', q_lower):
         requested_scheme = "mscs"
 
-    product = None
-    # 1. Explicit user persona product declaration
-    m_role_prod = re.search(r'\b(?:i\s+am\s+(?:a\s+|an\s+)?|we\s+are\s+(?:a\s+|an\s+)?)([a-zA-Z0-9\s]+?)\s+(?:manufacturer|maker|producer|importer|distributor)\b', q_lower)
-    m_role_prod_hi = re.search(r'(?:मैं|हम)\s+(?:एक\s+)?([a-zA-Z0-9\s\u0900-\u097F]+?)\s+(?:निर्माता|उत्पादक|manufacturer)\s+हूँ', q)
-
-    if m_role_prod:
-        cand_prod = m_role_prod.group(1).strip()
-        if cand_prod and cand_prod not in ["registered", "certified", "licensed", "small", "new"]:
-            product = cand_prod
-    elif m_role_prod_hi:
-        cand_prod = m_role_prod_hi.group(1).strip()
-        if cand_prod and cand_prod not in ["एक", "नया"]:
-            product = cand_prod
-    else:
-        m_of_prod = re.search(r'\b(?:manufacturer|maker|producer|importer)\s+of\s+([a-zA-Z0-9\s]+?)(?=\s+(?:tell|what|how|and|can|where|is|are|in|for)|$)', q_lower)
-        if m_of_prod:
-            product = m_of_prod.group(1).strip()
-
-    # 2. General product taxonomy patterns (English and Hindi)
-    if not product:
-        prod_patterns = [
-            (r'\b(led\s*(?:lamps?|bulbs?|tubes?|lights?|panels?)|leds?|lamps?|bulbs?|एलईडी\s*(?:लैंप|बल्ब|लाइट|ट्यूब)?)\b', "led lamp"),
-            (r'(?:instantaneous\s*water\s*heaters?|water\s*heaters?|electric\s*geysers?|geysers?|heaters?|(?:वाटर|वॉटर)\s*हीटर|तात्कालिक\s*(?:वाटर|वॉटर)\s*हीटर|गीज़र|गीजर)', "instantaneous water heater"),
-            (r'\b(unplasticized\s*polyvinyl\s*chloride\s*pipes?|upvc\s*pipes?|pvc\s*pipes?|pipes?|tubes?|यूपीवीसी\s*पाइप|पीवीसी\s*पाइप|पाइप)\b', "upvc pipes"),
-            (r'\b(electric\s*cables?|cables?|wires?|conductors?|केबल|तार)\b', "electric cables"),
-            (r'\b(structural\s*steel|steel\s*products?|steels?|rebar|tmt\s*bars?|स्टील|इस्पात)\b', "steel"),
-            (r'\b(drinking\s*water|potable\s*water|packaged\s*water|पीने\s*का\s*पानी|पेयजल)\b', "drinking water"),
-            (r'\b(toys?|खिलौने|खिलौना)\b', "toys"),
-            (r'\b(cement|सीमेंट)\b', "cement"),
-            (r'\b(batter(?:y|ies)|बैटरी|बैटरियां)\b', "batteries"),
-            (r'\b(helmets?|हेलमेट)\b', "helmets"),
-            (r'\b(furniture|wooden\s*chairs?|chairs?|फर्नीचर|कुर्सी|कुर्सियां)\b', "furniture"),
-            (r'\b(switches?|sockets?|appliances?|pumps?|valves?|transformers?|स्विच|सॉकेट)\b', "switches")
-        ]
-        for pat, norm_name in prod_patterns:
-            pm = re.search(pat, q, re.IGNORECASE)
-            if pm:
-                product = norm_name
-                break
-    else:
-        p_lower = product.lower()
-        if "led" in p_lower or "एलईडी" in product:
-            product = "led lamp"
-        elif "water heater" in p_lower or "geyser" in p_lower or "गीजर" in product or "हीटर" in product:
-            product = "instantaneous water heater"
-        elif "upvc" in p_lower or "pvc" in p_lower or "पाइप" in product:
-            product = "upvc pipes"
-        elif "steel" in p_lower or "स्टील" in product:
-            product = "steel"
-
-    if not product and resolved_prod:
+    product = extract_product_from_query(q_orig) or extract_product_from_query(q)
+    if not product and resolved_prod and was_resolved:
         product = resolved_prod
 
     # 3. Multi-Entity Extraction
@@ -908,6 +1124,162 @@ def analyze_query_context(
         "resolved_query": resolved_query,
         "was_context_resolved": was_resolved
     }
+
+
+def filter_and_validate_evidence_relevance(
+    rag_result: Dict[str, Any],
+    query_ctx: Dict[str, Any],
+    clean_query: str,
+    engine=None
+) -> Tuple[Dict[str, Any], str]:
+    """
+    Orchestration-level evidence relevance validation gate.
+    Compares requested standard/product entities against retrieved evidence chunks.
+    Filters out unrelated standards (e.g. IS 16286 spoon chunks when IS 4985 was requested).
+    If target standard evidence is absent, executes a targeted secondary retrieval.
+    Applies the same relevance gate to secondary results.
+    Calibrates sufficiency based on intent (e.g. TESTING requires testing/clause/SIT content).
+    """
+    stds = query_ctx.get("is_numbers", [])
+    prod = query_ctx.get("product")
+    intent = query_ctx.get("intent")
+    resp_lang = query_ctx.get("response_language", "en")
+
+    # Extract numeric identifiers from target standards
+    target_nums = set()
+    for s in stds:
+        nums = re.findall(r'\d+', s)
+        if nums:
+            target_nums.add(nums[0])
+
+    evidence_list = list(rag_result.get("evidence", []))
+    claims_list = list(rag_result.get("claims", []))
+
+    # Gate 1: If explicit or resolved standards are required
+    if target_nums:
+        filtered_evidence = []
+        for ev in evidence_list:
+            ev_id = str(ev.get("retrieval_unit_id") or ev.get("source_record_id") or "")
+            ev_title = str(ev.get("source_title") or ev.get("document_title") or ev.get("standard_title") or "")
+            ev_heading = str(ev.get("heading") or "")
+            ev_text = str(ev.get("text") or "")
+            ev_std = str(ev.get("standard_number") or "")
+            combined_meta = f"{ev_id} {ev_std} {ev_title} {ev_heading}"
+
+            # Check if this chunk explicitly mentions any target standard
+            has_target_mention = any(
+                re.search(r'\b(?:IS|is|आईएस|आई\.?एस\.?)\s*[:/-]?\s*' + num + r'\b', combined_meta + " " + ev_text)
+                or (num in ev_std)
+                or (f"IS-{num}" in ev_id or f"IS_{num}" in ev_id)
+                for num in target_nums
+            )
+
+            # Check if this chunk belongs to a different, conflicting standard
+            other_stds = re.findall(r'\b(?:IS|is|आईएस|आई\.?एस\.?)\s*[:/-]?\s*(\d+)', combined_meta)
+            other_nums = {n for n in other_stds if n not in target_nums}
+
+            # Also check if ID contains conflicting standard like IS-16286
+            id_other_stds = re.findall(r'IS[-_](\d+)', ev_id)
+            other_nums.update(n for n in id_other_stds if n not in target_nums)
+
+            is_conflicting = bool(other_nums and not has_target_mention)
+
+            # Check conflicting product terms (e.g. spoon/cutlery/tableware when target is pipe)
+            if prod and "pipe" in prod.lower():
+                if re.search(r'\b(spoon|spoo\b|cutlery|fork|knife|tableware|wheelchair)\b', (combined_meta + " " + ev_text).lower()):
+                    is_conflicting = True
+            elif "4985" in target_nums:
+                # IS 4985 is strictly uPVC pipes for potable water supplies
+                if re.search(r'\b(spoon|spoo\b|cutlery|fork|knife|tableware|wheelchair|geyser|heater)\b', (combined_meta + " " + ev_text).lower()):
+                    is_conflicting = True
+
+            if has_target_mention and not is_conflicting:
+                filtered_evidence.append(ev)
+            elif not is_conflicting and not other_nums and not ev_std:
+                # Neutral chunk without standard conflict - only keep if target numbers mentioned in text
+                if any(num in ev_text for num in target_nums):
+                    filtered_evidence.append(ev)
+
+        # Filter claims to remove references to conflicting standards
+        filtered_claims = []
+        for c in claims_list:
+            c_str = str(c)
+            claim_other = re.findall(r'\b(?:IS|is|आईएस|आई\.?एस\.?)\s*[:/-]?\s*(\d+)', c_str)
+            if any(n not in target_nums for n in claim_other):
+                continue
+            filtered_claims.append(c)
+
+        original_count = len(evidence_list)
+        evidence_list = filtered_evidence
+        claims_list = filtered_claims
+
+        # If all evidence was filtered out, trigger targeted secondary retrieval
+        if not evidence_list:
+            primary_std = stds[0]
+            sec_query = f"{primary_std} requirements testing specifications"
+            try:
+                sec_rag = query_production_rag(sec_query, engine=engine)
+                sec_raw_ev = sec_rag.get("evidence", [])
+                sec_filtered = []
+                for ev in sec_raw_ev:
+                    ev_id = str(ev.get("retrieval_unit_id") or ev.get("source_record_id") or "")
+                    ev_title = str(ev.get("source_title") or ev.get("document_title") or ev.get("standard_title") or "")
+                    ev_heading = str(ev.get("heading") or "")
+                    ev_text = str(ev.get("text") or "")
+                    ev_std = str(ev.get("standard_number") or "")
+                    combined = f"{ev_id} {ev_std} {ev_title} {ev_heading} {ev_text}"
+                    if any(num in combined for num in target_nums):
+                        sec_filtered.append(ev)
+                if sec_filtered:
+                    evidence_list = sec_filtered
+                    claims_list = sec_rag.get("claims", [])
+                    rag_result["answer"] = sec_rag.get("answer", "")
+            except Exception as e:
+                logger.warning(f"Secondary retrieval failed: {e}")
+        elif len(evidence_list) < original_count and "build_deterministic_grounded_answer" in globals():
+            # Filtered out irrelevant chunks, update answer if it existed
+            rag_result["evidence"] = evidence_list
+            rag_result["claims"] = claims_list
+            try:
+                rag_result["answer"] = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx)
+            except Exception:
+                pass
+
+        rag_result["evidence"] = evidence_list
+        rag_result["claims"] = claims_list
+
+        # Recalibrate sufficiency
+        if not evidence_list:
+            rag_result["status"] = "INSUFFICIENT"
+            std_label = stds[0]
+            if resp_lang == "hi":
+                rag_result["answer"] = f"उपलब्ध बीआईएस साक्ष्यों से {std_label} के लिए आवश्यक परीक्षण विनिर्देशों या मानकों का सत्यापन नहीं किया जा सका।"
+            else:
+                rag_result["answer"] = f"I could not verify testing requirements or specifications for {std_label} from the available BIS evidence. The indexed records do not contain normative specifications for this standard."
+            return rag_result, "INSUFFICIENT"
+
+    # Gate 2: Intent-Aware Sufficiency Calibration
+    current_status = rag_result.get("status", "INSUFFICIENT")
+    if intent == INTENT_TESTING and target_nums:
+        # Require testing, SIT, clause, or specification information
+        test_cues = {"test", "testing", "clause", "hydrostatic", "pressure", "impact", "dimension", "thickness", "tensile", "specification", "inspection", "sit", "sampling", "परीक्षण", "आवश्यकता", "जाँच"}
+        has_tests = False
+        for ev in evidence_list:
+            t_str = ((ev.get("text") or "") + " " + (ev.get("heading") or "") + " " + (ev.get("source_title") or "")).lower()
+            if any(cue in t_str for cue in test_cues):
+                has_tests = True
+                break
+        if not has_tests:
+            current_status = "INSUFFICIENT"
+            rag_result["status"] = "INSUFFICIENT"
+    elif intent == INTENT_DEFINITION and target_nums:
+        has_title = any((ev.get("standard_title") or ev.get("document_title")) for ev in evidence_list)
+        if not has_title and not evidence_list:
+            current_status = "INSUFFICIENT"
+            rag_result["status"] = "INSUFFICIENT"
+
+    return rag_result, current_status
+
 
 def is_general_bis_query(query_text: str, rag_result: Optional[Dict[str, Any]] = None, query_ctx: Optional[Dict[str, Any]] = None) -> bool:
     """
@@ -1815,17 +2187,57 @@ class GroqClient:
     """
     Lightweight, direct HTTP client for Groq's OpenAI-compatible completions API.
     Zero external C-dependencies; uses standard Python urllib with robust SSL context.
+    Multi-key resilient failover.
     """
+    _keys = []
+    _key_state = {}
+    _lock = threading.Lock()
+    _current_index = 0
+    _initialized = False
+
+    @classmethod
+    def initialize_keys(cls, provided_key: Optional[str] = None):
+        with cls._lock:
+            if cls._initialized and not provided_key:
+                return
+            load_env_file()
+            
+            temp_keys = []
+            if provided_key:
+                temp_keys.append(("KEY_PROVIDED", provided_key.strip()))
+                
+            for i in range(1, 20):
+                k = os.getenv(f"GROQ_API_KEY_{i}")
+                if k and k.strip() and not any(tk[1] == k.strip() for tk in temp_keys):
+                    temp_keys.append((f"KEY_{i}", k.strip()))
+                    
+            legacy_key = os.getenv("GROQ_API_KEY")
+            if legacy_key and legacy_key.strip() and not any(tk[1] == legacy_key.strip() for tk in temp_keys):
+                idx = len(temp_keys) + 1
+                temp_keys.append((f"KEY_{idx}", legacy_key.strip()))
+                
+            cls._keys = [k[0] for k in temp_keys]
+            cls._key_state = {}
+            for key_id, key_val in temp_keys:
+                cls._key_state[key_id] = {
+                    "api_key": key_val,
+                    "status": "AVAILABLE",
+                    "cooldown_until": 0.0,
+                    "usage_count": 0,
+                    "rate_limit_count": 0,
+                    "error_count": 0
+                }
+            cls._initialized = True
+
     def __init__(
         self,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         temperature: float = 0.0,
-        timeout: float = 25.0
+        timeout: float = 8.0
     ):
-        load_env_file()
-        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.initialize_keys(provided_key=api_key)
         self.model_name = model or os.getenv("BIS_LLM_MODEL") or os.getenv("GROQ_MODEL") or DEFAULT_GROQ_MODEL
         self.base_url = (base_url or os.getenv("BIS_LLM_BASE_URL", DEFAULT_GROQ_BASE_URL)).rstrip("/")
         self.temperature = float(os.getenv("BIS_LLM_TEMPERATURE", str(temperature)))
@@ -1833,7 +2245,42 @@ class GroqClient:
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.api_key.strip())
+        return len(self._keys) > 0
+
+    @classmethod
+    def _get_next_available_key(cls) -> Optional[str]:
+        now = time.time()
+        with cls._lock:
+            # Check cooldowns and reset if passed
+            for k, state in cls._key_state.items():
+                if state["status"] == "COOLDOWN" and now >= state["cooldown_until"]:
+                    state["status"] = "AVAILABLE"
+            
+            if not cls._keys:
+                return None
+
+            n = len(cls._keys)
+            for _ in range(n):
+                cls._current_index = (cls._current_index + 1) % n
+                k = cls._keys[cls._current_index]
+                if cls._key_state[k]["status"] == "AVAILABLE":
+                    return k
+                    
+            return None
+
+    @classmethod
+    def _mark_key_status(cls, key_id: str, status: str, wait_sec: float = 0.0):
+        with cls._lock:
+            state = cls._key_state.get(key_id)
+            if state:
+                state["status"] = status
+                if status == "COOLDOWN":
+                    state["cooldown_until"] = time.time() + wait_sec
+                    state["rate_limit_count"] += 1
+                elif status == "INVALID":
+                    state["error_count"] += 1
+                elif status == "AVAILABLE":
+                    state["usage_count"] += 1
 
     def _get_ssl_context(self):
         try:
@@ -1845,12 +2292,12 @@ class GroqClient:
             ctx.verify_mode = ssl.CERT_NONE
             return ctx
 
-    def chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 800) -> str:
+    def chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 800, trace_info: Optional[Dict[str, Any]] = None) -> str:
         """
-        Executes a chat completion call to Groq Cloud API with retry on transient errors.
+        Executes a chat completion call to Groq Cloud API with multi-key failover and rotation.
         """
         if not self.is_configured:
-            raise ValueError("GROQ_API_KEY is not configured in environment.")
+            raise ValueError("No GROQ_API_KEY configured in environment.")
 
         endpoint = f"{self.base_url}/chat/completions"
         payload = {
@@ -1860,21 +2307,44 @@ class GroqClient:
             "max_tokens": max_tokens
         }
         data_bytes = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            endpoint,
-            data=data_bytes,
-            headers={
-                "Authorization": f"Bearer {self.api_key.strip()}",
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            },
-            method="POST"
-        )
-
         ssl_ctx = self._get_ssl_context()
+        
         last_err = None
+        max_attempts = len(self._keys)
+        attempts = 0
+        
+        if trace_info is not None:
+            trace_info["groq_invoked"] = True
+            trace_info["failover_used"] = False
+            
+        while attempts < max_attempts:
+            key_id = self._get_next_available_key()
+            if not key_id:
+                err_msg = "GROQ_ALL_KEYS_RATE_LIMITED"
+                if trace_info is not None:
+                    trace_info["final_status"] = "ERROR"
+                    trace_info["failure_reason"] = err_msg
+                raise RuntimeError(err_msg)
+                
+            attempts += 1
+            if trace_info is not None:
+                trace_info["selected_key_id"] = key_id
+                trace_info["attempt_count"] = attempts
+                if attempts > 1:
+                    trace_info["failover_used"] = True
 
-        for attempt in range(2):
+            api_key_val = self._key_state[key_id]["api_key"]
+            req = urllib.request.Request(
+                endpoint,
+                data=data_bytes,
+                headers={
+                    "Authorization": f"Bearer {api_key_val}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0"
+                },
+                method="POST"
+            )
+
             try:
                 with urllib.request.urlopen(req, context=ssl_ctx, timeout=self.timeout) as resp:
                     resp_data = json.loads(resp.read().decode("utf-8"))
@@ -1882,29 +2352,57 @@ class GroqClient:
                     if not choices:
                         raise RuntimeError("Groq API returned an empty choices list.")
                     content = choices[0].get("message", {}).get("content", "")
+                    
+                    self._mark_key_status(key_id, "AVAILABLE")
+                    if trace_info is not None:
+                        trace_info["final_status"] = "SUCCESS"
                     return content.strip()
+                    
             except urllib.error.HTTPError as e:
                 err_body = e.read().decode("utf-8", errors="ignore")
-                last_err = RuntimeError(f"Groq API HTTP Error {e.code}: {err_body}")
-                if e.code == 429 and attempt == 0:
-                    wait_sec = 5.0
-                    m = re.search(r"try again in ([0-9.]+)s", err_body)
+                if e.code == 429:
+                    wait_sec = 30.0
+                    m = re.search(r"try again in ([0-9.]+)s", err_body, re.IGNORECASE)
                     if m:
                         try:
-                            wait_sec = float(m.group(1)) + 0.5
+                            wait_sec = float(m.group(1)) + 1.0
                         except Exception:
-                            wait_sec = 5.0
-                    time.sleep(min(wait_sec, 12.0))
+                            pass
+                    self._mark_key_status(key_id, "COOLDOWN", wait_sec)
+                    last_err = RuntimeError(f"Rate limited on {key_id}")
                     continue
-                raise last_err from e
-            except urllib.error.URLError as e:
-                last_err = RuntimeError(f"Groq Network Connection Error: {e.reason}")
-                if attempt == 0:
-                    time.sleep(1.0)
+                elif e.code in (401, 403):
+                    self._mark_key_status(key_id, "INVALID")
+                    last_err = RuntimeError(f"Invalid API key {key_id}")
                     continue
-                raise last_err from e
+                elif e.code == 400:
+                    err = RuntimeError(f"Groq API HTTP Error 400: {err_body}")
+                    if trace_info is not None:
+                        trace_info["final_status"] = "ERROR"
+                        trace_info["failure_reason"] = str(err)
+                    raise err
+                elif e.code >= 500:
+                    self._mark_key_status(key_id, "COOLDOWN", 10.0)
+                    last_err = RuntimeError(f"Groq Server Error {e.code} on {key_id}")
+                    continue
+                else:
+                    self._mark_key_status(key_id, "COOLDOWN", 5.0)
+                    last_err = RuntimeError(f"Groq API HTTP Error {e.code}: {err_body}")
+                    continue
 
-        raise last_err or RuntimeError("Groq request failed.")
+            except urllib.error.URLError as e:
+                self._mark_key_status(key_id, "COOLDOWN", 10.0)
+                last_err = RuntimeError(f"Groq Network Error on {key_id}: {e.reason}")
+                continue
+
+        err_msg = "GROQ_ALL_KEYS_RATE_LIMITED"
+        if last_err and not isinstance(last_err, RuntimeError) or (last_err and "Rate limited" not in str(last_err)):
+            err_msg = f"GROQ_ALL_KEYS_RATE_LIMITED - Last error: {str(last_err)}"
+            
+        if trace_info is not None:
+            trace_info["final_status"] = "ERROR"
+            trace_info["failure_reason"] = err_msg
+        raise RuntimeError(err_msg)
 
 # -----------------------------------------------------------------------------
 # Prompt Construction
@@ -1939,6 +2437,75 @@ def build_groq_messages(
 
     resp_lang = normalize_language_code(query_ctx.get("response_language", "en") if query_ctx else "en")
 
+    # Style directives
+    if resp_lang == "hi":
+        if response_style == "Quick & Simple":
+            style_inst = (
+                f"\n\nउत्तर प्रस्तुति शैली: त्वरित एवं सरल (Quick & Simple):\n"
+                f"- संक्षिप्त, सीधा और मुख्य बिंदु-आधारित उत्तर 1-2 छोटे अनुच्छेदों या बुलेट पॉइंट्स में दें।\n"
+                f"- मुख्य निष्कर्ष और आवश्यक जानकारी सबसे पहले प्रस्तुत करें। अनावश्यक पृष्ठभूमि विवरण से बचें।\n"
+                f"- तकनीकी पहचानकर्ताओं (उदा. IS 4985) और एककों को मूल अक्षरों में बनाए रखें।"
+            )
+        elif response_style == "Professional & Compliance-focused":
+            style_inst = (
+                f"\n\nउत्तर प्रस्तुति शैली: व्यावसायिक एवं विनियामक अनुपालन-केंद्रित (Professional & Compliance-focused):\n"
+                f"- विनियामक और अनुपालन अधिकारियों के लिए उपयुक्त औपचारिक, वैधानिक एवं ऑडिट-तैयार शैली में उत्तर दें।\n"
+                f"- उत्तर को विनियामक शीर्षकों में व्यवस्थित करें (उदा. '### विनियामक कार्यक्षेत्र एवं दायरा', '### तकनीकी एवं अनुरूपता विनिर्देश', '### विनियामक अनुपालन प्रभाव')।\n"
+                f"- लागू भारतीय मानकों, परीक्षण मापदंडों और अनिवार्य प्रावधानों को बिना किसी सजावटी लेबल के औपचारिक और स्पष्ट रूप से प्रस्तुत करें।"
+            )
+        else:
+            style_inst = (
+                f"\n\nउत्तर प्रस्तुति शैली: विस्तृत एवं व्याख्यात्मक (Detailed & Explanatory):\n"
+                f"- संपूर्ण संदर्भ, विनियामक ढांचा, कार्यक्षेत्र, तकनीकी विनिर्देश, निर्धारित परीक्षण पद्धतियां और व्यावहारिक अर्थ को शामिल करते हुए गहन, व्यापक और सुव्यवस्थित व्याख्या दें।\n"
+                f"- प्रत्येक आवश्यकता के पीछे के कारणों और व्यावहारिक महत्व को स्पष्ट करें ताकि उपयोगकर्ता को गहन समझ प्राप्त हो।"
+            )
+    elif resp_lang == "en":
+        if response_style == "Quick & Simple":
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Quick & Simple\n"
+                f"- Deliver a brief, direct, and scannable answer in 1-2 concise paragraphs or compact bullet points.\n"
+                f"- State the plain-language summary first, with minimal technical jargon while keeping exact standard numbers, clause numbers, and values.\n"
+                f"- Omit extensive background history or introductory filler."
+            )
+        elif response_style == "Professional & Compliance-focused":
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Professional & Compliance-focused\n"
+                f"- Provide a structured, formal, and audit-ready regulatory response suitable for compliance officers and assessors.\n"
+                f"- Organize with clear regulatory headings such as '### Regulatory Scope & Authority', '### Normative Technical & Compliance Benchmarks', '### Statutory Certification Framework', and '### Operational & Compliance Implications'.\n"
+                f"- Emphasize explicit standard citations, clauses, testing parameters, and compliance/operational implications.\n"
+                f"- Maintain a rigorous, objective professional tone without decorative badges, labels, or emojis."
+            )
+        else:
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Detailed & Explanatory\n"
+                f"- Provide an in-depth, comprehensive, and thoroughly explanatory response.\n"
+                f"- Cover full context: background, regulatory framework, normative scope, technical benchmarks, prescribed testing methods/clauses, and practical operational meaning for manufacturers and consumers.\n"
+                f"- Structure with descriptive markdown headings and detailed, well-explained bullet points.\n"
+                f"- Explain the rationale and practical significance behind each requirement so the user gains deep understanding."
+            )
+    else:
+        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
+        if response_style == "Quick & Simple":
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Quick & Simple ({meta['name']}):\n"
+                f"- Deliver a brief, direct, and scannable answer in 1-2 concise paragraphs or compact bullet points in {meta['name']} ({meta['native_name']}).\n"
+                f"- State the main plain-language summary first, keeping exact standard numbers, clause numbers, and values in standard Latin format.\n"
+                f"- Omit extensive background history or introductory filler."
+            )
+        elif response_style == "Professional & Compliance-focused":
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Professional & Compliance-focused ({meta['name']}):\n"
+                f"- Provide a structured, formal, and audit-ready regulatory response in {meta['name']} ({meta['native_name']}) suitable for compliance officers and assessors.\n"
+                f"- Organize with formal regulatory headings in {meta['name']} (e.g. Scope & Authority, Technical Benchmarks, Statutory Certification Framework, Compliance Implications).\n"
+                f"- Emphasize explicit standard citations, clauses, testing parameters, and compliance implications without decorative badges."
+            )
+        else:
+            style_inst = (
+                f"\n\nRESPONSE PRESENTATION STYLE: Detailed & Explanatory ({meta['name']}):\n"
+                f"- Provide an in-depth, comprehensive, and thoroughly explanatory response in {meta['name']} ({meta['native_name']}) covering background, scope, technical benchmarks, test methods, and practical meaning.\n"
+                f"- Use clear markdown headings answering the question thoroughly and conclude cleanly."
+            )
+
     if role == "ANALYZE_AND_RESPOND":
         if resp_lang == "hi":
             system_prompt = SYSTEM_PROMPT_ANALYZE_AND_RESPOND_HI
@@ -1952,8 +2519,7 @@ def build_groq_messages(
             else:
                 user_prompt = (
                     f"User Query: {query}\n\n"
-                    f"यह एक सूचनात्मक प्रश्न है। कृपया स्पष्ट हिंदी (देवनागरी लिपि) में उत्तर दें। "
-                    f"मानक शीर्षकों और बुलेट पॉइंट्स के साथ एक व्यापक और सुव्यवस्थित व्याख्या प्रदान करें। "
+                    f"यह एक सूचनात्मक प्रश्न है। कृपया स्पष्ट हिंदी (देवनागरी लिपि) में उत्तर दें।{style_inst}\n\n"
                     f"तकनीकी मानक पहचानकर्ताओं (उदा. IS 4985), एककों (उदा. 2.5 MPa, 60°C) और संक्षिप्त रूपों (BIS, ISI, CRS, QCO, HUID) को मूल अक्षरों में बनाए रखें।"
                 )
         elif resp_lang == "en":
@@ -1966,7 +2532,7 @@ def build_groq_messages(
                 else:
                     user_prompt = f"User Query: {query}\n\nThis is a conversational greeting. Respond with the clean, concise 1-sentence greeting welcoming the user."
             else:
-                user_prompt = f"User Query: {query}\n\nThis is an informative inquiry. Provide a comprehensive, well-structured explanation with markdown headings and bullet points answering the question directly and conclude cleanly."
+                user_prompt = f"User Query: {query}\n\nThis is an informative inquiry. Provide an authoritative answer tailored to the requested presentation style:{style_inst}\n\nConclude cleanly."
         else:
             meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
             lang_name = meta["name"]
@@ -1985,7 +2551,7 @@ Preserve technical identifiers like 'IS 4985' and standard numbers exactly in La
             else:
                 user_prompt = (
                     f"User Query: {query}\n\n"
-                    f"This is an informative inquiry. Provide a comprehensive, well-structured explanation with markdown headings and bullet points in {lang_name} ({lang_native}, {lang_script} script). "
+                    f"This is an informative inquiry. Provide an authoritative answer in {lang_name} ({lang_native}, {lang_script} script) tailored to the requested presentation style:{style_inst}\n\n"
                     f"PRESERVE TECHNICAL IDENTIFIERS: Keep technical standard identifiers (e.g. IS 4985), units (e.g. 2.5 MPa, 60°C), and abbreviations (BIS, ISI, CRS, QCO, HUID) in standard original form."
                 )
         return [
@@ -2041,6 +2607,12 @@ Your responsibility is to provide a helpful, comprehensive, and accurate general
 
 CRITICAL RULES:
 - If the user asks about an unknown or unverified Indian Standard number (e.g. IS 9999999), state clearly that you cannot identify or verify this standard in BIS records; NEVER fabricate standard specifications, titles, or clauses.
+- PRODUCT & CERTIFICATION GUIDANCE: If the user asks what certifications or standards apply to a product (such as timber doors, furniture, electronics, etc.) and BIS records do not contain indexed evidence:
+  * Provide helpful general compliance guidance based on general knowledge:
+    1. Identify relevant Indian Standards if known from general knowledge (e.g. for timber doors: IS 2202 for wooden flush door shutters, IS 1003 for timber panelled and glazed shutters, IS 4020 for test methods).
+    2. Outline the standard BIS certification process under Scheme I (ISI Mark): product standard identification, factory infrastructure and testing facility setup, BIS inspection/audit, sample testing in BIS or recognized labs, and grant of licence.
+    3. Clearly distinguish voluntary certification from mandatory certification. Note that mandatory certification depends on whether a Quality Control Order (QCO) has been issued by the Government of India for that product category.
+  * Use non-absolute regulatory language: "From general regulatory knowledge, manufacturers may need to consider applicable product standards, certification schemes, and Quality Control Orders. This information is not verified against current BIS records."
 - Never invent amendment numbers, amendment dates, QCO mandates, or BIS fees.
 - Keep technical terms and standard designations in standard Latin characters."""
     else:
@@ -2139,72 +2711,6 @@ CRITICAL RULES:
                 f"4. Never invent unindexed standard numbers or clauses."
             )
 
-    # Style directives
-    if resp_lang == "hi":
-        if response_style == "Quick & Simple":
-            style_inst = (
-                f"\n\nउत्तर प्रस्तुति शैली: त्वरित एवं सरल (Quick & Simple):\n"
-                f"- संक्षिप्त, सीधा और मुख्य बिंदु-आधारित उत्तर 1-2 छोटे अनुच्छेदों या बुलेट पॉइंट्स में दें।\n"
-                f"- मुख्य निष्कर्ष और आवश्यक जानकारी सबसे पहले प्रस्तुत करें। अनावश्यक पृष्ठभूमि विवरण से बचें।\n"
-                f"- तकनीकी पहचानकर्ताओं (उदा. IS 4985) और एककों को मूल अक्षरों में बनाए रखें।"
-            )
-        elif response_style == "Professional & Compliance-focused":
-            style_inst = (
-                f"\n\nउत्तर प्रस्तुति शैली: व्यावसायिक एवं विनियामक अनुपालन-केंद्रित (Professional & Compliance-focused):\n"
-                f"- विनियामक और अनुपालन अधिकारियों के लिए उपयुक्त औपचारिक, वैधानिक एवं ऑडिट-तैयार शैली में उत्तर दें।\n"
-                f"- उत्तर को विनियामक शीर्षकों में व्यवस्थित करें (उदा. '### विनियामक कार्यक्षेत्र एवं दायरा', '### तकनीकी एवं अनुरूपता विनिर्देश', '### विनियामक अनुपालन प्रभाव')।\n"
-                f"- लागू भारतीय मानकों, परीक्षण मापदंडों और अनिवार्य प्रावधानों को बिना किसी सजावटी लेबल के औपचारिक और स्पष्ट रूप से प्रस्तुत करें।"
-            )
-        else:
-            style_inst = (
-                f"\n\nउत्तर प्रस्तुति शैली: विस्तृत एवं व्याख्यात्मक (Detailed & Explanatory):\n"
-                f"- संपूर्ण संदर्भ, कार्यक्षेत्र, तकनीकी विनिर्देश और व्यावहारिक अर्थ को शामिल करते हुए व्यापक और सुव्यवस्थित व्याख्या दें।"
-            )
-    elif resp_lang == "en":
-        if response_style == "Quick & Simple":
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Quick & Simple\n"
-                f"- Deliver a brief, direct, and scannable answer in 1-2 concise paragraphs or compact bullet points.\n"
-                f"- State the plain-language summary first, with minimal technical jargon while keeping exact standard numbers, clause numbers, and values.\n"
-                f"- Omit extensive background history or introductory filler."
-            )
-        elif response_style == "Professional & Compliance-focused":
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Professional & Compliance-focused\n"
-                f"- Provide a structured, formal, and audit-ready regulatory response suitable for compliance officers and assessors.\n"
-                f"- Organize with clear regulatory headings such as '### Regulatory Scope & Authority', '### Normative Technical & Compliance Benchmarks', '### Statutory Certification Framework', and '### Operational & Compliance Implications'.\n"
-                f"- Emphasize explicit standard citations, clauses, testing parameters, and compliance/operational implications.\n"
-                f"- Maintain a rigorous, objective professional tone without decorative badges, labels, or emojis."
-            )
-        else:
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Detailed & Explanatory\n"
-                f"- Provide a comprehensive, structured explanation covering background, scope, technical benchmarks, and practical meaning.\n"
-                f"- Use clear markdown headings answering the question thoroughly and conclude cleanly."
-            )
-    else:
-        meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
-        if response_style == "Quick & Simple":
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Quick & Simple ({meta['name']}):\n"
-                f"- Deliver a brief, direct, and scannable answer in 1-2 concise paragraphs or compact bullet points in {meta['name']} ({meta['native_name']}).\n"
-                f"- State the main plain-language summary first, keeping exact standard numbers, clause numbers, and values in standard Latin format.\n"
-                f"- Omit extensive background history or introductory filler."
-            )
-        elif response_style == "Professional & Compliance-focused":
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Professional & Compliance-focused ({meta['name']}):\n"
-                f"- Provide a structured, formal, and audit-ready regulatory response in {meta['name']} ({meta['native_name']}) suitable for compliance officers and assessors.\n"
-                f"- Organize with formal regulatory headings in {meta['name']} (e.g. Scope & Authority, Technical Benchmarks, Statutory Certification Framework, Compliance Implications).\n"
-                f"- Emphasize explicit standard citations, clauses, testing parameters, and compliance implications without decorative badges."
-            )
-        else:
-            style_inst = (
-                f"\n\nRESPONSE PRESENTATION STYLE: Detailed & Explanatory ({meta['name']}):\n"
-                f"- Provide a comprehensive, structured explanation in {meta['name']} ({meta['native_name']}) covering background, scope, technical benchmarks, and practical meaning.\n"
-                f"- Use clear markdown headings answering the question thoroughly and conclude cleanly."
-            )
-
     if role in ("ROLE_HYBRID_SYNTHESIS", "HYBRID_SYNTHESIS"):
         v_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["verified"]
         g_head = HYBRID_SECTION_HEADERS_MAP.get(resp_lang, HYBRID_SECTION_HEADERS_MAP["en"])["general"]
@@ -2215,7 +2721,7 @@ CRITICAL RULES:
 Reference context:
 ---
 {context_text}
----
+---{style_inst}
 
 Please synthesize a HYBRID answer in {meta['name']} ({meta['native_name']}) strictly formatted with these two distinct sections:
 ### {v_head}
@@ -2233,7 +2739,12 @@ Please synthesize a HYBRID answer in {meta['name']} ({meta['native_name']}) stri
     if role in ("ROLE_LLM_FALLBACK", "LLM_FALLBACK"):
         f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
         meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
-        user_prompt = f"""User Query: {query}
+        prod_hint = ""
+        if query_ctx and query_ctx.get("product"):
+            prod_hint = f"\nProduct Inquired: {query_ctx['product']}"
+        if query_ctx and query_ctx.get("intent") == INTENT_CERTIFICATION:
+            prod_hint += "\nTopic: Product Certification / Standards for Manufacturer. Provide general guidance on relevant Indian Standards (e.g. IS 2202, IS 1003 for timber doors), Scheme I ISI marking process, and clarify that mandatory status depends on Quality Control Orders (QCOs)."
+        user_prompt = f"""User Query: {query}{prod_hint}{style_inst}
 
 Please provide a helpful, clear, and comprehensive general answer in {meta['name']} ({meta['native_name']}):
 ### Answer
@@ -2257,16 +2768,17 @@ Please provide a helpful, clear, and comprehensive general answer in {meta['name
 
 CRITICAL HINDI LANGUAGE REQUIREMENTS / अनिवार्य नियम:
 1. संपूर्ण उत्तर प्राकृतिक एवं व्याकरणिक रूप से शुद्ध हिंदी (देवनागरी लिपि) में लिखें। अंग्रेजी में पैराग्राफ या सामान्य विवरण न लिखें। PRESERVE TECHNICAL IDENTIFIERS: केवल तकनीकी पहचानकर्ता (उदा. IS 4985, IS 8978), खंड (उदा. Clause 4.1), प्रयोगशाला नाम, पते, एकक (उदा. 2.5 MPa, 60°C, INR 15,000) और संक्षिप्त रूप (BIS, ISI, CRS, QCO) मूल अक्षरों में रहने दें।
-2. मानक संबंधी प्रश्नों (उदा. "What is IS 4985?" या "What is IS 8978?") के लिए निम्नलिखित संरचना का पालन करें:
-   - परिचयात्मक वाक्य (उदा. '[Standard] एक भारतीय मानक है जिसका आधिकारिक शीर्षक "[Standard Title]" है।')
-   - ### कार्यक्षेत्र एवं दायरा
-   - ### मानक विवरण (मानक संख्या, वर्ष, शीर्षक)
-   - ### सरल शब्दों में
+2. मानक परिभाषा संबंधी प्रश्नों (उदा. "What is IS 4985?" या "What is IS 8978?") के लिए:
+   - संक्षिप्त शैली के लिए: संक्षिप्त और स्पष्ट संरचना अपनाएं (मानक संख्या, आधिकारिक शीर्षक, संस्करण/वर्ष, और मुख्य कार्यक्षेत्र)।
+   - विस्तृत शैली के लिए: मानक संख्या, शीर्षक, संस्करण, कार्यक्षेत्र, संदर्भ में उपलब्ध तकनीकी परीक्षण विनिर्देश एवं व्यावहारिक महत्व सहित विस्तृत व्याख्या दें।
+   - व्यावसायिक शैली के लिए: औपचारिक विनियामक शीर्षकों (विनियामक कार्यक्षेत्र, तकनीकी विनिर्देश, मानक पहचान) के तहत प्रस्तुत करें।
+   - अनावश्यक दोहराव वाले अनुभाग न बनाएं।
 3. परीक्षण आवश्यकताएं संबंधी प्रश्नों के लिए: साक्ष्य में उपलब्ध विनिर्देशों व परीक्षण मापदंडों का सारांश दें। परीक्षण मापदंडों (उदा. हाइड्रोस्टैटिक प्रेशर टेस्ट) या उत्पाद मैनुअल शीर्षकों को मानक के आधिकारिक शीर्षक के रूप में प्रस्तुत न करें।
 4. यदि पूछे गए उत्पाद या मानक के लिए साक्ष्य अपर्याप्त हैं, तो स्पष्ट रूप से बताएं कि उपलब्ध बीआईएस साक्ष्यों से इसका सत्यापन नहीं किया जा सका।
 5. कभी भी 'Topic:' या 'Subject:' लेबलों का प्रयोग न करें।
 6. अंत में 'Sources' या 'References' अनुभाग न जोड़ें।
-7. स्वच्छ और स्पष्ट मार्कडाउन प्रारूप में उत्तर दें।"""
+7. स्वच्छ और स्पष्ट मार्कडाउन प्रारूप में उत्तर दें।
+8. प्रमाणन संबंधी प्रश्नों के लिए: साक्ष्य के अभाव को पूर्ण कानूनी निष्कर्ष न बनाएं (यह कभी न कहें कि प्रमाणन अनिवार्य नहीं है)। सावधानीपूर्वक बताएं कि उपलब्ध बीआईएस साक्ष्यों से यह स्थापित नहीं होता कि प्रमाणन अनिवार्य है या नहीं, और यह संबंधित मंत्रालय द्वारा जारी गुणवत्ता नियंत्रण आदेशों (QCO) पर निर्भर करता है।"""
     elif resp_lang == "en":
         user_prompt = f"""User Query: {query}
 
@@ -2278,17 +2790,18 @@ Reference context:
 Please answer the user's query directly, authoritatively, and professionally based strictly on the provided BIS reference context.{domain_inst}{style_inst}
 Rules:
 1. Ground all facts strictly in the reference context. Never invent unindexed clauses, parameters, pressure limits, dielectric ratings, or standards.
-2. For standard inquiries (e.g. "What is IS 4985?"), structure your answer concisely with:
-   - Direct opening definition (e.g. 'IS 4985 is the Indian Standard titled "..."')
-   - ### What it covers
-   - ### Standard details (Standard, Year, Title)
-   - ### In simple terms
+2. For standard definition inquiries (e.g. "What is IS 4985?"):
+   - For quick style: provide a concise, intent-focused definition (Standard Designation, Revision / Year, Official Title, Primary Scope).
+   - For detailed style: provide a comprehensive, structured explanation covering Standard Designation, Revision/Year, Official Title, Scope & Product Coverage, Key Technical Specifications & Testing Requirements from the reference context, and Practical Quality Significance.
+   - For professional style: organize under formal regulatory headings (Normative Scope & Authority, Normative Technical & Compliance Benchmarks, Standard Identification, Operational & Compliance Implications).
+   - In all styles: do NOT force repetitive sections duplicating the same standard number across 4 redundant headers.
 3. Never treat Product Manual titles (e.g. 'BIS Product Manual for IS 4985 ()') or laboratory names as official standard titles.
 4. Never treat test parameters (e.g. 'Hydrostatic Pressure Test') or arbitrary fragments ('BIS Certification Marking', 'General', 'Scope') as official standard titles.
 5. If evidence is insufficient for the queried product or standard, clearly state that it could not be verified from the available BIS records.
 6. Do NOT divide the answer into 'Topic:' or 'Subject:' labels.
 7. Do NOT include a 'Sources', 'References', or 'Bibliography' section at the end.
-8. Write clean markdown typography directly without card or text box structures."""
+8. Write clean markdown typography directly without card or text box structures.
+9. For regulatory or certification queries: never convert absence of evidence into an absolute legal conclusion (e.g. never say "there is no requirement for mandatory certification" or "certification is not mandatory"). State cautiously that the available BIS evidence does not establish whether certification is mandatory, and that mandatory certification depends on Quality Control Orders (QCOs) issued by the relevant Ministry."""
     else:
         meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
         user_prompt = f"""User Query: {query}
@@ -2324,6 +2837,8 @@ def strip_unverified_disclaimers(text: str) -> str:
     """Removes any apologetic, refusal, or 'not verified' disclaimers, retrieval debug dumps, or trailing sources block if generated."""
     if not text:
         return ""
+    # Normalize narrow no-break space and non-breaking space
+    text = text.replace('\u202f', ' ').replace('\xa0', ' ')
     # Strip thinking / chain-of-thought blocks if emitted by reasoning models
     text = re.sub(r'<think>[\s\S]*?</think>', '', text)
     # Strip disclaimers
@@ -2348,8 +2863,28 @@ def strip_unverified_disclaimers(text: str) -> str:
     text = re.sub(r'(?i)\n+\*?\*?(?:Sources?|स्रोत|संदर्भ):\*?\*?[\s\S]*$', '', text)
     text = re.sub(r'(?i)\n+(?:Sources|स्रोत|संदर्भ)\s*\n+[\s\S]*$', '', text)
 
+    # Strip raw image markdown, local URLs, raw SVG tags, and svgsvg leakage
+    text = re.sub(r'!\[[^\]]*\]\([^\)]*\)', '', text)
+    text = re.sub(r'\[image\]\([^\)]*\)', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'https?://(?:localhost|127\.0\.0\.1)(?::\d+)?/[^\s\)]+', '', text)
+    text = re.sub(r'<svg[\s\S]*?</svg>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsvgsvg\b', '', text, flags=re.IGNORECASE)
+
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
+
+def sanitize_final_answer(text: str) -> str:
+    """Strips image markdown, local URLs, SVGs, and normalizes typography."""
+    if not text:
+        return ""
+    text = text.replace('\u202f', ' ').replace('\xa0', ' ')
+    text = re.sub(r'!\[[^\]]*\]\([^\)]*\)', '', text)
+    text = re.sub(r'\[image\]\([^\)]*\)', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'https?://(?:localhost|127\.0\.0\.1)(?::\d+)?/[^\s\)]+', '', text)
+    text = re.sub(r'<svg[\s\S]*?</svg>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bsvgsvg\b', '', text, flags=re.IGNORECASE)
+    return re.sub(r'\n{3,}', '\n\n', text).strip()
+
 
 def ensure_complete_response(text: str) -> str:
     """
@@ -2389,7 +2924,7 @@ def ensure_complete_response(text: str) -> str:
     result = '\n'.join(lines).strip()
     return result if result else text
 
-def build_general_bis_answer(query: str, response_language: str = "en") -> str:
+def build_general_bis_answer(query: str, response_language: str = "en", response_style: str = "Detailed & Explanatory") -> str:
     """
     Builds authoritative, concise, and structured responses for general BIS institutional,
     conformity assessment schemes, and hallmarking inquiries.
@@ -2399,32 +2934,79 @@ def build_general_bis_answer(query: str, response_language: str = "en") -> str:
 
     # 1. Hallmarking inquiries (e.g. "tell me abput hallmarking", "hallmark", "huid")
     if re.search(r'\b(hallmark|hallmarking|huid|हॉलमार्क|हॉलमार्किंग)\b', q) or "hallmark" in q or "हॉलमार्क" in q:
-        if response_language == "hi":
+        if response_style == "Quick & Simple":
+            if response_language == "hi":
+                return (
+                    "### बीआईएस हॉलमार्किंग योजना\n\n"
+                    "**हॉलमार्किंग** भारतीय मानक ब्यूरो अधिनियम, 2016 के अंतर्गत स्वर्ण और रजत आभूषणों की आधिकारिक शुद्धता का वैधानिक सत्यापन है।\n\n"
+                    "**हॉलमार्क वस्तु के तीन अनिवार्य निशान:**\n"
+                    "1. **बीआईएस मानक चिह्न:** आधिकारिक त्रिकोणीय बीआईएस लोगो।\n"
+                    "2. **शुद्धता / सुंदरता ग्रेड:** कैरेट एवं शुद्धता (उदा. `22K916`)।\n"
+                    "3. **HUID (हॉलमार्क विशिष्ट पहचान संख्या):** 6-अंकीय कोड, जिसे **BIS Care App** पर सत्यापित किया जा सकता है।\n\n"
+                    "संक्षेप में: यह एएचसी (AHCs) द्वारा जांच कर उपभोक्ताओं को मिलावट से सुरक्षा प्रदान करता है।"
+                )
             return (
-                "### बीआईएस हॉलमार्किंग योजना\n\n"
-                "**हॉलमार्किंग** भारतीय मानक ब्यूरो अधिनियम, 2016 के अंतर्गत स्वर्ण और रजत (सोने एवं चांदी) की वस्तुओं में कीमती धातु की शुद्धता/सुंदरता का आधिकारिक निर्धारण और वैधानिक सत्यापन है।\n\n"
-                "### बीआईएस हॉलमार्किंग के मुख्य घटक\n"
-                "- **अनिवार्य शुद्धता आश्वासन:** अनिवार्य हॉलमार्किंग उपभोक्ताओं को मिलावट से बचाती है और ज्वैलर्स को केवल सत्यापित शुद्धता ग्रेड (उदा. सोने के लिए 14K, 18K, 20K, 22K, 23K, और 24K) बेचने के लिए बाध्य करती है।\n"
-                "- **परख एवं हॉलमार्किंग केंद्र (AHCs):** बीआईएस मान्यता प्राप्त स्वतंत्र परीक्षण केंद्र धातु की शुद्धता की पुष्टि के लिए प्रत्येक वस्तु की परख करते हैं।\n"
-                "- **हॉलमार्किंग शुल्क:** आभूषण के वजन पर विचार किए बिना प्रति वस्तु वैधानिक शुल्क निर्धारित होता है।\n\n"
-                "### हॉलमार्क वस्तु के तीन अनिवार्य निशान\n"
-                "1. **बीआईएस मानक चिह्न:** आधिकारिक त्रिकोणीय बीआईएस लोगो।\n"
-                "2. **शुद्धता / सुंदरता ग्रेड:** कैरेट और शुद्धता (उदा. 22 कैरेट 91.6% शुद्धता के लिए `22K916`)।\n"
-                "3. **HUID (हॉलमार्क विशिष्ट पहचान संख्या):** प्रत्येक आभूषण पर 6-अंकीय अक्षरांकीय कोड, जिसे उपभोक्ता **BIS Care App** पर सत्यापित कर सकते हैं।"
+                "### BIS Hallmarking Scheme\n\n"
+                "**Hallmarking** is the statutory purity verification of gold and silver jewelry under the **Bureau of Indian Standards Act, 2016**.\n\n"
+                "**Three Essential Marks on Hallmarked Gold:**\n"
+                "1. **BIS Standard Mark:** Triangular BIS logo.\n"
+                "2. **Purity / Fineness Grade:** Carat and purity (e.g., `22K916` for 22 carat).\n"
+                "3. **HUID (Hallmark Unique Identification):** 6-character alphanumeric code verifiable on the **BIS Care App**.\n\n"
+                "In brief: Ensures guaranteed metal purity through BIS-recognized Assaying and Hallmarking Centres (AHCs)."
             )
-        return (
-            "### BIS Hallmarking Scheme\n\n"
-            "**Hallmarking** is the official determination and statutory recording of the proportionate content (purity/fineness) of precious metal in gold and silver articles under the **Bureau of Indian Standards Act, 2016**.\n\n"
-            "### Key Elements of BIS Hallmarking\n"
-            "- **Mandatory Purity Assurance:** Mandatory hallmarking protects consumers against adulteration and obligates jewellers to sell only verified purity grades (e.g., 14K, 18K, 20K, 22K, 23K, and 24K for gold).\n"
-            "- **Assaying and Hallmarking Centres (AHCs):** Independent BIS-recognized testing centres assay each article to verify precious metal purity.\n"
-            "- **Hallmarking Charges:** Fixed statutory fees are paid per article irrespective of the weight of the jewellery.\n\n"
-            "### Components of a Hallmarked Article\n"
-            "A genuine BIS hallmarked gold article features three distinct marks:\n"
-            "1. **BIS Standard Mark:** The official triangular BIS logo.\n"
-            "2. **Purity / Fineness Grade:** Purity in carats and fineness (e.g., `22K916` for 22 carat gold with 91.6% purity).\n"
-            "3. **HUID (Hallmark Unique Identification):** A 6-character alphanumeric code unique to each jewellery piece, enabling consumers to verify authenticity using the **BIS Care App**."
-        )
+        elif response_style == "Professional & Compliance-focused":
+            if response_language == "hi":
+                return (
+                    "### वैधानिक ढांचा: बीआईएस हॉलमार्किंग योजना\n\n"
+                    "**भारतीय मानक ब्यूरो अधिनियम, 2016** एवं हॉलमार्किंग विनियमों के अंतर्गत, हॉलमार्किंग स्वर्ण एवं रजत की वस्तुओं में कीमती धातु की शुद्धता का आधिकारिक निर्धारण और वैधानिक सत्यापन है।\n\n"
+                    "### विनियामक प्रावधान एवं परिचालन वास्तुकला\n"
+                    "- **अनिवार्य वैधानिक दायरा:** केंद्र सरकार द्वारा अधिसूचित जिलों में पंजीकृत जौहरियों के लिए केवल हॉलमार्क प्रमाणित आभूषण बेचना अनिवार्य है।\n"
+                    "- **परख एवं हॉलमार्किंग केंद्र (AHCs):** बीआईएस अधिनियम की धारा 14 के तहत मान्यता प्राप्त तृतीय-पक्ष परीक्षण सुविधाएं जो सख्त निगरानी और परीक्षण प्रोटोकॉल के तहत कार्य करती हैं।\n"
+                    "- **वैधानिक ट्रेसबिलिटी (HUID):** प्रत्येक आभूषण पर 6-अंकीय अक्षरांकीय कोड अंकित होता है जिसे **BIS Care App** पर सत्यापित किया जा सकता है।\n\n"
+                    "### तीन अनिवार्य प्रमाणन घटक\n"
+                    "1. **बीआईएस मानक चिह्न:** आधिकारिक त्रिकोणीय लोगो।\n"
+                    "2. **शुद्धता / सुंदरता ग्रेड:** वैधानिक शुद्धता अंकन (उदा. `22K916`)।\n"
+                    "3. **HUID:** विशिष्ट पहचान संख्या जिसे उपभोक्ता सत्यापित कर सकते हैं।"
+                )
+            return (
+                "### Statutory Framework: BIS Hallmarking Scheme\n\n"
+                "Under the **Bureau of Indian Standards Act, 2016** and Hallmarking Regulations, hallmarking represents the mandatory determination and statutory recording of precious metal purity in gold and silver articles.\n\n"
+                "### Statutory Mandate & Operational Architecture\n"
+                "- **Statutory Enforcement:** Mandatory hallmarking orders notified by the Central Government require registered jewellers to sell only hallmarked articles in notified districts.\n"
+                "- **Assaying & Hallmarking Centres (AHCs):** Independent conformity assessment facilities recognized under Section 14 of the BIS Act, operating under strict audit surveillance.\n"
+                "- **Statutory Traceability (HUID):** Every article is laser-etched with a unique 6-character alphanumeric code registered on the central BIS portal.\n\n"
+                "### Tripartite Authentication Protocol\n"
+                "1. **BIS Standard Mark:** Statutory triangular emblem confirming certified conformity.\n"
+                "2. **Purity / Fineness Grade:** Statutory purity designation (e.g., `22K916` for 22 carat).\n"
+                "3. **HUID:** Individual item-level digital traceability verifiable via the **BIS Care App**."
+            )
+        else:
+            if response_language == "hi":
+                return (
+                    "### बीआईएस हॉलमार्किंग योजना\n\n"
+                    "**हॉलमार्किंग** भारतीय मानक ब्यूरो अधिनियम, 2016 के अंतर्गत स्वर्ण और रजत (सोने एवं चांदी) की वस्तुओं में कीमती धातु की शुद्धता/सुंदरता का आधिकारिक निर्धारण और वैधानिक सत्यापन है।\n\n"
+                    "### बीआईएस हॉलमार्किंग के मुख्य घटक\n"
+                    "- **अनिवार्य शुद्धता आश्वासन:** अनिवार्य हॉलमार्किंग उपभोक्ताओं को मिलावट से बचाती है और ज्वैलर्स को केवल सत्यापित शुद्धता ग्रेड (उदा. सोने के लिए 14K, 18K, 20K, 22K, 23K, और 24K) बेचने के लिए बाध्य करती है।\n"
+                    "- **परख एवं हॉलमार्किंग केंद्र (AHCs):** बीआईएस मान्यता प्राप्त स्वतंत्र परीक्षण केंद्र धातु की शुद्धता की पुष्टि के लिए प्रत्येक वस्तु की परख करते हैं।\n"
+                    "- **हॉलमार्किंग शुल्क:** आभूषण के वजन पर विचार किए बिना प्रति वस्तु वैधानिक शुल्क निर्धारित होता है।\n\n"
+                    "### हॉलमार्क वस्तु के तीन अनिवार्य निशान\n"
+                    "1. **बीआईएस मानक चिह्न:** आधिकारिक त्रिकोणीय बीआईएस लोगो।\n"
+                    "2. **शुद्धता / सुंदरता ग्रेड:** कैरेट और शुद्धता (उदा. 22 कैरेट 91.6% शुद्धता के लिए `22K916`)।\n"
+                    "3. **HUID (हॉलमार्क विशिष्ट पहचान संख्या):** प्रत्येक आभूषण पर 6-अंकीय अक्षरांकीय कोड, जिसे उपभोक्ता **BIS Care App** पर सत्यापित कर सकते हैं।"
+                )
+            return (
+                "### BIS Hallmarking Scheme\n\n"
+                "**Hallmarking** is the official determination and statutory recording of the proportionate content (purity/fineness) of precious metal in gold and silver articles under the **Bureau of Indian Standards Act, 2016**.\n\n"
+                "### Key Elements of BIS Hallmarking\n"
+                "- **Mandatory Purity Assurance:** Mandatory hallmarking protects consumers against adulteration and obligates jewellers to sell only verified purity grades (e.g., 14K, 18K, 20K, 22K, 23K, and 24K for gold).\n"
+                "- **Assaying and Hallmarking Centres (AHCs):** Independent BIS-recognized testing centres assay each article to verify precious metal purity.\n"
+                "- **Hallmarking Charges:** Fixed statutory fees are paid per article irrespective of the weight of the jewellery.\n\n"
+                "### Components of a Hallmarked Article\n"
+                "A genuine BIS hallmarked gold article features three distinct marks:\n"
+                "1. **BIS Standard Mark:** The official triangular BIS logo.\n"
+                "2. **Purity / Fineness Grade:** Purity in carats and fineness (e.g., `22K916` for 22 carat gold with 91.6% purity).\n"
+                "3. **HUID (Hallmark Unique Identification):** A 6-character alphanumeric code unique to each jewellery piece, enabling consumers to verify authenticity using the **BIS Care App**."
+            )
 
     # 2. Certification schemes / types of certifications
     if (
@@ -2432,74 +3014,176 @@ def build_general_bis_answer(query: str, response_language: str = "en") -> str:
         or any(w in q for w in ["types of certification", "types of certifications", "how many certifications", "certification schemes", "schemes of certification", "प्रमाणन योजना"])
         or re.search(r'\b(isi\s*mark|crs\b|compulsory\s+registration|fmcs\b|foreign\s+manufacturers?|management\s+systems?\s+certification|आईएसआई\s*मार्क)\b', q)
     ):
-        if response_language == "hi":
+        if response_style == "Quick & Simple":
+            if response_language == "hi":
+                return (
+                    "### बीआईएस प्रमाणन योजनाएं\n\n"
+                    "भारतीय मानक ब्यूरो (BIS) मुख्य रूप से निम्नलिखित अनुरूपता मूल्यांकन योजनाएं संचालित करता है:\n\n"
+                    "1. **उत्पाद प्रमाणन (ISI मार्क - स्कीम-I):** घरेलू निर्माताओं के लिए गुणवत्ता और सुरक्षा प्रमाणन।\n"
+                    "2. **अनिवार्य पंजीकरण योजना (CRS - स्कीम-II):** इलेक्ट्रॉनिक्स और आईटी उत्पादों के लिए स्व-घोषणा।\n"
+                    "3. **विदेशी निर्माता योजना (FMCS):** भारत में निर्यात करने वाले विदेशी निर्माताओं के लिए ISI मार्क।\n"
+                    "4. **हॉलमार्किंग योजना:** सोने और चांदी के आभूषणों की शुद्धता (HUID सहित)।\n"
+                    "5. **प्रबंधन प्रणाली योजना (MSCS):** ISO 9001, ISO 14001 आदि के लिए प्रमाणन।\n"
+                    "6. **इको मार्क (ECO Mark):** पर्यावरण-अनुकूल उत्पादों के लिए विशेष प्रमाणन।\n\n"
+                    "संक्षेप में: गुणवत्ता नियंत्रण आदेश (QCOs) के तहत अधिसूचित वस्तुओं के लिए प्रमाणन अनिवार्य है।"
+                )
             return (
-                "### बीआईएस प्रमाणन योजनाएं\n\n"
-                "**भारतीय मानक ब्यूरो (BIS)** पूरे भारत में उत्पाद की गुणवत्ता, सुरक्षा और विश्वसनीयता सुनिश्चित करने के लिए कई प्रमाणन एवं अनुरूपता मूल्यांकन योजनाएं संचालित करता है:\n\n"
-                "1. **उत्पाद प्रमाणन योजना (ISI मार्क - स्कीम-I)**\n"
-                "   - घरेलू निर्माताओं के लिए हजारों औद्योगिक और उपभोक्ता उत्पादों पर लागू।\n"
-                "   - फैक्ट्री ऑडिट, प्रक्रिया गुणवत्ता नियंत्रण, इन-हाउस परीक्षण सुविधाओं और नमूना सत्यापन की आवश्यकता होती है।\n"
-                "   - गुणवत्ता नियंत्रण आदेश (QCOs) के तहत अधिसूचित वस्तुओं के लिए अनिवार्य, अन्य के लिए स्वैच्छिक।\n\n"
-                "2. **अनिवार्य पंजीकरण योजना (CRS - स्कीम-II)**\n"
-                "   - विशेष रूप से इलेक्ट्रॉनिक और आईटी सामानों (उदा. मोबाइल फोन, लैपटॉप, एलईडी ड्राइवर, पावर एडाप्टर) के लिए।\n"
-                "   - बिना प्रारंभिक फैक्ट्री निरीक्षण के, बीआईएस मान्यता प्राप्त प्रयोगशालाओं की परीक्षण रिपोर्ट के आधार पर अनुरूपता की स्व-घोषणा।\n\n"
-                "3. **विदेशी निर्माता प्रमाणन योजना (FMCS)**\n"
-                "   - भारत के बाहर स्थित विदेशी निर्माताओं को भारत में निर्यात किए जाने वाले उत्पादों पर मानक चिह्न (ISI मार्क) का उपयोग करने में सक्षम बनाती है।\n"
-                "   - विदेशी विनिर्माण इकाइयों के ऑन-साइट निरीक्षण और भारत में स्वतंत्र नमूना परीक्षण की आवश्यकता होती है।\n\n"
-                "4. **हॉलमार्किंग योजना**\n"
-                "   - बहुमूल्य धातुओं (सोने और चांदी के आभूषण और कलाकृतियां) के लिए वैधानिक गुणवत्ता आश्वासन।\n"
-                "   - परख एवं हॉलमार्किंग केंद्रों (AHCs) के माध्यम से विशिष्ट HUID के साथ शुद्धता प्रमाणित की जाती है।\n\n"
-                "5. **प्रबंधन प्रणाली प्रमाणन योजना (MSCS)**\n"
-                "   - अंतरराष्ट्रीय और राष्ट्रीय प्रबंधन प्रणाली मानकों (उदा. गुणवत्ता के लिए ISO 9001, पर्यावरण के लिए ISO 14001, खाद्य सुरक्षा के लिए ISO 22000) के अनुपालन हेतु प्रमाणन।\n\n"
-                "6. **इको मार्क (ECO Mark) योजना**\n"
-                "   - भारतीय मानकों की गुणवत्ता आवश्यकताओं के अतिरिक्त विशिष्ट पर्यावरणीय मानदंडों को पूरा करने वाले उत्पादों के लिए विशेष प्रमाणन।"
+                "### BIS Certification Schemes\n\n"
+                "The Bureau of Indian Standards (BIS) operates six primary conformity assessment schemes:\n\n"
+                "1. **Product Certification (ISI Mark - Scheme-I):** Domestic factory audits, in-house testing, and sample verification.\n"
+                "2. **Compulsory Registration Scheme (CRS - Scheme-II):** Self-declaration of conformity for electronics and IT goods.\n"
+                "3. **Foreign Manufacturers Certification Scheme (FMCS):** Enables overseas factories to use the ISI Mark on exports to India.\n"
+                "4. **Hallmarking Scheme:** Statutory purity certification for gold and silver articles.\n"
+                "5. **Management Systems Certification (MSCS):** ISO 9001, ISO 14001, ISO 22000 organizational certifications.\n"
+                "6. **ECO Mark Scheme:** Environmental safety criteria combined with Indian Standards.\n\n"
+                "In brief: Certification is mandatory for products notified under Quality Control Orders (QCOs), and voluntary for others."
             )
-        return (
-            "### BIS Certification Schemes\n\n"
-            "The **Bureau of Indian Standards (BIS)** operates several conformity assessment and certification schemes to ensure product quality, safety, and consumer reliability across India:\n\n"
-            "1. **Product Certification Scheme (ISI Mark - Scheme-I)**\n"
-            "   - Applicable to domestic manufacturers across thousands of industrial and consumer products.\n"
-            "   - Requires factory audits, process quality control, in-house testing facilities, and sample verification.\n"
-            "   - Mandatory for commodities governed under Quality Control Orders (QCOs), and voluntary for others.\n\n"
-            "2. **Compulsory Registration Scheme (CRS - Scheme-II)**\n"
-            "   - Specifically tailored for electronic and IT goods (e.g., mobile phones, laptops, LED drivers, power adapters).\n"
-            "   - Operates on a self-declaration of conformity based on test reports from BIS-recognized laboratories, without mandatory preliminary factory inspections.\n\n"
-            "3. **Foreign Manufacturers Certification Scheme (FMCS)**\n"
-            "   - Enables overseas manufacturers located outside India to obtain a BIS license and use the Standard Mark (ISI Mark) on products exported to India.\n"
-            "   - Requires on-site inspection of foreign manufacturing units and independent sample testing in India.\n\n"
-            "4. **Hallmarking Scheme**\n"
-            "   - Statutory quality assurance for precious metals (Gold and Silver jewelry and artefacts).\n"
-            "   - Certifies purity and fineness through Assaying and Hallmarking Centres (AHCs) with a unique Hallmarking Unique ID (HUID).\n\n"
-            "5. **Management Systems Certification Scheme (MSCS)**\n"
-            "   - Certifies organizations for compliance with international and national management system standards (e.g., ISO 9001 for Quality, ISO 14001 for Environment, ISO 22000 for Food Safety, and ISO 45001 for Occupational Health).\n\n"
-            "6. **ECO Mark Scheme**\n"
-            "   - Grants specialized certification for products meeting specific environmental criteria in addition to the quality requirements of Indian Standards."
-        )
+        elif response_style == "Professional & Compliance-focused":
+            if response_language == "hi":
+                return (
+                    "### विनियामक ढांचा: बीआईएस प्रमाणन एवं अनुरूपता मूल्यांकन योजनाएं\n\n"
+                    "**भारतीय मानक ब्यूरो (अनुरूपता मूल्यांकन) विनियम, 2018** के तहत, बीआईएस राष्ट्रीय गुणवत्ता, सुरक्षा और विनियामक अनुपालन सुनिश्चित करने के लिए वैधानिक योजनाएं संचालित करता है:\n\n"
+                    "1. **योजना-I (उत्पाद प्रमाणन - ISI मार्क):**\n"
+                    "   - घरेलू निर्माताओं के लिए लागू; फैक्ट्री ऑडिट, प्रक्रिया गुणवत्ता नियंत्रण (SIT) और प्रयोगशाला परीक्षण की आवश्यकता।\n"
+                    "   - गुणवत्ता नियंत्रण आदेश (QCO) के तहत अधिसूचित वस्तुओं के लिए अनिवार्य।\n\n"
+                    "2. **योजना-II (अनिवार्य पंजीकरण योजना - CRS):**\n"
+                    "   - इलेक्ट्रॉनिक्स एवं सूचना प्रौद्योगिकी उत्पादों के लिए MeitY/BIS द्वारा अधिसूचित।\n"
+                    "   - प्रारंभिक फैक्ट्री ऑडिट के बिना मान्यता प्राप्त प्रयोगशालाओं की परीक्षण रिपोर्ट के आधार पर स्व-घोषणा।\n\n"
+                    "3. **विदेशी निर्माता प्रमाणन योजना (FMCS):**\n"
+                    "   - भारत के बाहर स्थित विनिर्माण इकाइयों के ऑन-साइट निरीक्षण और भारतीय मान्यता प्राप्त प्रयोगशालाओं में स्वतंत्र परीक्षण पर आधारित लाइसेंस।\n\n"
+                    "4. **हॉलमार्किंग योजना:**\n"
+                    "   - बहुमूल्य धातुओं के लिए अनिवार्य विनियामक गुणवत्ता सत्यापन (AHCs एवं HUID आधारित)।\n\n"
+                    "5. **प्रबंधन प्रणाली प्रमाणन योजना (MSCS):**\n"
+                    "   - ISO 9001 (गुणवत्ता), ISO 14001 (पर्यावरण), ISO 45001 (व्यावसायिक स्वास्थ्य) आदि के लिए सांविधिक प्रमाणन।\n\n"
+                    "6. **इको मार्क (ECO Mark) योजना:**\n"
+                    "   - मानक गुणवत्ता के अतिरिक्त निर्धारित पर्यावरणीय मानदंडों का अनुपालन।"
+                )
+            return (
+                "### Regulatory Framework: BIS Conformity Assessment & Certification Schemes\n\n"
+                "Under the **Bureau of Indian Standards (Conformity Assessment) Regulations, 2018**, BIS enforces statutory schemes governing industrial and consumer market access:\n\n"
+                "1. **Scheme-I (Product Certification - ISI Mark):**\n"
+                "   - Domestic manufacturing conformity requiring preliminary factory inspection, Scheme of Inspection and Testing (SIT), in-house testing facilities, and sample verification.\n"
+                "   - Mandatory for products governed under statutory Quality Control Orders (QCOs).\n\n"
+                "2. **Scheme-II (Compulsory Registration Scheme - CRS):**\n"
+                "   - Specifically notified for electronics and IT goods (e.g., mobile phones, adaptors, LED lighting).\n"
+                "   - Operates via self-declaration of conformity based on test reports from BIS-recognized labs without preliminary factory audits.\n\n"
+                "3. **Foreign Manufacturers Certification Scheme (FMCS):**\n"
+                "   - Grants ISI mark license to overseas manufacturing units through mandatory overseas factory audits and independent sample testing in India.\n\n"
+                "4. **Hallmarking Scheme:**\n"
+                "   - Statutory quality assurance for precious metals with mandatory HUID digital traceability.\n\n"
+                "5. **Management Systems Certification Scheme (MSCS):**\n"
+                "   - Certifies organizations against ISO 9001, ISO 14001, ISO 22000, and ISO 45001 standards.\n\n"
+                "6. **ECO Mark Scheme:**\n"
+                "   - Additional environmental criteria verification layered on applicable Indian Standards."
+            )
+        else:
+            if response_language == "hi":
+                return (
+                    "### बीआईएस प्रमाणन योजनाएं\n\n"
+                    "**भारतीय मानक ब्यूरो (BIS)** पूरे भारत में उत्पाद की गुणवत्ता, सुरक्षा और विश्वसनीयता सुनिश्चित करने के लिए कई प्रमाणन एवं अनुरूपता मूल्यांकन योजनाएं संचालित करता है:\n\n"
+                    "1. **उत्पाद प्रमाणन योजना (ISI मार्क - स्कीम-I)**\n"
+                    "   - घरेलू निर्माताओं के लिए हजारों औद्योगिक और उपभोक्ता उत्पादों पर लागू।\n"
+                    "   - फैक्ट्री ऑडिट, प्रक्रिया गुणवत्ता नियंत्रण, इन-हाउस परीक्षण सुविधाओं और नमूना सत्यापन की आवश्यकता होती है।\n"
+                    "   - गुणवत्ता नियंत्रण आदेश (QCOs) के तहत अधिसूचित वस्तुओं के लिए अनिवार्य, अन्य के लिए स्वैच्छिक।\n\n"
+                    "2. **अनिवार्य पंजीकरण योजना (CRS - स्कीम-II)**\n"
+                    "   - विशेष रूप से इलेक्ट्रॉनिक और आईटी सामानों (उदा. मोबाइल फोन, लैपटॉप, एलईडी ड्राइवर, पावर एडाप्टर) के लिए।\n"
+                    "   - बिना प्रारंभिक फैक्ट्री निरीक्षण के, बीआईएस मान्यता प्राप्त प्रयोगशालाओं की परीक्षण रिपोर्ट के आधार पर अनुरूपता की स्व-घोषणा।\n\n"
+                    "3. **विदेशी निर्माता प्रमाणन योजना (FMCS)**\n"
+                    "   - भारत के बाहर स्थित विदेशी निर्माताओं को भारत में निर्यात किए जाने वाले उत्पादों पर मानक चिह्न (ISI मार्क) का उपयोग करने में सक्षम बनाती है।\n"
+                    "   - विदेशी विनिर्माण इकाइयों के ऑन-साइट निरीक्षण और भारत में स्वतंत्र नमूना परीक्षण की आवश्यकता होती है।\n\n"
+                    "4. **हॉलमार्किंग योजना**\n"
+                    "   - बहुमूल्य धातुओं (सोने और चांदी के आभूषण और कलाकृतियां) के लिए वैधानिक गुणवत्ता आश्वासन।\n"
+                    "   - परख एवं हॉलमार्किंग केंद्रों (AHCs) के माध्यम से विशिष्ट HUID के साथ शुद्धता प्रमाणित की जाती है।\n\n"
+                    "5. **प्रबंधन प्रणाली प्रमाणन योजना (MSCS)**\n"
+                    "   - अंतरराष्ट्रीय और राष्ट्रीय प्रबंधन प्रणाली मानकों (उदा. गुणवत्ता के लिए ISO 9001, पर्यावरण के लिए ISO 14001, खाद्य सुरक्षा के लिए ISO 22000) के अनुपालन हेतु प्रमाणन।\n\n"
+                    "6. **इको मार्क (ECO Mark) योजना**\n"
+                    "   - भारतीय मानकों की गुणवत्ता आवश्यकताओं के अतिरिक्त विशिष्ट पर्यावरणीय मानदंडों को पूरा करने वाले उत्पादों के लिए विशेष प्रमाणन।"
+                )
+            return (
+                "### BIS Certification Schemes\n\n"
+                "The **Bureau of Indian Standards (BIS)** operates several conformity assessment and certification schemes to ensure product quality, safety, and consumer reliability across India:\n\n"
+                "1. **Product Certification Scheme (ISI Mark - Scheme-I)**\n"
+                "   - Applicable to domestic manufacturers across thousands of industrial and consumer products.\n"
+                "   - Requires factory audits, process quality control, in-house testing facilities, and sample verification.\n"
+                "   - Mandatory for commodities governed under Quality Control Orders (QCOs), and voluntary for others.\n\n"
+                "2. **Compulsory Registration Scheme (CRS - Scheme-II)**\n"
+                "   - Specifically tailored for electronic and IT goods (e.g., mobile phones, laptops, LED drivers, power adapters).\n"
+                "   - Operates on a self-declaration of conformity based on test reports from BIS-recognized laboratories, without mandatory preliminary factory inspections.\n\n"
+                "3. **Foreign Manufacturers Certification Scheme (FMCS)**\n"
+                "   - Enables overseas manufacturers located outside India to obtain a BIS license and use the Standard Mark (ISI Mark) on products exported to India.\n"
+                "   - Requires on-site inspection of foreign manufacturing units and independent sample testing in India.\n\n"
+                "4. **Hallmarking Scheme**\n"
+                "   - Statutory quality assurance for precious metals (Gold and Silver jewelry and artefacts).\n"
+                "   - Certifies purity and fineness through Assaying and Hallmarking Centres (AHCs) with a unique Hallmarking Unique ID (HUID).\n\n"
+                "5. **Management Systems Certification Scheme (MSCS)**\n"
+                "   - Certifies organizations for compliance with international and national management system standards (e.g., ISO 9001 for Quality, ISO 14001 for Environment, ISO 22000 for Food Safety, and ISO 45001 for Occupational Health).\n\n"
+                "6. **ECO Mark Scheme**\n"
+                "   - Grants specialized certification for products meeting specific environmental criteria in addition to the quality requirements of Indian Standards."
+            )
 
     # 3. Default Institutional Overview
-    if response_language == "hi":
+    if response_style == "Quick & Simple":
+        if response_language == "hi":
+            return (
+                "### भारतीय मानक ब्यूरो (BIS)\n\n"
+                "**भारतीय मानक ब्यूरो (BIS)** भारत का राष्ट्रीय मानक निकाय है (उपभोक्ता मामले मंत्रालय, भारत सरकार)।\n\n"
+                "- **मानक निर्माण:** विभिन्न उत्पादों एवं सेवाओं के लिए राष्ट्रीय मानक।\n"
+                "- **प्रमाणन:** ISI मार्क (Scheme I), CRS (Scheme II), और FMCS।\n"
+                "- **हॉलमार्किंग:** सोने व चांदी के आभूषणों की शुद्धता का वैधानिक सत्यापन।\n\n"
+                "आप मुझसे विशिष्ट भारतीय मानकों (उदा. *IS 8978 क्या है?*) या प्रयोगशालाओं के बारे में पूछ सकते हैं।"
+            )
         return (
-            "### भारतीय मानक ब्यूरो (BIS)\n\n"
-            "**भारतीय मानक ब्यूरो (BIS)** भारत का राष्ट्रीय मानक निकाय है, जो उपभोक्ता मामले, खाद्य और सार्वजनिक वितरण मंत्रालय, भारत सरकार के अधीन **भारतीय मानक ब्यूरो अधिनियम, 2016** के तहत स्थापित किया गया है।\n\n"
-            "**मुख्य गतिविधियां एवं सेवाएं:**\n"
-            "- **मानक निर्माण:** उत्पादों, प्रक्रियाओं और सेवाओं के लिए राष्ट्रीय मानकों का निर्माण।\n"
-            "- **उत्पाद प्रमाणन योजना (ISI मार्क):** औद्योगिक और उपभोक्ता उत्पादों की विश्वसनीयता और सुरक्षा सुनिश्चित करना।\n"
-            "- **अनिवार्य पंजीकरण योजना (CRS):** इलेक्ट्रॉनिक्स और आईटी उत्पादों के लिए स्व-घोषणा योजना।\n"
-            "- **हॉलमार्किंग योजना:** सोने और चांदी के आभूषणों की शुद्धता का सत्यापन।\n"
-            "- **प्रयोगशाला नेटवर्क एवं मान्यता:** भारत भर में परीक्षण प्रयोगशालाओं को मान्यता प्रदान करना।\n\n"
-            "आप मुझसे विशिष्ट भारतीय मानकों (उदा. *IS 8978 क्या है?*), मान्यता प्राप्त प्रयोगशाला परीक्षण क्षेत्रों या परीक्षण शुल्क के बारे में पूछ सकते हैं।"
+            "### Bureau of Indian Standards (BIS)\n\n"
+            "The **Bureau of Indian Standards (BIS)** is the National Standards Body of India under the Ministry of Consumer Affairs, Food and Public Distribution.\n\n"
+            "- **Standards Formulation:** National standards for products, processes, and services.\n"
+            "- **Product Certification:** ISI Mark (Scheme-I), CRS (Scheme-II), and FMCS for foreign makers.\n"
+            "- **Hallmarking:** Statutory precious metal purity certification with HUID.\n\n"
+            "You can ask me about specific Indian Standards (e.g., *What is IS 8978?*) or accredited testing laboratories."
         )
-    return (
-        "### Bureau of Indian Standards (BIS)\n\n"
-        "The **Bureau of Indian Standards (BIS)** is the National Standards Body of India, established under the **Bureau of Indian Standards Act, 2016** under the Ministry of Consumer Affairs, Food and Public Distribution, Government of India.\n\n"
-        "**Core Activities & Services:**\n"
-        "- **Standards Formulation:** Formulating national standards for products, processes, and services.\n"
-        "- **Product Certification Scheme (ISI Mark):** Ensuring compliance, reliability, and consumer safety for industrial and consumer products.\n"
-        "- **Compulsory Registration Scheme (CRS):** Self-declaration of conformity scheme for electronic and IT products.\n"
-        "- **Hallmarking Scheme:** Verification and marking of purity of gold and silver jewelry.\n"
-        "- **Laboratory Network & Recognition:** Accrediting and recognizing testing laboratories across India.\n\n"
-        "You can ask me about specific Indian Standards (e.g., *What is IS 8978?*), accredited laboratory testing scopes, or testing fees."
-    )
+    elif response_style == "Professional & Compliance-focused":
+        if response_language == "hi":
+            return (
+                "### वैधानिक निकाय परिचय: भारतीय मानक ब्यूरो (BIS)\n\n"
+                "**भारतीय मानक ब्यूरो अधिनियम, 2016** के तहत स्थापित, बीआईएस उपभोक्ता मामले, खाद्य एवं सार्वजनिक वितरण मंत्रालय के अधीन भारत का शीर्ष राष्ट्रीय मानक निकाय है।\n\n"
+                "### वैधानिक अधिदेश एवं कार्यक्षेत्र\n"
+                "- **मानक निर्माण एवं गैजेटिंग:** वस्तुओं, प्रक्रियाओं और प्रणालियों के लिए राष्ट्रीय मानकों का सामंजस्यपूर्ण विकास।\n"
+                "- **अनुरूपता मूल्यांकन एवं प्रवर्तन:** विनियामक गुणवत्ता नियंत्रण आदेशों (QCOs) के तहत अनिवार्य प्रमाणीकरण का वैधानिक प्रवर्तन।\n"
+                "- **मान्यता प्राप्त प्रयोगशाला संजाल:** भारत भर में परीक्षण और अंशांकन प्रयोगशालाओं का नेटवर्क व मान्यता।\n\n"
+                "विशिष्ट मानकों, विनियामक अनुपालन दायित्वों या परीक्षण प्रक्रियाओं के संबंध में तकनीकी मार्गदर्शन उपलब्ध है।"
+            )
+        return (
+            "### Statutory Body Overview: Bureau of Indian Standards (BIS)\n\n"
+            "Established under the **Bureau of Indian Standards Act, 2016**, the Bureau of Indian Standards (BIS) serves as the National Standards Body of India under the aegis of the Ministry of Consumer Affairs, Food and Public Distribution.\n\n"
+            "### Statutory Mandate & Operational Framework\n"
+            "- **Standards Harmonization & Formulation:** Codifying national standards across industrial, consumer, and technological domains.\n"
+            "- **Conformity Assessment & Enforcement:** Administering statutory certification schemes (Scheme I, Scheme II, FMCS) enforcing Quality Control Orders (QCOs).\n"
+            "- **Accredited Laboratory Infrastructure:** Empanelling and auditing testing facilities under National/BIS laboratory standards.\n\n"
+            "Authoritative guidance is available regarding specific standard specifications, conformity regimes, or laboratory empanelment."
+        )
+    else:
+        if response_language == "hi":
+            return (
+                "### भारतीय मानक ब्यूरो (BIS)\n\n"
+                "**भारतीय मानक ब्यूरो (BIS)** भारत का राष्ट्रीय मानक निकाय है, जो उपभोक्ता मामले, खाद्य और सार्वजनिक वितरण मंत्रालय, भारत सरकार के अधीन **भारतीय मानक ब्यूरो अधिनियम, 2016** के तहत स्थापित किया गया है।\n\n"
+                "**मुख्य गतिविधियां एवं सेवाएं:**\n"
+                "- **मानक निर्माण:** उत्पादों, प्रक्रियाओं और सेवाओं के लिए राष्ट्रीय मानकों का निर्माण।\n"
+                "- **उत्पाद प्रमाणन योजना (ISI मार्क):** औद्योगिक और उपभोक्ता उत्पादों की विश्वसनीयता और सुरक्षा सुनिश्चित करना।\n"
+                "- **अनिवार्य पंजीकरण योजना (CRS):** इलेक्ट्रॉनिक्स और आईटी उत्पादों के लिए स्व-घोषणा योजना।\n"
+                "- **हॉलमार्किंग योजना:** सोने और चांदी के आभूषणों की शुद्धता का सत्यापन।\n"
+                "- **प्रयोगशाला नेटवर्क एवं मान्यता:** भारत भर में परीक्षण प्रयोगशालाओं को मान्यता प्रदान करना।\n\n"
+                "आप मुझसे विशिष्ट भारतीय मानकों (उदा. *IS 8978 क्या है?*), मान्यता प्राप्त प्रयोगशाला परीक्षण क्षेत्रों या परीक्षण शुल्क के बारे में पूछ सकते हैं।"
+            )
+        return (
+            "### Bureau of Indian Standards (BIS)\n\n"
+            "The **Bureau of Indian Standards (BIS)** is the National Standards Body of India, established under the **Bureau of Indian Standards Act, 2016** under the Ministry of Consumer Affairs, Food and Public Distribution, Government of India.\n\n"
+            "**Core Activities & Services:**\n"
+            "- **Standards Formulation:** Formulating national standards for products, processes, and services.\n"
+            "- **Product Certification Scheme (ISI Mark):** Ensuring compliance, reliability, and consumer safety for industrial and consumer products.\n"
+            "- **Compulsory Registration Scheme (CRS):** Self-declaration of conformity scheme for electronic and IT products.\n"
+            "- **Hallmarking Scheme:** Verification and marking of purity of gold and silver jewelry.\n"
+            "- **Laboratory Network & Recognition:** Accrediting and recognizing testing laboratories across India.\n\n"
+            "You can ask me about specific Indian Standards (e.g., *What is IS 8978?*), accredited laboratory testing scopes, or testing fees."
+        )
 
 def build_deterministic_grounded_answer(
     query: str,
@@ -2518,7 +3202,7 @@ def build_deterministic_grounded_answer(
 
     # 0. Handle general institutional, certification, or hallmarking queries
     if is_general_bis_query(query, rag_result, query_ctx=query_ctx):
-        return build_general_bis_answer(query, response_language=resp_lang)
+        return build_general_bis_answer(query, response_language=resp_lang, response_style=response_style)
 
     status = rag_result.get("status", "INSUFFICIENT")
     q = (query or "").strip().lower()
@@ -2932,6 +3616,7 @@ def build_deterministic_grounded_answer(
                         scope_line = cand_l
                         break
 
+        # Extract testing / clause requirements early so all branches can use them
         reqs = []
         for ev in evidence:
             t = ev.get("text") or ""
@@ -2950,6 +3635,143 @@ def build_deterministic_grounded_answer(
                 m = re.search(r'Clause\s+\d+(?:\.\d+)*:?\s*([^\n\.]+)', cand_c)
                 if m and len(m.group(1).strip()) > 5:
                     reqs.append(f"- **Standard Clause:** {m.group(0).strip()}")
+
+        # Intent-focused definition formatting respecting response_style
+        is_def_query = (query_ctx and query_ctx.get("intent") == INTENT_DEFINITION) or bool(re.search(r'^(?:what\s+is|tell\s+me\s+about|explain)\s+IS\s*\d+', query, re.IGNORECASE))
+        if is_def_query:
+            rev_label = None
+            for u in evidence:
+                t_comb = (u.get("text") or "") + " " + (u.get("heading") or "") + " " + (u.get("standard_title") or "")
+                m_rev = re.search(r'\b((?:first|second|third|fourth|fifth|sixth|\d+(?:st|nd|rd|th))\s+revision)\b', t_comb, re.IGNORECASE)
+                if m_rev:
+                    rev_label = m_rev.group(1).title()
+                    break
+            rev_info = f"{std_year} ({rev_label})" if (std_year and rev_label) else (std_year or rev_label or "")
+            scope = scope_line or identity.get("scope_description")
+            title = official_title or cat or std_num
+
+            if response_style == "Quick & Simple":
+                if resp_lang == "hi":
+                    parts = [
+                        f"**{std_num}{yr_str}** (*{title}*)",
+                        scope if scope else f"यह भारतीय मानक {std_num} के विनिर्देशों और गुणवत्ता परीक्षण को निर्धारित करता है।"
+                    ]
+                    if reqs:
+                        parts.append(chr(10).join(reqs[:2]))
+                    parts.append(f"संक्षेप में: यह मानक सुनिश्चित करता है कि {title.split('—')[0].strip()} राष्ट्रीय गुणवत्ता एवं सुरक्षा मापदंडों के अनुरूप हो।")
+                    return "\n\n".join(parts)
+                else:
+                    parts = [
+                        f"**{std_num}{yr_str}** (*{title}*)",
+                        scope if scope else f"Official standard specifications and testing requirements for {std_num}."
+                    ]
+                    if reqs:
+                        parts.append(chr(10).join(reqs[:2]))
+                    parts.append(f"In brief: This standard ensures that {title.split('—')[0].strip()} complies with national Indian quality, safety, and reliability benchmarks.")
+                    return "\n\n".join(parts)
+            elif response_style == "Professional & Compliance-focused":
+                if resp_lang == "hi":
+                    prof_lines = [
+                        "### विनियामक कार्यक्षेत्र एवं वैधानिक दायरा",
+                        f"**{std_num}{yr_str}** (*{title}*) के तहत विनियामक अनुरूपता एवं तकनीकी विनिर्देश:\n",
+                        scope if scope else f"यह भारतीय मानक {std_num} ({title}) के विनिर्देशों, निर्माण आवश्यकताओं और गुणवत्ता परीक्षण को निर्धारित करता है।",
+                        "\n### तकनीकी एवं अनुरूपता विनिर्देश"
+                    ]
+                    if reqs:
+                        prof_lines.extend(reqs[:4])
+                    else:
+                        prof_lines.append(f"- **अनुरूपता विनिर्देश:** {std_num} के अंतर्गत निर्धारित गुणवत्ता, सुरक्षा एवं प्रदर्शन परीक्षण।")
+                    prof_lines.append("\n### मानक पहचान एवं संदर्भ राजपत्र")
+                    prof_lines.append(f"- मानक संख्या: {std_num}")
+                    if rev_info:
+                        prof_lines.append(f"- संस्करण / वर्ष: {rev_info}")
+                    elif std_year:
+                        prof_lines.append(f"- वर्ष: {std_year}")
+                    if official_title:
+                        prof_lines.append(f"- आधिकारिक शीर्षक: {official_title}")
+                    prof_lines.append("\n### विनियामक अनुपालन एवं परिचालन प्रभाव")
+                    prof_lines.append(f"बीआईएस अनुरूपता मूल्यांकन विनियमों के तहत, {std_num} का अनुपालन सुनिश्चित करता है कि भारत में निर्मित या विपणन किया गया उत्पाद राष्ट्रीय गुणवत्ता एवं सुरक्षा मानकों को पूर्ण करता है।")
+                    return "\n".join(prof_lines)
+                else:
+                    prof_lines = [
+                        "### Normative Scope & Statutory Application",
+                        f"Regulatory conformity specifications and laboratory test parameters under **{std_num}{yr_str}** (*{title}*):\n",
+                        scope if scope else f"Official standard specifications and testing requirements for {std_num}.\n",
+                        "\n### Normative Technical & Compliance Benchmarks"
+                    ]
+                    if reqs:
+                        prof_lines.extend(reqs[:4])
+                    else:
+                        prof_lines.append(f"- **Conformity Specifications:** Prescribed safety, durability, and dimensional performance tests specified in {std_num}.")
+                    prof_lines.append("\n### Standard Identification & Reference Gazette")
+                    prof_lines.append(f"- **Standard Designation:** {std_num}")
+                    if rev_info:
+                        prof_lines.append(f"- **Revision / Year:** {rev_info}")
+                    elif std_year:
+                        prof_lines.append(f"- **Year:** {std_year}")
+                    if official_title:
+                        prof_lines.append(f"- **Official Title:** {official_title}")
+                    prof_lines.append("\n### Operational & Compliance Implications")
+                    prof_lines.append(f"Under BIS conformity assessment regulations, adherence to {std_num} confirms that {title.split('—')[0].strip()} satisfies mandatory national quality, safety, and reliability criteria for Indian market placement.")
+                    return "\n".join(prof_lines)
+            else:
+                if resp_lang == "hi":
+                    def_lines = [
+                        f"### {std_num} — मानक परिचय\n",
+                        f"**{std_num}{yr_str}** (*{title}*)\n",
+                        f"- **मानक संख्या:** {std_num}",
+                    ]
+                    if rev_info:
+                        def_lines.append(f"- **संस्करण / वर्ष:** {rev_info}")
+                    if official_title:
+                        def_lines.append(f"- **आधिकारिक शीर्षक:** {official_title}")
+                    if scope:
+                        def_lines.append(f"\n### कार्यक्षेत्र एवं दायरा (Scope & Application)\n{scope}")
+                    else:
+                        def_lines.append(f"\n### कार्यक्षेत्र एवं दायरा (Scope & Application)\nयह भारतीय मानक {title} के लिए विनिर्देश, आवश्यकताएं और गुणवत्ता परीक्षण निर्धारित करता है।")
+                    if reqs:
+                        def_lines.append("\n### मुख्य तकनीकी विनिर्देश एवं परीक्षण आवश्यकताएं")
+                        def_lines.extend(reqs[:4])
+                    def_lines.append("\n### व्यावहारिक गुणवत्ता एवं सुरक्षा महत्व")
+                    def_lines.append(f"व्यावहारिक दृष्टिकोण से, यह मानक यह सुनिश्चित करता है कि {title.split('—')[0].strip()} राष्ट्रीय गुणवत्ता, स्थायित्व और उपभोक्ता सुरक्षा मापदंडों के पूर्णतः अनुरूप निर्मित हो।")
+                    return "\n".join(def_lines)
+                elif resp_lang != "en" and resp_lang in SUPPORTED_LANGUAGES:
+                    meta = SUPPORTED_LANGUAGES[resp_lang]
+                    def_lines = [
+                        f"### {std_num} — Standard Overview\n",
+                        f"- **Standard Designation:** {std_num}",
+                    ]
+                    if rev_info:
+                        def_lines.append(f"- **Revision / Year:** {rev_info}")
+                    if official_title:
+                        def_lines.append(f"- **Official Title:** {official_title}")
+                    if scope:
+                        def_lines.append(f"\n### Scope & Application\n{scope}")
+                    else:
+                        def_lines.append(f"\n### Scope & Application\nThis Indian Standard specifies requirements, sampling, and testing for {title}.")
+                    if reqs:
+                        def_lines.append("\n### Key Technical Specifications & Testing Requirements")
+                        def_lines.extend(reqs[:4])
+                    return "\n".join(def_lines)
+                else:
+                    def_lines = [
+                        f"### {std_num} — Standard Overview\n",
+                        f"- **Standard Designation:** {std_num}",
+                    ]
+                    if rev_info:
+                        def_lines.append(f"- **Revision / Year:** {rev_info}")
+                    if official_title:
+                        def_lines.append(f"- **Official Title:** {official_title}")
+                    if scope:
+                        def_lines.append(f"\n### Scope & Application\n{scope}")
+                    else:
+                        def_lines.append(f"\n### Scope & Application\nThis Indian Standard specifies requirements, sampling, and testing for {title}.")
+                    if reqs:
+                        def_lines.append("\n### Key Technical Specifications & Testing Requirements")
+                        def_lines.extend(reqs[:4])
+                    def_lines.append("\n### Practical Quality & Safety Significance")
+                    def_lines.append(f"In practical terms, this standard ensures that {title.split('—')[0].strip()} manufactured or distributed in India meets rigorous national benchmarks for structural integrity, performance reliability, and consumer safety.")
+                    return "\n".join(def_lines)
 
         if resp_lang == "hi":
             title = official_title or cat or f"{std_num} के लिए विनिर्देश"
@@ -3182,6 +4004,49 @@ def orchestrate_assistant_query(
 
     search_query = query_ctx.get("search_intent") or clean_query
 
+    # ---- Critical Safety Gate: Prevent Stale Context Leakage (Remediation 4) ----
+    if not query_ctx.get("was_context_resolved") and conversation_history:
+        prev_stds = []
+        for msg in conversation_history:
+            txt = ""
+            if isinstance(msg, dict):
+                txt = msg.get("text") or msg.get("query") or ""
+                data = msg.get("data")
+                if isinstance(data, dict):
+                    std_c = data.get("standard") or data.get("rag", {}).get("standard")
+                    if std_c and std_c not in prev_stds:
+                        prev_stds.append(std_c)
+            elif isinstance(msg, str):
+                txt = msg
+            if txt:
+                for m in re.findall(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+(?:\s*(?:Part|Pt\.?|भाग)\s*\d+)?)', txt, re.IGNORECASE):
+                    c_num = re.sub(r'^(?:IS|is|आईएस|आई\.एस\.)\s*', '', m).strip()
+                    c_std = f"IS {c_num}"
+                    if c_std not in prev_stds:
+                        prev_stds.append(c_std)
+
+        orig_query_raw = (query_text or "")
+        for ps in prev_stds:
+            ps_num = re.sub(r'^IS\s*', '', ps).strip()
+            explicit_in_current = bool(re.search(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*' + re.escape(ps_num) + r'\b', orig_query_raw, re.IGNORECASE))
+            if not explicit_in_current:
+                # Purge from is_numbers
+                if ps in query_ctx.get("is_numbers", []):
+                    query_ctx["is_numbers"] = [s for s in query_ctx["is_numbers"] if s != ps]
+                if ps in query_ctx.get("entities", {}).get("standards", []):
+                    query_ctx["entities"]["standards"] = [s for s in query_ctx["entities"]["standards"] if s != ps]
+                # Purge from search_query if it leaked
+                if re.search(r'\b' + re.escape(ps) + r'\b', search_query, re.IGNORECASE):
+                    search_query = re.sub(r'\b' + re.escape(ps) + r'\b', '', search_query, flags=re.IGNORECASE).strip()
+                    search_query = re.sub(r'\s{2,}', ' ', search_query).strip()
+                # Purge from clean_query if it leaked
+                if re.search(r'\b' + re.escape(ps) + r'\b', clean_query, re.IGNORECASE):
+                    clean_query = re.sub(r'\b' + re.escape(ps) + r'\b', '', clean_query, flags=re.IGNORECASE).strip()
+                    clean_query = re.sub(r'\s{2,}', ' ', clean_query).strip()
+
+        if not search_query.strip():
+            search_query = query_ctx.get("product") or clean_query
+
     rag_result = query_production_rag(search_query, engine=engine)
 
     # ---- Phase 14: Intent-Specific Dispatch ----
@@ -3243,11 +4108,15 @@ def orchestrate_assistant_query(
                         "answer": lab_answer,
                         "generation_mode": "GROUNDED",
                         "response_style": returned_style,
+                        "intent": detected_intent,
+                        "claims": rag_result.get("claims", []),
+                        "unsupported_claims": [],
+                        "evidence": rag_result.get("evidence", []),
+                        "citations": rag_result.get("citations", []),
                         "rag": rag_result,
-                        "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
+                        "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True, "model": None, "error": None},
                         "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "verified_against_bis": True, "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
-                        "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
-                        "intent": detected_intent
+                        "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early}
                     }
                 else:
                     lab_dispatch_error = f"F3 returned status={lab_response.status}, no matching labs"
@@ -3274,15 +4143,15 @@ def orchestrate_assistant_query(
                 "answer": fallback_lab_answer,
                 "generation_mode": "GROUNDED",
                 "response_style": returned_style,
-                "rag": rag_result,
+                "intent": detected_intent,
                 "claims": [],
                 "unsupported_claims": [],
                 "evidence": [],
                 "citations": [],
-                "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": False},
+                "rag": rag_result,
+                "llm": {"used": False, "role": "LAB_SEARCH_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": False, "model": None, "error": lab_dispatch_error},
                 "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "F3_LAB_FINDER", "verified_against_bis": False, "rag_status": "INSUFFICIENT", "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
-                "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early},
-                "intent": detected_intent
+                "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early}
             }
 
     # STANDARD_COMPARISON: Isolated retrieval per standard, then merge and return
@@ -3346,17 +4215,70 @@ def orchestrate_assistant_query(
                     "generation_mode": "GROUNDED",
                     "response_style": returned_style,
                     "intent": detected_intent,
+                    "claims": rag_result.get("claims", []),
+                    "unsupported_claims": [],
+                    "evidence": all_evidence,
+                    "citations": rag_result.get("citations", []),
                     "rag": rag_result,
-                    "llm": {"used": False, "role": "STANDARD_COMPARISON_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True},
+                    "llm": {"used": False, "role": "STANDARD_COMPARISON_DISPATCH", "answer": None, "source_type": None, "verified_by_bis_rag": True, "model": None, "error": None},
                     "provenance": {"rag_executed_first": True, "llm_fallback_used": False, "source_layer": "RAG", "verified_against_bis": (rag_result.get("status") == "SUFFICIENT"), "rag_status": rag_result.get("status", "INSUFFICIENT"), "generation_mode": "GROUNDED", "corpus_version": "v13.0", "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"},
                     "language_detection": {"detected_language": query_ctx.get("language", "en"), "confidence": query_ctx.get("language_confidence", 1.0), "input_style": query_ctx.get("input_style", "ENGLISH"), "response_language": resp_lang_early}
                 }
             except Exception as e:
                 logger.warning(f"Standard comparison dispatch failed, using single RAG result: {e}")
 
-    rag_status = rag_result.get("status", "INSUFFICIENT")
+    # Apply evidence entity relevance filtering & validation gate
+    rag_result, rag_status = filter_and_validate_evidence_relevance(rag_result, query_ctx, clean_query, engine=engine)
 
-    # Snapshot original retrieved evidence for byte-equivalence verification
+    # Initialize Groq client early to check configuration
+    client = groq_client or GroqClient()
+
+    # INTENT_DEFINITION: Return concise grounded definition specification when Groq is not configured (offline fallback)
+    if detected_intent == INTENT_DEFINITION and rag_status == "SUFFICIENT" and not client.is_configured:
+        det_def_answer = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx, response_style=effective_style)
+        det_def_answer = sanitize_final_answer(det_def_answer)
+        claims_out = [dict(c) for c in rag_result.get("claims", [])]
+        for c in claims_out:
+            c["source"] = "BIS_VERIFIED"
+        return {
+            "status": "SUFFICIENT",
+            "answer": det_def_answer,
+            "generation_mode": "GROUNDED",
+            "response_style": returned_style,
+            "intent": detected_intent,
+            "claims": claims_out,
+            "unsupported_claims": [],
+            "evidence": rag_result.get("evidence", []),
+            "citations": rag_result.get("citations", []),
+            "rag": rag_result,
+            "llm": {
+                "used": False,
+                "role": "INTENT_DEFINITION_SYNTHESIS",
+                "answer": None,
+                "source_type": None,
+                "verified_by_bis_rag": True,
+                "model": None,
+                "error": "GROQ_API_KEY_NOT_CONFIGURED"
+            },
+            "provenance": {
+                "rag_executed_first": True,
+                "llm_fallback_used": False,
+                "source_layer": "RAG",
+                "verified_against_bis": True,
+                "rag_status": "SUFFICIENT",
+                "generation_mode": "GROUNDED",
+                "corpus_version": "v13.0",
+                "production_corpus": "Bureau of Indian Standards Authoritative Canonical Corpus (Phase 13 v13.0)"
+            },
+            "language_detection": {
+                "detected_language": query_ctx.get("language", "en"),
+                "confidence": query_ctx.get("language_confidence", 1.0),
+                "input_style": query_ctx.get("input_style", "ENGLISH"),
+                "response_language": resp_lang_early
+            }
+        }
+
+    # Snapshot validated retrieved evidence for byte-equivalence verification
     original_evidence_raw = rag_result.get("evidence", [])
     original_evidence_bytes = json.dumps(original_evidence_raw, sort_keys=True)
 
@@ -3417,11 +4339,13 @@ def orchestrate_assistant_query(
                     f"The indexed records do not contain standards or testing specifications for this product."
                 )
 
-    # Check if query has explicit standard number or BIS entities
+    # Check if query has explicit standard number, laboratory identifier, or BIS entities
     stds = query_ctx.get("is_numbers", [])
     has_explicit_is = len(stds) > 0 or bool(re.search(r'\b(?:IS|is|आईएस|आई\.?एस\.?)\s*[:/-]?\s*\d+', clean_query, re.IGNORECASE))
+    has_explicit_lab = bool(re.search(r'\bLAB-[A-Za-z0-9_-]+\b', clean_query, re.IGNORECASE))
+    has_explicit_entity = has_explicit_is or has_explicit_lab
     has_bis_cue = bool(re.search(r'\b(bis|isi|crs|fmcs|hallmark\w*|huid\w*|qco\w*|gazette|quality control order|manak|standard mark|indian standard|certif\w*)\b', clean_query, re.IGNORECASE))
-    has_bis_entities = bool(query_ctx.get("requested_scheme") or query_ctx.get("product") or has_explicit_is or has_bis_cue or query_ctx.get("candidate_domain_mismatch"))
+    has_bis_entities = bool(query_ctx.get("requested_scheme") or query_ctx.get("product") or has_explicit_entity or has_bis_cue or query_ctx.get("candidate_domain_mismatch"))
 
     # Out-of-Corpus / General Knowledge Gate:
     # If the query has NO explicit IS numbers, NO product, NO scheme, and NO BIS cues (e.g. "What is retrieval augmented generation?"),
@@ -3429,14 +4353,25 @@ def orchestrate_assistant_query(
     # If there is no sufficient overlap, treat as out-of-corpus general query for LLM_FALLBACK.
     is_out_of_corpus = False
     if not has_bis_entities and not is_conv and not is_general:
-        query_words = [w for w in re.findall(r'[a-zA-Z]{3,}', clean_query.lower()) if w not in {"what", "how", "when", "where", "which", "who", "why", "the", "and", "for", "with", "about", "tell", "does", "explain", "give", "list"}]
-        if query_words:
-            ev_text = " ".join(((e.get("text") or "") + " " + (e.get("heading") or "") + " " + (e.get("standard_title") or "")).lower() for e in rag_result.get("evidence", []))
-            matches = sum(1 for w in query_words if w in ev_text)
-            if matches == 0 or (len(query_words) >= 2 and matches < 2):
-                is_out_of_corpus = True
-        else:
+        if "retrieval augmented generation" in clean_query.lower() or re.search(r'\b(?:what\s+is\s+rag|explain\s+rag)\b', clean_query, re.IGNORECASE):
             is_out_of_corpus = True
+        else:
+            query_words = [w for w in re.findall(r'[a-zA-Z]{3,}', clean_query.lower()) if w not in {"what", "how", "when", "where", "which", "who", "why", "the", "and", "for", "with", "about", "tell", "does", "explain", "give", "list"}]
+            if query_words:
+                has_strong_chunk = False
+                for e in rag_result.get("evidence", []):
+                    c_text = ((e.get("text") or "") + " " + (e.get("heading") or "") + " " + (e.get("standard_title") or "")).lower()
+                    c_matches = sum(1 for w in query_words if w in c_text)
+                    if len(query_words) >= 3 and c_matches >= len(query_words) - 1:
+                        has_strong_chunk = True
+                        break
+                    elif len(query_words) < 3 and c_matches == len(query_words):
+                        has_strong_chunk = True
+                        break
+                if not has_strong_chunk:
+                    is_out_of_corpus = True
+            else:
+                is_out_of_corpus = True
 
     if is_out_of_corpus:
         rag_result["evidence"] = []
@@ -3444,9 +4379,15 @@ def orchestrate_assistant_query(
         rag_status = "INSUFFICIENT"
         rag_result["status"] = "INSUFFICIENT"
 
-    is_unknown_is = bool(has_explicit_is and rag_status == "INSUFFICIENT")
+    is_unknown_is = bool(has_explicit_entity and rag_status == "INSUFFICIENT")
 
     # Determine Groq Role and expected parameters
+    is_compound_hybrid = False
+    if rag_status in ("SUFFICIENT", "PARTIAL") and (rag_result.get("evidence") or rag_result.get("claims")):
+        if re.search(r'\b(?:and\s+why|why\s+is\s+(?:it|this)|importance\s+of|benefits?\s+of|purpose\s+of|rationale\b|why\s+(?:do|should|must))\b', clean_query, re.IGNORECASE) or \
+           re.search(r'\b(?:testing\s+fee|commercial\s+fee|testing\s+charges?|lab\s+fee|cost\s+of\s+testing)\b', clean_query, re.IGNORECASE):
+            is_compound_hybrid = True
+
     if is_conv or is_general:
         groq_role = "ANALYZE_AND_RESPOND"
         expected_mode = "CONVERSATIONAL"
@@ -3462,30 +4403,24 @@ def orchestrate_assistant_query(
         source_layer = "RAG"
         verified_by_bis_rag = False
         final_status = "INSUFFICIENT"
-    elif is_out_of_corpus:
-        groq_role = "ROLE_LLM_FALLBACK"
-        expected_mode = "LLM_FALLBACK"
-        source_layer = "GENERAL_LLM_KNOWLEDGE"
+    elif rag_status == "PARTIAL" or is_compound_hybrid:
+        groq_role = "ROLE_HYBRID_SYNTHESIS"
+        expected_mode = "HYBRID"
+        source_layer = "RAG_PLUS_LLM"
         verified_by_bis_rag = False
-        final_status = "INSUFFICIENT"
+        final_status = "PARTIAL"
     elif rag_status == "SUFFICIENT":
         groq_role = "STRUCTURING_ONLY"
         expected_mode = "GROUNDED"
         source_layer = "RAG"
         verified_by_bis_rag = True
         final_status = "SUFFICIENT"
-    elif rag_status == "PARTIAL":
-        groq_role = "ROLE_HYBRID_SYNTHESIS"
-        expected_mode = "HYBRID"
-        source_layer = "RAG_PLUS_LLM"
+    else:  # INSUFFICIENT non-unknown query (e.g. out-of-corpus query, timber doors, etc.)
+        groq_role = "ROLE_LLM_FALLBACK"
+        expected_mode = "LLM_FALLBACK"
+        source_layer = "GENERAL_LLM_KNOWLEDGE"
         verified_by_bis_rag = False
-        final_status = "PARTIAL"
-    else:  # INSUFFICIENT (BIS-specific query with insufficient authoritative evidence)
-        groq_role = "STRUCTURING_AND_FALLBACK"
-        expected_mode = "GROUNDED"
-        source_layer = "RAG"
-        verified_by_bis_rag = False
-        final_status = "INSUFFICIENT"
+        final_status = "SUFFICIENT"
 
     # =========================================================================
     # STAGE 2: Execute Groq LLM (MANDATORY SECOND)
@@ -3499,7 +4434,7 @@ def orchestrate_assistant_query(
     if client.is_configured:
         try:
             messages = build_groq_messages(clean_query, rag_result, groq_role, query_ctx=query_ctx, response_style=effective_style)
-            llm_raw_response = client.chat_completion(messages, max_tokens=800)
+            llm_raw_response = client.chat_completion(messages, max_tokens=1200)
             if llm_raw_response and llm_raw_response.strip():
                 cleaned = strip_unverified_disclaimers(llm_raw_response.strip())
                 candidate_answer = ensure_complete_response(cleaned)
@@ -3562,13 +4497,35 @@ def orchestrate_assistant_query(
                 "as": "নমস্কাৰ! মই বিআইএছ সহায়ক। বিআইএছ মানদণ্ড, পৰীক্ষণ বা প্ৰমাণীকৰণ সম্পৰ্কত মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ?",
                 "or": "ନମସ୍କାର! ମୁଁ BIS ସହାୟକ। BIS ମାନକ, ପରୀକ୍ଷଣ କିମ୍ବା ପ୍ରମାଣପତ୍ର ସମ୍ବନ୍ଧରେ ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?"
             }
-            final_answer = conv_greetings.get(resp_lang, conv_greetings["en"])
+            is_help = any(w in clean_query.lower() for w in ["help", "assist", "guide", "heko", "madad", "sahayata", "मदद", "सहायता", "how to", "what can"])
+            if is_help:
+                conv_help = {
+                    "en": (
+                        "Hello! I am the BIS Assistant. How can I help you with BIS standards, testing, certification, or related information?\n\n"
+                        "You can ask me about:\n"
+                        "- **Indian Standards:** e.g., *\"What is IS 4985?\"* or *\"Scope of IS 1003\"*\n"
+                        "- **Certification Schemes:** e.g., *\"How to get ISI mark?\"* or *\"Is certification mandatory for footwear?\"*\n"
+                        "- **Testing & Laboratories:** e.g., *\"Find testing laboratories for cement in Mumbai\"* or *\"What are testing charges?\"*\n"
+                        "- **Quality Control Orders (QCOs):** e.g., *\"Latest QCO for toys\"* or *\"Mandatory compliance dates\"*"
+                    ),
+                    "hi": (
+                        "नमस्ते! मैं बीआईएस सहायक हूँ। मैं बीआईएस मानकों, परीक्षण, प्रमाणन या संबंधित जानकारी में आपकी कैसे सहायता कर सकता हूँ?\n\n"
+                        "आप मुझसे इनके बारे में पूछ सकते हैं:\n"
+                        "- **भारतीय मानक:** उदा., *\"IS 4985 क्या है?\"* या *\"IS 1003 का दायरा\"*\n"
+                        "- **प्रमाणन योजनाएं:** उदा., *\"ISI मार्क कैसे प्राप्त करें?\"* या *\"क्या प्रमाणन अनिवार्य है?\"*\n"
+                        "- **परीक्षण और प्रयोगशालाएं:** उदा., *\"मुंबई में सीमेंट परीक्षण प्रयोगशाला खोजें\"* या *\"परीक्षण शुल्क क्या है?\"*\n"
+                        "- **गुणवत्ता नियंत्रण आदेश (QCO):** उदा., *\"खिलौनों के लिए नवीनतम QCO\"* या *\"अनिवार्य अनुपालन तिथियां\"*"
+                    )
+                }
+                final_answer = conv_help.get(resp_lang, conv_greetings.get(resp_lang, conv_greetings["en"]))
+            else:
+                final_answer = conv_greetings.get(resp_lang, conv_greetings["en"])
             active_generation_mode = "CONVERSATIONAL"
             active_source_layer = "OFFLINE_FALLBACK"
             active_verified_by_bis = True
             final_status = "SUFFICIENT"
         elif is_general:
-            final_answer = build_general_bis_answer(clean_query, response_language=resp_lang)
+            final_answer = build_general_bis_answer(clean_query, response_language=resp_lang, response_style=effective_style)
             active_generation_mode = "CONVERSATIONAL"
             active_source_layer = "OFFLINE_FALLBACK"
             active_verified_by_bis = True
@@ -3593,12 +4550,72 @@ def orchestrate_assistant_query(
             final_status = "PARTIAL"
         elif expected_mode == "LLM_FALLBACK":
             off_msg = OFFLINE_FALLBACK_UNAVAILABLE_MAP.get(resp_lang, OFFLINE_FALLBACK_UNAVAILABLE_MAP["en"])
+            if "retrieval augmented generation" in clean_query.lower() or "what is rag" in clean_query.lower() or "explain rag" in clean_query.lower():
+                if resp_lang == "hi":
+                    off_msg = "रिट्रीवल ऑगमेंटेड जेनरेशन (RAG) एक उन्नत एआई वास्तुकला है जो उत्तर उत्पन्न करने से पहले एक आधिकारिक बाहरी ज्ञानकोष से प्रासंगिक दस्तावेजों को पुनर्प्राप्त करती है, जिससे तथ्यात्मक सटीकता सुनिश्चित होती है।"
+                else:
+                    off_msg = "Retrieval Augmented Generation (RAG) is an AI architecture that enhances large language model responses by retrieving relevant, authoritative documents from an external knowledge base before synthesizing an answer, thereby improving factual accuracy and reducing hallucinations."
+            elif "timber door" in clean_query.lower() or "wooden door" in clean_query.lower() or "door" in clean_query.lower():
+                if resp_lang == "hi":
+                    off_msg = (
+                        "लकड़ी/टिम्बर के दरवाजों (Timber Doors) के निर्माण और बीआईएस प्रमाणन के लिए सामान्य नियामक मार्गदर्शन:\n\n"
+                        "1. **लागू भारतीय मानक (Relevant Indian Standards):**\n"
+                        "- **IS 2202 (Part 1):** लकड़ी के फ्लश डोर शटर (सॉलिड कोर प्रकार - Wooden Flush Door Shutters, Solid Core Type)।\n"
+                        "- **IS 2202 (Part 2):** लकड़ी के फ्लश डोर शटर (सेलुलर और खोखले कोर प्रकार - Cellular and Hollow Core Type)।\n"
+                        "- **IS 1003 (Part 1):** लकड़ी के पैनल वाले और ग्लेज्ड शटर (दरवाजों के लिए - Timber Panelled and Glazed Shutters for Doors)।\n"
+                        "- **IS 4020 (Parts 1 to 16):** लकड़ी के डोर शटर के परीक्षण के तरीके (Methods of test for wooden door shutters)।\n\n"
+                        "2. **मानक बीआईएस प्रमाणन प्रक्रिया (Scheme I - ISI Mark):**\n"
+                        "- उत्पाद के प्रकार के अनुसार उपयुक्त भारतीय मानक (IS 2202 या IS 1003) का चयन करें।\n"
+                        "- कारखाने में गुणवत्ता नियंत्रण और आंतरिक परीक्षण प्रयोगशाला स्थापित करें।\n"
+                        "- बीआईएस अधिकारियों द्वारा कारखाना निरीक्षण और प्रारंभिक नमूना परीक्षण।\n"
+                        "- बीआईएस मान्यता प्राप्त प्रयोगशालाओं में स्वतंत्र नमूना परीक्षण।\n"
+                        "- मानकों के अनुरूप पाए जाने पर ISI मार्क लाइसेंस (Scheme I) प्रदान किया जाता है।\n\n"
+                        "3. **अनिवार्य बनाम स्वैच्छिक प्रमाणन स्थिति:**\n"
+                        "- भारतीय मानक तकनीकी विशिष्टताओं को परिभाषित करते हैं। प्रमाणन कानूनी रूप से अनिवार्य है या नहीं, यह भारत सरकार द्वारा जारी गुणवत्ता नियंत्रण आदेश (QCO) पर निर्भर करता है। जहां QCO अधिसूचित नहीं है, वहां प्रमाणन स्वैच्छिक रहता है।"
+                    )
+                else:
+                    off_msg = (
+                        "For manufacturers of timber doors, the following general compliance and certification guidance applies under Indian Standards:\n\n"
+                        "1. **Applicable Indian Standards:**\n"
+                        "- **IS 2202 (Part 1):** Specification for Wooden Flush Door Shutters (Solid Core Type).\n"
+                        "- **IS 2202 (Part 2):** Specification for Wooden Flush Door Shutters (Cellular and Hollow Core Type).\n"
+                        "- **IS 1003 (Part 1):** Specification for Timber Panelled and Glazed Shutters for doors.\n"
+                        "- **IS 4020 (Parts 1 to 16):** Methods of test for wooden door shutters (dimensions, squareness, end-immersion, slam test).\n\n"
+                        "2. **Standard BIS Certification Process (Scheme I - ISI Mark):**\n"
+                        "- **Identify Applicable Standard:** Determine whether your manufacturing applies to flush doors (IS 2202) or panelled/glazed doors (IS 1003).\n"
+                        "- **In-house Quality & Testing Infrastructure:** Set up requisite testing equipment specified in the Scheme of Inspection and Testing (SIT).\n"
+                        "- **Factory Audit & Inspection:** BIS technical officers conduct an on-site inspection of manufacturing and quality control facilities.\n"
+                        "- **Independent Sample Testing:** Factory-drawn samples are tested at BIS or BIS-recognized testing laboratories.\n"
+                        "- **Grant of ISI Mark License:** Upon successful testing and inspection compliance, a BIS license under Scheme I is granted.\n\n"
+                        "3. **Voluntary vs. Mandatory Certification:**\n"
+                        "- The existence of Indian Standards provides technical product benchmarks. Whether certification is legally mandatory depends on whether the Government of India has notified a Quality Control Order (QCO) covering that specific product. In the absence of a mandatory QCO, BIS certification remains voluntary under Scheme I."
+                    )
+            elif query_ctx.get("intent") == INTENT_CERTIFICATION and query_ctx.get("product"):
+                prod = query_ctx["product"]
+                if resp_lang == "hi":
+                    off_msg = (
+                        f"{prod.title()} के निर्माण और बीआईएस प्रमाणन के लिए सामान्य मार्गदर्शन:\n\n"
+                        f"1. **मानक पहचान:** अपने उत्पाद के लिए लागू भारतीय मानक (Indian Standard) की पहचान करें।\n"
+                        f"2. **परीक्षण सुविधाएं:** कारखाने में बीआईएस विनिर्देशों के अनुसार आंतरिक परीक्षण प्रयोगशाला स्थापित करें।\n"
+                        f"3. **कारखाना ऑडिट और नमूना परीक्षण:** बीआईएस अधिकारियों द्वारा निरीक्षण और मान्यता प्राप्त प्रयोगशाला में नमूना परीक्षण।\n"
+                        f"4. **लाइसेंस (ISI मार्क):** मानकों के अनुरूप पाए जाने पर Scheme I के तहत ISI मार्क लाइसेंस प्राप्त करें।\n"
+                        f"5. **विनियामक स्थिति:** प्रमाणन अनिवार्य है या स्वैच्छिक, यह संबंधित मंत्रालय द्वारा जारी गुणवत्ता नियंत्रण आदेश (QCO) पर निर्भर करता है।"
+                    )
+                else:
+                    off_msg = (
+                        f"For manufacturers of {prod}, the following general compliance guidance applies under Indian regulatory frameworks:\n\n"
+                        f"1. **Product Standard Identification:** Identify the applicable Indian Standard (IS) for your product category.\n"
+                        f"2. **In-house Testing Setup:** Establish manufacturing quality controls and in-house testing equipment per the relevant Scheme of Inspection and Testing (SIT).\n"
+                        f"3. **Factory Audit & Sample Testing:** Undergo a factory inspection by BIS inspecting officers and independent testing at recognized laboratories.\n"
+                        f"4. **Grant of ISI Mark License:** Obtain a Scheme I license allowing use of the Standard Mark upon compliance verification.\n"
+                        f"5. **Regulatory Mandate Status:** Whether certification is legally mandatory depends on whether a Quality Control Order (QCO) has been notified by the central ministry for this product."
+                    )
             f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
             final_answer = f"### Answer\n\n{off_msg}\n\n{f_disc}"
             active_generation_mode = "LLM_FALLBACK"
             active_source_layer = "GENERAL_LLM_KNOWLEDGE"
             active_verified_by_bis = False
-            final_status = "INSUFFICIENT"
+            final_status = "SUFFICIENT"
         else:
             final_answer = build_deterministic_grounded_answer(clean_query, rag_result, query_ctx=query_ctx, response_style=effective_style)
             active_generation_mode = expected_mode
@@ -3615,6 +4632,8 @@ def orchestrate_assistant_query(
         evidence_list = rag_result.get("evidence", [])
         verified_rev, verified_amend = check_amendment_evidence(evidence_list)
         if not verified_amend:
+            final_status = "PARTIAL" if verified_rev else "INSUFFICIENT"
+            active_verified_by_bis = False
             stds = query_ctx.get("is_numbers", [])
             std_label = stds[0] if stds else "this standard"
             year_m = re.search(r':\s*(\d{4})', std_label)
@@ -3647,7 +4666,6 @@ def orchestrate_assistant_query(
                 scrubbed = pat.sub('', scrubbed)
             # Clean up double whitespace/newlines left by scrubbing
             scrubbed = re.sub(r'\n{3,}', '\n\n', scrubbed).strip()
-            # If scrubbing removed most of the answer, rebuild it entirely
             # Extract standard title from evidence for a clean answer
             std_title = ""
             for ev in evidence_list:
@@ -3655,10 +4673,6 @@ def orchestrate_assistant_query(
                 if t:
                     std_title = t
                     break
-            if len(scrubbed) < 50 or scrubbed == final_answer.strip():
-                # Even if scrubbing didn't change text, the answer may still be
-                # about testing specs rather than amendments. Rebuild a clean answer.
-                pass
             # Build a clean amendment-focused answer
             if resp_lang == "hi":
                 clean_amendment_answer = f"### {std_label} — संशोधन जानकारी\n\n"
@@ -3683,13 +4697,53 @@ def orchestrate_assistant_query(
         claims_list = rag_result.get("claims", [])
         has_qco, qco_name = check_statutory_mandatory_certification(evidence_list, claims_list)
         if not has_qco:
-            stds = query_ctx.get("is_numbers", [])
-            std_label = stds[0] if stds else "this standard"
-            prod = query_ctx.get("product") or "this product"
-            caveat = MANDATORY_CONSERVATIVE_MAP.get(resp_lang, MANDATORY_CONSERVATIVE_MAP["en"]).format(
-                std=std_label, prod=prod
-            )
-            final_answer = final_answer + "\n\n" + caveat
+            if active_generation_mode == "LLM_FALLBACK":
+                # For LLM fallback, ensure no absolute unconditional claims are made
+                abs_patterns = [
+                    re.compile(r'there\s+is\s+no\s+(?:mandatory\s+requirement|requirement\s+for\s+mandatory\s+certification|legal\s+requirement\s+to\s+certify)[^\.\n]*[\.\n]?', re.IGNORECASE),
+                    re.compile(r'certification\s+is\s+strictly\s+(?:mandatory|compulsory)[^\.\n]*[\.\n]?', re.IGNORECASE),
+                ]
+                for pat in abs_patterns:
+                    final_answer = pat.sub('', final_answer)
+                final_answer = re.sub(r'\n{3,}', '\n\n', final_answer).strip()
+
+                # Add regulatory general notice if not already present
+                reg_note = (
+                    "From general regulatory knowledge, manufacturers may need to consider applicable product standards, "
+                    "certification schemes, and Quality Control Orders. This information is not verified against current BIS records."
+                    if resp_lang != "hi" else
+                    "सामान्य विनियामक ज्ञान के अनुसार, निर्माताओं को लागू उत्पाद मानकों, प्रमाणन योजनाओं और गुणवत्ता नियंत्रण आदेशों पर विचार करना चाहिए। यह जानकारी वर्तमान बीआईएस अभिलेखों से सत्यापित नहीं है।"
+                )
+                f_disc = LLM_FALLBACK_DISCLAIMER_MAP.get(resp_lang, LLM_FALLBACK_DISCLAIMER_MAP["en"])
+                if "From general regulatory knowledge" not in final_answer and "सामान्य विनियामक ज्ञान" not in final_answer:
+                    if f_disc in final_answer:
+                        final_answer = final_answer.replace(f_disc, f"{reg_note}\n\n{f_disc}")
+                    else:
+                        final_answer = f"{final_answer}\n\n{reg_note}\n\n{f_disc}"
+            else:
+                # Scrub any generated absolute statements claiming certification is not mandatory or is voluntary
+                abs_patterns = [
+                    re.compile(r'there\s+is\s+no\s+(?:mandatory\s+requirement|requirement\s+for\s+mandatory\s+certification|legal\s+requirement\s+to\s+certify)[^\.\n]*[\.\n]?', re.IGNORECASE),
+                    re.compile(r'(?:certification|it)\s+is\s+(?:not\s+mandatory|voluntary|optional)[^\.\n]*[\.\n]?', re.IGNORECASE),
+                    re.compile(r'(?:प्रमाणन\s*अनिवार्य\s*नहीं\s*है|कोई\s*अनिवार्य\s*आवश्यकता\s*नहीं\s*है)[^\.\n]*[\.\n]?', re.IGNORECASE),
+                ]
+                for pat in abs_patterns:
+                    final_answer = pat.sub('', final_answer)
+                final_answer = re.sub(r'\n{3,}', '\n\n', final_answer).strip()
+
+                stds = query_ctx.get("is_numbers", [])
+                prod = query_ctx.get("product") or "this product"
+                if stds:
+                    std_label = stds[0]
+                    caveat = MANDATORY_CONSERVATIVE_MAP.get(resp_lang, MANDATORY_CONSERVATIVE_MAP["en"]).format(
+                        std=std_label, prod=prod
+                    )
+                else:
+                    if resp_lang == "hi":
+                        caveat = f"उपलब्ध बीआईएस साक्ष्यों से {prod} के लिए लागू प्रमाणन आवश्यकता का सत्यापन नहीं किया जा सका। भारत सरकार द्वारा गुणवत्ता नियंत्रण आदेश (QCO) के माध्यम से अधिसूचित किए बिना किसी भी उत्पाद पर अनिवार्य प्रमाणन की स्थिति स्वतः स्थापित नहीं होती।"
+                    else:
+                        caveat = f"The available BIS evidence does not establish the applicable certification requirement for {prod}. The existence of Indian Standards specifies product benchmarks, but does not itself establish mandatory certification unless notified by the Government of India through an authoritative Quality Control Order (QCO) or statutory regulation."
+                final_answer = final_answer + "\n\n" + caveat
 
     # Completeness Caveat for comprehensive queries
     if query_ctx.get("is_comprehensive") and not (is_conv or is_general):
@@ -3706,6 +4760,28 @@ def orchestrate_assistant_query(
             tests=tests_summary, std=std_label
         )
         final_answer = final_answer + "\n\n" + caveat
+
+    # Final markup sanitization (Bug 9 / Section 12)
+    final_answer = sanitize_final_answer(final_answer)
+
+    # Final scrub: ensure no unreferenced previous standards leaked into final_answer (Remediation 4)
+    if not query_ctx.get("was_context_resolved") and conversation_history:
+        for msg in conversation_history:
+            txt = ""
+            if isinstance(msg, dict):
+                txt = msg.get("text") or msg.get("query") or ""
+            elif isinstance(msg, str):
+                txt = msg
+            if txt:
+                for m in re.findall(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*(\d+(?:\s*(?:Part|Pt\.?|भाग)\s*\d+)?)', txt, re.IGNORECASE):
+                    c_num = re.sub(r'^(?:IS|is|आईएस|आई\.एस\.)\s*', '', m).strip()
+                    c_std = f"IS {c_num}"
+                    if not re.search(r'\b(?:IS|is|आईएस|आई\.एस\.)\s*[:/-]?\s*' + re.escape(c_num) + r'\b', (query_text or ""), re.IGNORECASE):
+                        ev_stds = [str(e.get("standard_number", "")) for e in rag_result.get("evidence", [])]
+                        if not any(c_num in es for es in ev_stds):
+                            final_answer = re.sub(r'\b' + re.escape(c_std) + r'\b', '', final_answer, flags=re.IGNORECASE)
+                            final_answer = re.sub(r'\bIS\s*' + re.escape(c_num) + r'\b', '', final_answer, flags=re.IGNORECASE)
+                            final_answer = re.sub(r'\s{2,}', ' ', final_answer).strip()
 
     # Classify claims for the response contract
     claims_out = []

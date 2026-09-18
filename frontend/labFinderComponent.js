@@ -830,7 +830,7 @@ export class LabFinderComponent {
     }
 
     /**
-     * Renders loading spinner skeleton into the results pane.
+     * Renders skeleton loading state into the results pane.
      */
     renderLoadingState(std) {
         const container = this.container.querySelector('#resultsListContainer');
@@ -842,14 +842,59 @@ export class LabFinderComponent {
             badgeElem.textContent = std;
             badgeElem.classList.remove('hidden');
         }
-        if (countElem) countElem.textContent = 'Searching official BIS scopes...';
+        if (countElem) countElem.textContent = this.getLanguage() === 'hi' ? 'खोज जारी है...' : 'Searching official BIS scopes...';
+
+        const titleText = this.getLanguage() === 'hi'
+            ? `<strong>${this.escapeHtml(std)}</strong> के लिए बीआईएस एलआईएमएस परीक्षण कार्यक्षेत्र का मूल्यांकन...`
+            : `Evaluating BIS LIMS testing scopes for <strong>${this.escapeHtml(std)}</strong>...`;
+        const subText = this.getLanguage() === 'hi'
+            ? 'मान्यता प्राप्त खंडों, बहिष्करणों और दूरी की जांच की जा रही है'
+            : 'Checking accredited clauses, exclusions, and distance cache';
 
         if (container) {
             container.innerHTML = `
-                <div class="lab-loading-skeleton">
-                    <div class="skeleton-spinner"></div>
-                    <p class="skeleton-text">Evaluating BIS LIMS testing scopes for <strong>${this.escapeHtml(std)}</strong>...</p>
-                    <span class="skeleton-sub">Checking accredited clauses, exclusions, and distance cache</span>
+                <div class="lab-skeleton-container lab-loading-skeleton" aria-busy="true" aria-live="polite">
+                    <div class="lab-skeleton-status-banner">
+                        <div class="skeleton-pulse-dot" aria-hidden="true"></div>
+                        <div class="skeleton-status-text">
+                            <p class="skeleton-status-title">${titleText}</p>
+                            <span class="skeleton-status-sub">${subText}</span>
+                        </div>
+                    </div>
+
+                    <div class="lab-cards-list skeleton-cards-list" aria-hidden="true">
+                        ${[1, 2, 3].map((num) => `
+                            <div class="lab-candidate-card lab-card-skeleton">
+                                <div class="card-header-row">
+                                    <div class="card-identity-group">
+                                        <div class="skeleton-shimmer skeleton-rank"></div>
+                                        <div class="skeleton-shimmer skeleton-badge"></div>
+                                    </div>
+                                    <div class="skeleton-shimmer skeleton-distance"></div>
+                                </div>
+
+                                <div class="skeleton-title-group">
+                                    <div class="skeleton-shimmer skeleton-title-line" style="width: ${num === 1 ? '82%' : num === 2 ? '72%' : '86%'}"></div>
+                                    <div class="skeleton-shimmer skeleton-title-line-sm" style="width: ${num === 1 ? '48%' : num === 2 ? '62%' : '44%'}"></div>
+                                </div>
+
+                                <div class="skeleton-address-row">
+                                    <div class="skeleton-shimmer skeleton-icon-pin"></div>
+                                    <div class="skeleton-shimmer skeleton-address-line" style="width: ${num === 1 ? '86%' : num === 2 ? '76%' : '90%'}"></div>
+                                </div>
+
+                                <div class="card-badges-row">
+                                    <div class="skeleton-shimmer skeleton-pill skeleton-pill-scope"></div>
+                                    <div class="skeleton-shimmer skeleton-pill skeleton-pill-clauses"></div>
+                                    <div class="skeleton-shimmer skeleton-pill skeleton-pill-fee"></div>
+                                </div>
+
+                                <div class="card-footer-actions">
+                                    <div class="skeleton-shimmer skeleton-btn-action"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         }

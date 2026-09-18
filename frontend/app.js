@@ -19,6 +19,7 @@
 
 import { AssistantService } from './mockData.js?v=14.2.0';
 import { LabFinderComponent } from './labFinderComponent.js';
+import { ComplianceJourneyComponent } from './complianceJourneyComponent.js?v=14.7.2';
 import { apiUrl } from './config.js';
 import {
     initializeAuth,
@@ -37,8 +38,13 @@ import {
     getLoginUrl,
     getHomeUrl,
     isGuestSession,
-    setGuestSession
-} from './auth.js?v=14.1.0';
+    setGuestSession,
+    validateDeliverableEmail,
+    getEmailCooldownRemaining,
+    setEmailCooldown,
+    isEmailCooldownActive,
+    EMAIL_COOLDOWN_ACTIONS
+} from './auth.js?v=14.2.0';
 
 import {
     DEFAULT_USER_PREFERENCES as MODULE_DEFAULT_USER_PREFERENCES,
@@ -50,6 +56,16 @@ import {
     normalizeFrontendToDb
 } from './preferences.js?v=14.6.1';
 
+import {
+    generateUUID,
+    isUUID,
+    getAuthenticatedUserId,
+    upsertConversationToSupabase,
+    insertMessageToSupabase,
+    loadConversationsFromSupabase,
+    deleteConversationFromSupabase
+} from './conversations.js?v=15.0.0';
+
 function initApp() {
     // -------------------------------------------------------------------------
     // DOM Element References
@@ -58,26 +74,57 @@ function initApp() {
     const viewAssistant = document.getElementById('viewAssistant');
     const viewHome = document.getElementById('viewHome');
     const viewLabFinder = document.getElementById('viewLabFinder');
+    const viewComplianceJourney = document.getElementById('viewComplianceJourney');
     const navAssistant = document.getElementById('navAssistant');
     const navHome = document.getElementById('navHome');
     const navLabFinder = document.getElementById('navLabFinder');
+    const navComplianceJourney = document.getElementById('navComplianceJourney');
     const brandLink = document.getElementById('brandLink');
     const btnStartAssistant = document.getElementById('btnStartAssistant');
 
-    // Initialize Lab Finder Component
+    // Subcomponents (Lab Finder & Compliance Journey)
     let labFinder = null;
-    if (viewLabFinder) {
-        try {
-            labFinder = new LabFinderComponent({
-                container: viewLabFinder,
-                mapContainer: 'labFinderMap',
-                apiEndpoint: apiUrl('/api/labs/search'),
-                t: (k, fb) => t(k, fb),
-                getLanguage: () => currentLanguage
-            });
-            labFinder.init();
-        } catch (labErr) {
-            console.warn('[BIS Init] LabFinderComponent initialization deferred:', labErr);
+    let complianceJourney = null;
+
+    function initSubComponents() {
+        if (viewLabFinder && !labFinder) {
+            try {
+                labFinder = new LabFinderComponent({
+                    container: viewLabFinder,
+                    mapContainer: 'labFinderMap',
+                    apiEndpoint: apiUrl('/api/labs/search'),
+                    t: (k, fb) => { try { return t(k, fb); } catch (e) { return fb || k; } },
+                    getLanguage: () => currentLanguage
+                });
+                labFinder.init();
+            } catch (labErr) {
+                console.warn('[BIS Init] LabFinderComponent initialization deferred:', labErr);
+            }
+        }
+
+        if (viewComplianceJourney && !complianceJourney) {
+            try {
+                complianceJourney = new ComplianceJourneyComponent({
+                    container: viewComplianceJourney,
+                    apiEndpoint: apiUrl('/api/compliance/journey'),
+                    t: (k, fb) => { try { return t(k, fb); } catch (e) { return fb || k; } },
+                    getLanguage: () => currentLanguage,
+                    onOpenEvidence: (evId) => openEvidenceDrawer(evId),
+                    onOpenLabFinder: (std, loc) => {
+                        switchView('labfinder');
+                        if (labFinder && viewLabFinder) {
+                            const inputStd = viewLabFinder.querySelector('#labInputStandard') || viewLabFinder.querySelector('#labInputQuery');
+                            const inputLoc = viewLabFinder.querySelector('#labInputLocation');
+                            if (inputStd) inputStd.value = std;
+                            if (inputLoc) inputLoc.value = loc || '';
+                            labFinder.executeSearchFromInputs();
+                        }
+                    }
+                });
+                complianceJourney.init();
+            } catch (compErr) {
+                console.warn('[BIS Init] ComplianceJourneyComponent initialization deferred:', compErr);
+            }
         }
     }
 
@@ -192,8 +239,15 @@ function initApp() {
     const authFooterText = document.getElementById('authFooterText');
     const authFooterSwitchBtn = document.getElementById('authFooterSwitchBtn');
 
+    const authSignupConfirmationBox = document.getElementById('authSignupConfirmationBox');
+    const authConfirmationTargetEmail = document.getElementById('authConfirmationTargetEmail');
+    const authSignupCooldownBadge = document.getElementById('authSignupCooldownBadge');
+    const authSignupCooldownText = document.getElementById('authSignupCooldownText');
+    const btnAuthBackToSignIn = document.getElementById('btnAuthBackToSignIn');
+
     // Sidebar User Action Buttons
     const btnSidebarPreferences = document.getElementById('btnSidebarPreferences');
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
     const btnSidebarTour = document.getElementById('btnSidebarTour');
     const btnSystemModalTour = document.getElementById('btnSystemModalTour');
 
@@ -240,6 +294,7 @@ function initApp() {
     let conversations = [];
     let currentConversationId = null;
     let evidenceMemory = {}; // Cache of evidence units by unit_id
+    window.evidenceMemory = evidenceMemory;
     let backendMode = 'production'; // 'production' | 'mock'
     let authMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'reset'
 
@@ -411,6 +466,11 @@ function initApp() {
             labFinder.onLanguageChange(lang);
         }
 
+        // Notify ComplianceJourney component to re-render active journey and texts
+        if (complianceJourney && typeof complianceJourney.onLanguageChange === 'function') {
+            complianceJourney.onLanguageChange(lang);
+        }
+
         // Re-sync auth UI so dynamic user profile/status is not regressed by translation sweep
         if (typeof updateAuthStateUI === 'function') {
             const cached = typeof getCachedUser === 'function' ? getCachedUser() : null;
@@ -519,6 +579,25 @@ function initApp() {
             const raw = localStorage.getItem('bis_ai_conversations_v2');
             if (raw) {
                 conversations = JSON.parse(raw);
+                // Ensure all cached conversations and messages have valid UUIDs
+                let modified = false;
+                if (Array.isArray(conversations)) {
+                    conversations.forEach(c => {
+                        if (!isUUID(c.id)) {
+                            c.id = generateUUID();
+                            modified = true;
+                        }
+                        if (Array.isArray(c.messages)) {
+                            c.messages.forEach(m => {
+                                if (!m.id || !isUUID(m.id)) {
+                                    m.id = generateUUID();
+                                    modified = true;
+                                }
+                            });
+                        }
+                    });
+                }
+                if (modified) saveConversations();
             }
         } catch (e) {
             console.warn('Failed to load conversations from localStorage:', e);
@@ -532,6 +611,52 @@ function initApp() {
             renderConversationList();
             renderActiveConversation();
         }
+
+        const authUserId = getAuthenticatedUserId();
+        if (authUserId) {
+            syncConversationsFromSupabase(authUserId);
+        }
+    }
+
+    let isSyncingConversations = false;
+
+    async function syncConversationsFromSupabase(authUserId) {
+        if (!authUserId || isSyncingConversations || (typeof isSubmittingQuery !== 'undefined' && isSubmittingQuery)) return;
+        isSyncingConversations = true;
+        try {
+            const remoteConvs = await loadConversationsFromSupabase(authUserId);
+            if (remoteConvs && Array.isArray(remoteConvs)) {
+                if (remoteConvs.length > 0) {
+                    const activeLocal = getCurrentConversation();
+                    const matchingRemote = remoteConvs.find(c => c.id === activeLocal?.id);
+                    if (activeLocal && (activeLocal.messages?.length || 0) > (matchingRemote?.messages?.length || 0)) {
+                        // Local active conversation has newer uncommitted messages, don't overwrite with stale remote
+                        return;
+                    }
+                    conversations = remoteConvs;
+                    if (!conversations.some(c => c.id === currentConversationId)) {
+                        currentConversationId = conversations[0].id;
+                    }
+                    saveConversations();
+                    renderConversationList();
+                    renderActiveConversation();
+                } else if (conversations.length > 0) {
+                    // Supabase has 0 records; sync local conversations that have messages
+                    for (const localConv of conversations) {
+                        if (localConv.messages && localConv.messages.length > 0) {
+                            await upsertConversationToSupabase(localConv, authUserId);
+                            for (const msg of localConv.messages) {
+                                await insertMessageToSupabase(msg, localConv.id, authUserId);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[BIS Conversations] Background sync error:', err);
+        } finally {
+            isSyncingConversations = false;
+        }
     }
 
     function saveConversations() {
@@ -544,10 +669,11 @@ function initApp() {
 
     function createNewConversation(switchViewToAssistant = true) {
         const newConv = {
-            id: 'conv_' + Date.now(),
+            id: generateUUID(),
             title: 'New Session',
             messages: [],
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            updatedAt: Date.now()
         };
         conversations.unshift(newConv);
         currentConversationId = newConv.id;
@@ -577,6 +703,10 @@ function initApp() {
 
     function deleteConversation(convId, e) {
         if (e) e.stopPropagation();
+        const authUserId = getAuthenticatedUserId();
+        if (authUserId) {
+            deleteConversationFromSupabase(convId, authUserId);
+        }
         conversations = conversations.filter(c => c.id !== convId);
         if (conversations.length === 0) {
             createNewConversation(false);
@@ -705,9 +835,14 @@ function initApp() {
 
             conv.messages.forEach(msg => {
                 if (msg.role === 'user') {
-                    appendUserMessageToDOM(msg.text);
+                    appendUserMessageToDOM(msg.text || msg.content || '');
                 } else if (msg.role === 'assistant') {
-                    appendAssistantResponseToDOM(msg.data, false);
+                    const dataPayload = msg.data || {
+                        answer: msg.text || msg.content || '',
+                        status: 'SUFFICIENT',
+                        generation_mode: 'GROUNDED'
+                    };
+                    appendAssistantResponseToDOM(dataPayload, false);
                 }
             });
 
@@ -719,20 +854,31 @@ function initApp() {
     }
 
     // -------------------------------------------------------------------------
-    // 2. View Switching: Assistant vs Home vs Lab Finder
+    // 2. View Switching: Assistant vs Home vs Lab Finder vs Compliance Journey
     // -------------------------------------------------------------------------
     function switchView(viewName) {
+        window.switchView = switchView;
         currentView = viewName;
+        initSubComponents();
+        const targetHash = (viewName === 'compliance' || viewName === 'journey') ? '#compliance' : (viewName === 'labfinder' || viewName === 'labs' ? '#labfinder' : (viewName === 'home' ? '#home' : '#assistant'));
+        if (window.location.hash.toLowerCase() !== targetHash) {
+            try {
+                history.replaceState(null, '', targetHash);
+            } catch (e) {}
+        }
         if (viewName === 'home') {
             viewAssistant.classList.add('hidden');
             if (viewLabFinder) viewLabFinder.classList.add('hidden');
+            if (viewComplianceJourney) viewComplianceJourney.classList.add('hidden');
             viewHome.classList.remove('hidden');
             navHome.classList.add('active');
             navAssistant.classList.remove('active');
             if (navLabFinder) navLabFinder.classList.remove('active');
+            if (navComplianceJourney) navComplianceJourney.classList.remove('active');
         } else if (viewName === 'labfinder' || viewName === 'labs') {
             viewAssistant.classList.add('hidden');
             viewHome.classList.add('hidden');
+            if (viewComplianceJourney) viewComplianceJourney.classList.add('hidden');
             if (viewLabFinder) {
                 viewLabFinder.classList.remove('hidden');
                 if (labFinder && labFinder.mapComponent) {
@@ -749,13 +895,27 @@ function initApp() {
             if (navLabFinder) navLabFinder.classList.add('active');
             navAssistant.classList.remove('active');
             navHome.classList.remove('active');
+            if (navComplianceJourney) navComplianceJourney.classList.remove('active');
+        } else if (viewName === 'compliance' || viewName === 'journey') {
+            viewAssistant.classList.add('hidden');
+            viewHome.classList.add('hidden');
+            if (viewLabFinder) viewLabFinder.classList.add('hidden');
+            if (viewComplianceJourney) {
+                viewComplianceJourney.classList.remove('hidden');
+            }
+            if (navComplianceJourney) navComplianceJourney.classList.add('active');
+            navAssistant.classList.remove('active');
+            navHome.classList.remove('active');
+            if (navLabFinder) navLabFinder.classList.remove('active');
         } else {
             viewHome.classList.add('hidden');
             if (viewLabFinder) viewLabFinder.classList.add('hidden');
+            if (viewComplianceJourney) viewComplianceJourney.classList.add('hidden');
             viewAssistant.classList.remove('hidden');
             navAssistant.classList.add('active');
             navHome.classList.remove('active');
             if (navLabFinder) navLabFinder.classList.remove('active');
+            if (navComplianceJourney) navComplianceJourney.classList.remove('active');
             scrollToBottom();
             if (chatInput) chatInput.focus();
         }
@@ -817,10 +977,27 @@ function initApp() {
             currentChatTitle.textContent = conv.title;
         }
 
+        const userMsg = {
+            id: generateUUID(),
+            role: 'user',
+            text: query,
+            createdAt: Date.now()
+        };
         // Add user message to conversation
-        conv.messages.push({ role: 'user', text: query });
+        conv.messages.push(userMsg);
+        conv.updatedAt = Date.now();
         saveConversations();
         renderConversationList();
+
+        // Asynchronously sync conversation and user message to Supabase (sequenced to satisfy foreign key)
+        let userPersistPromise = null;
+        const authUserId = getAuthenticatedUserId();
+        if (authUserId) {
+            userPersistPromise = (async () => {
+                await upsertConversationToSupabase(conv, authUserId);
+                await insertMessageToSupabase(userMsg, conv.id, authUserId);
+            })().catch(e => console.warn('[BIS] Conv/User msg persist error:', e));
+        }
 
         // Transition from landing state to active conversation state
         welcomeContainer.classList.add('hidden');
@@ -860,28 +1037,96 @@ function initApp() {
             const effectiveLang = userPrefs?.language || currentLanguage || 'en';
             // Build conversation history for context resolution (exclude the query currently being submitted)
             const priorMessages = (conv.messages || []).slice(0, -1);
-            const historyMessages = priorMessages.slice(-10).map(m => ({
-                role: m.role,
-                text: m.text || '',
-                data: m.data ? {
-                    answer: m.data.answer || m.data.answer_markdown || '',
-                    intent: m.data.intent,
-                    rag: m.data.rag ? { standard: m.data.rag.standard } : undefined
-                } : undefined
-            }));
-            const responseData = await AssistantService.query(query, {
-                mode: backendMode,
-                headers: getAuthHeaders(),
-                language: effectiveLang,
-                responseStyle: userPrefs?.responseStyle || 'Detailed & Explanatory',
-                history: historyMessages
+            const historyMessages = priorMessages.slice(-10).map(m => {
+                const text = m.text || m.data?.answer || m.data?.answer_markdown || '';
+                const standard = m.data?.standard || m.data?.rag?.standard || (text.match(/\bIS\s*\d+\b/i) || [])[0] || undefined;
+                const intent = m.data?.intent || m.data?.rag?.intent || undefined;
+                const provenance = m.data?.provenance || undefined;
+                return {
+                    role: m.role,
+                    text: text,
+                    data: m.data ? {
+                        answer: m.data.answer || m.data.answer_markdown || '',
+                        intent: intent,
+                        standard: standard,
+                        provenance: provenance,
+                        rag: m.data.rag ? { standard: standard, ...m.data.rag } : (standard ? { standard } : undefined)
+                    } : (standard ? { standard, intent } : undefined)
+                };
             });
+            // Check if user is explicitly asking for a product compliance journey
+            const isExplicitCompQuery = /compliance\s+journey|compliance\s+pathway|regulatory\s+pathway|what\s+standards,\s*certification,\s*testing|show\s+compliance\s+journey/i.test(query);
+
+            let responseData;
+            if (isExplicitCompQuery) {
+                const compRes = await fetch(apiUrl('/api/compliance/journey'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
+                    },
+                    body: JSON.stringify({ query: query, conversation_history: historyMessages || [] })
+                });
+
+                if (!compRes.ok) {
+                    const errText = await compRes.text();
+                    throw new Error(`Compliance Journey resolution error (${compRes.status}): ${errText || compRes.statusText}`);
+                }
+
+                const compData = await compRes.json();
+                const journeyObj = compData.journey || compData;
+                const prodName = journeyObj.product?.product_name || 'the requested product';
+                const stdsFound = journeyObj.applicable_standards?.standards?.map(s => s.standard_number).join(', ') || '';
+
+                // Use V2 assessment as summary when available
+                const v2Assessment = journeyObj.compliance_answer_v2?.assessment?.answer;
+                const summaryText = v2Assessment
+                    ? v2Assessment
+                    : stdsFound
+                        ? `Authoritative BIS Product Compliance Journey established for **${prodName}** covering standard(s) **${stdsFound}**. See the 10-stage regulatory pathway below.`
+                        : `BIS Product Compliance Journey established for **${prodName}**. See the 10-stage regulatory pathway below.`;
+
+                responseData = {
+                    status: 'SUFFICIENT',
+                    answer: summaryText,
+                    generation_mode: 'GROUNDED',
+                    response_style: userPrefs?.responseStyle || 'Detailed & Explanatory',
+                    compliance_journey: journeyObj,
+                    provenance: journeyObj.provenance || []
+                };
+            } else {
+                responseData = await AssistantService.query(query, {
+                    mode: backendMode,
+                    headers: getAuthHeaders(),
+                    language: effectiveLang,
+                    responseStyle: userPrefs?.responseStyle || 'Detailed & Explanatory',
+                    history: historyMessages
+                });
+            }
 
             thinkingRow.remove();
 
-            // Store in conversation state
-            conv.messages.push({ role: 'assistant', data: responseData });
+            const assistantMsg = {
+                id: generateUUID(),
+                role: 'assistant',
+                text: responseData.answer || '',
+                data: responseData,
+                createdAt: Date.now()
+            };
+            // Store in conversation state with role, text, and data contract
+            conv.messages.push(assistantMsg);
+            conv.updatedAt = Date.now();
             saveConversations();
+
+            if (authUserId) {
+                (async () => {
+                    if (userPersistPromise) {
+                        try { await userPersistPromise; } catch (_) {}
+                    }
+                    await upsertConversationToSupabase(conv, authUserId);
+                    await insertMessageToSupabase(assistantMsg, conv.id, authUserId);
+                })().catch(e => console.warn('[BIS] Assistant msg persist error:', e));
+            }
 
             const assistantRow = appendAssistantResponseToDOM(responseData, true);
             scrollToBottom(assistantRow);
@@ -919,8 +1164,8 @@ function initApp() {
         const row = document.createElement('div');
         row.className = 'assistant-row';
         row.innerHTML = `
-            <div class="assistant-avatar">
-                <img src="/static/favicon.svg" alt="" aria-hidden="true">
+            <div class="assistant-avatar" aria-hidden="true" style="user-select: none;">
+                <img src="/static/favicon.svg" alt="" aria-hidden="true" style="pointer-events: none; user-select: none;">
             </div>
             <div class="assistant-bubble-container">
                 <div class="assistant-thinking">
@@ -938,8 +1183,8 @@ function initApp() {
         const row = document.createElement('div');
         row.className = 'assistant-row';
         row.innerHTML = `
-            <div class="assistant-avatar" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.3);">
-                <img src="/static/favicon.svg" alt="" aria-hidden="true">
+            <div class="assistant-avatar" aria-hidden="true" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); user-select: none;">
+                <img src="/static/favicon.svg" alt="" aria-hidden="true" style="pointer-events: none; user-select: none;">
             </div>
             <div class="assistant-bubble-container">
                 <div class="grounding-notice notice-refusal">
@@ -994,7 +1239,12 @@ function initApp() {
     // -------------------------------------------------------------------------
     function preprocessAnswerText(rawText, userQueryText) {
         if (!rawText) return '';
-        let text = rawText.trim();
+        let text = rawText.trim()
+            .replace(/!?\[(?:image|alt)\]\([^)]*\)/gi, '')
+            .replace(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/[^\s\)]+/gi, '')
+            .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+            .replace(/\bsvgsvg\b/gi, '')
+            .trim();
         const userQ = (userQueryText || '').toLowerCase();
 
         const isLabOrFeeQuery = /\b(labs?|laborator(?:y|ies)|testing\s+facilit(?:y|ies)|testing\s+scope|where\s+to\s+test|who\s+can\s+test|accredited|fees?|costs?|charges?|pricing|rates?|how\s+much)\b/i.test(userQ);
@@ -1241,6 +1491,30 @@ function initApp() {
             `;
         }
 
+        // 5.b Compliance Journey Interactive Bridge Widget (when standard mentioned and not already a full journey card)
+        let complianceJourneyBridgeHtml = '';
+        let complianceJourneyHtml = '';
+
+        if (data.compliance_journey) {
+            complianceJourneyHtml = ComplianceJourneyComponent.renderJourneyCard(data.compliance_journey, { t: (k, fb) => t(k, fb) });
+        } else if (stdMatch) {
+            const matchedStd = `IS ${stdMatch[1].replace(/\s+/g, ' ')}`;
+            complianceJourneyBridgeHtml = `
+                <div class="chat-compliance-bridge-card">
+                    <div class="chat-compliance-bridge-info">
+                        <span class="chat-compliance-bridge-icon" aria-hidden="true">📋</span>
+                        <div>
+                            <h5 class="chat-compliance-bridge-title">${t('compliance_journey.chat_bridge_title', 'Product Compliance Journey')}: ${escapeHtml(matchedStd)}</h5>
+                            <p class="chat-compliance-bridge-desc">${t('compliance_journey.chat_bridge_desc', 'Explore complete regulatory status, mandatory certification, testing requirements, and qualified laboratories for this standard.')}</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-chat-open-compliance" data-standard="${escapeHtml(matchedStd)}">
+                        <span>${t('compliance_journey.chat_bridge_btn', 'View Full Compliance Journey')} &rarr;</span>
+                    </button>
+                </div>
+            `;
+        }
+
         const userPrefs = typeof getUserPreferences === 'function' ? getUserPreferences() : null;
         const respStyle = data.response_style || userPrefs?.responseStyle || 'Detailed & Explanatory';
         let styleClass = 'style-detailed-explanatory';
@@ -1251,15 +1525,17 @@ function initApp() {
         }
 
         row.innerHTML = `
-            <div class="assistant-avatar">
-                <img src="/static/favicon.svg" alt="" aria-hidden="true">
+            <div class="assistant-avatar" aria-hidden="true" style="user-select: none;">
+                <img src="/static/favicon.svg" alt="" aria-hidden="true" style="pointer-events: none; user-select: none;">
             </div>
             <div class="assistant-bubble-container">
                 <div class="assistant-bubble ${styleClass}">
                     <div class="editorial-answer">${answerHtml}</div>
+                    ${complianceJourneyHtml}
                     ${feeResultsHtml}
                     ${labResultsHtml}
                     ${labFinderBridgeHtml}
+                    ${complianceJourneyBridgeHtml}
                     ${footerHtml}
                 </div>
             </div>
@@ -1296,6 +1572,40 @@ function initApp() {
                 }
             });
         });
+
+        // Wire up Compliance Journey bridge button
+        row.querySelectorAll('.btn-chat-open-compliance').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const std = btn.getAttribute('data-standard');
+                switchView('compliance');
+                if (complianceJourney && viewComplianceJourney) {
+                    const inputStd = viewComplianceJourney.querySelector('#compInputStandard');
+                    const inputProd = viewComplianceJourney.querySelector('#compInputProduct');
+                    const inputQuery = viewComplianceJourney.querySelector('#compInputQuery');
+                    if (inputStd) inputStd.value = std || '';
+                    if (inputProd) inputProd.value = '';
+                    if (inputQuery) inputQuery.value = '';
+                    complianceJourney.executeSearchFromInputs();
+                }
+            });
+        });
+
+        // Wire up Compliance Journey card interactions if journey card rendered in chat
+        if (data.compliance_journey) {
+            ComplianceJourneyComponent.bindJourneyCardInteractions(row, data.compliance_journey, {
+                onOpenEvidence: (evId) => openEvidenceDrawer(evId),
+                onOpenLabFinder: (std, loc) => {
+                    switchView('labfinder');
+                    if (labFinder && viewLabFinder) {
+                        const inputStd = viewLabFinder.querySelector('#labInputStandard') || viewLabFinder.querySelector('#labInputQuery');
+                        const inputLoc = viewLabFinder.querySelector('#labInputLocation');
+                        if (inputStd) inputStd.value = std;
+                        if (inputLoc) inputLoc.value = loc || '';
+                        labFinder.executeSearchFromInputs();
+                    }
+                }
+            });
+        }
 
         messagesStream.appendChild(row);
         return row;
@@ -1494,6 +1804,7 @@ function initApp() {
     // 6. Evidence Drawer Controller
     // -------------------------------------------------------------------------
     function openEvidenceDrawer(evidenceId) {
+        window.openEvidenceDrawer = openEvidenceDrawer;
         if (evidenceId === 'llm_only' || (!evidenceMemory[evidenceId] && String(evidenceId).startsWith('llm'))) {
             drawerTitle.textContent = "Reference Information";
             drawerTypeBadge.textContent = "Reference Unit";
@@ -2101,6 +2412,78 @@ function initApp() {
             card.classList.toggle('selected', isSelected);
             card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         });
+
+        // Step 4: Workspace Appearance / Theme
+        const currentThemePref = getSavedThemePreference();
+        document.querySelectorAll('#onboardingThemesGrid .onboarding-theme-card').forEach(card => {
+            const themeVal = card.getAttribute('data-theme-val');
+            const isSelected = themeVal === currentThemePref;
+            card.classList.toggle('selected', isSelected);
+            card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Theme System (Light / Dark / System)
+    // -------------------------------------------------------------------------
+    function getSystemTheme() {
+        return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+    }
+
+    function getSavedThemePreference() {
+        return localStorage.getItem('bis_theme') || 'system';
+    }
+
+    function applyTheme(themeMode) {
+        const resolved = themeMode === 'system' ? getSystemTheme() : themeMode;
+        document.documentElement.setAttribute('data-theme', resolved);
+
+        if (btnThemeToggle) {
+            const sunIcon = btnThemeToggle.querySelector('.theme-icon-sun');
+            const moonIcon = btnThemeToggle.querySelector('.theme-icon-moon');
+            const textSpan = document.getElementById('themeToggleText');
+            if (resolved === 'light') {
+                sunIcon?.classList.remove('hidden');
+                moonIcon?.classList.add('hidden');
+                if (textSpan) textSpan.textContent = 'Light';
+            } else {
+                sunIcon?.classList.add('hidden');
+                moonIcon?.classList.remove('hidden');
+                if (textSpan) textSpan.textContent = 'Dark';
+            }
+            btnThemeToggle.setAttribute('title', `Appearance: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)} (Click to switch)`);
+        }
+
+        document.querySelectorAll('#onboardingThemesGrid .onboarding-theme-card').forEach(c => {
+            const val = c.getAttribute('data-theme-val');
+            const isMatch = val === themeMode;
+            c.classList.toggle('selected', isMatch);
+            c.setAttribute('aria-checked', isMatch ? 'true' : 'false');
+        });
+    }
+
+    function setThemePreference(themeMode) {
+        localStorage.setItem('bis_theme', themeMode);
+        applyTheme(themeMode);
+    }
+
+    function toggleTheme() {
+        const activeResolved = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = activeResolved === 'light' ? 'dark' : 'light';
+        setThemePreference(next);
+    }
+
+    function initTheme() {
+        const saved = getSavedThemePreference();
+        applyTheme(saved);
+
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+                if (getSavedThemePreference() === 'system') {
+                    applyTheme('system');
+                }
+            });
+        }
     }
 
     function setOnboardingStep(step) {
@@ -2304,8 +2687,11 @@ function initApp() {
     // 10. Event Listeners Setup
     // -------------------------------------------------------------------------
     function setupEventListeners() {
+        window.switchView = switchView;
+        window.openEvidenceDrawer = openEvidenceDrawer;
         // Nav Links
         if (navAssistant) navAssistant.addEventListener('click', () => switchView('assistant'));
+        if (navComplianceJourney) navComplianceJourney.addEventListener('click', () => switchView('compliance'));
         if (navLabFinder) navLabFinder.addEventListener('click', () => switchView('labfinder'));
         if (navHome) navHome.addEventListener('click', () => switchView('home'));
         if (brandLink) {
@@ -2398,6 +2784,13 @@ function initApp() {
             btnSidebarPreferences.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openOnboarding(true);
+            });
+        }
+
+        if (btnThemeToggle) {
+            btnThemeToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleTheme();
             });
         }
 
@@ -2658,6 +3051,19 @@ function initApp() {
                             c.classList.toggle('selected', isThis);
                             c.setAttribute('aria-checked', isThis ? 'true' : 'false');
                         });
+                    }
+                }
+            });
+        }
+
+        const themesGrid = document.getElementById('onboardingThemesGrid');
+        if (themesGrid) {
+            themesGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.onboarding-theme-card');
+                if (card) {
+                    const themeVal = card.getAttribute('data-theme-val');
+                    if (themeVal) {
+                        setThemePreference(themeVal);
                     }
                 }
             });
@@ -2996,9 +3402,60 @@ function initApp() {
         // ---------------------------------------------------------------------
         // Authentication UI Handlers
         // ---------------------------------------------------------------------
+        let authCooldownInterval = null;
+
+        function updateAuthCooldownUI() {
+            const signupRemaining = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+            const resetRemaining = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET);
+
+            if (authMode === 'signup' && authSignupConfirmationBox && !authSignupConfirmationBox.classList.contains('hidden')) {
+                if (signupRemaining > 0) {
+                    if (authSignupCooldownBadge) authSignupCooldownBadge.classList.remove('hidden');
+                    if (authSignupCooldownText) authSignupCooldownText.textContent = `Resend available in ${signupRemaining}s`;
+                } else {
+                    if (authSignupCooldownText) authSignupCooldownText.textContent = 'You may now resend or try again.';
+                }
+            }
+
+            if (authMode === 'forgot') {
+                if (resetRemaining > 0) {
+                    if (authSubmitBtn) authSubmitBtn.disabled = true;
+                    if (authSubmitText) authSubmitText.textContent = `Wait (${resetRemaining}s)`;
+                } else {
+                    if (authSubmitBtn) authSubmitBtn.disabled = false;
+                    if (authSubmitText) authSubmitText.textContent = 'Send Reset Link';
+                }
+            }
+        }
+
+        function startAuthCooldownTicker() {
+            if (authCooldownInterval) clearInterval(authCooldownInterval);
+            updateAuthCooldownUI();
+            authCooldownInterval = setInterval(() => {
+                updateAuthCooldownUI();
+                const signupRem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+                const resetRem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET);
+                if (signupRem <= 0 && resetRem <= 0) {
+                    clearInterval(authCooldownInterval);
+                    authCooldownInterval = null;
+                }
+            }, 1000);
+        }
+
+        function showAuthSignupConfirmation(email) {
+            if (authConfirmationTargetEmail) authConfirmationTargetEmail.textContent = email;
+            if (authForm) authForm.classList.add('hidden');
+            if (authTabs) authTabs.classList.add('hidden');
+            if (authDivider) authDivider.classList.add('hidden');
+            if (authSocialGroup) authSocialGroup.classList.add('hidden');
+            if (authSignupConfirmationBox) authSignupConfirmationBox.classList.remove('hidden');
+            startAuthCooldownTicker();
+        }
+
         function openAuthModal(mode = 'signin') {
             setAuthMode(mode);
             clearAuthAlert();
+            startAuthCooldownTicker();
             authModalBackdrop.classList.remove('hidden');
             authModalBackdrop.setAttribute('aria-hidden', 'false');
             setTimeout(() => {
@@ -3014,12 +3471,23 @@ function initApp() {
             authModalBackdrop.classList.add('hidden');
             authModalBackdrop.setAttribute('aria-hidden', 'true');
             clearAuthAlert();
-            if (authForm) authForm.reset();
+            if (authCooldownInterval) {
+                clearInterval(authCooldownInterval);
+                authCooldownInterval = null;
+            }
+            if (authSignupConfirmationBox) authSignupConfirmationBox.classList.add('hidden');
+            if (authForm) {
+                authForm.classList.remove('hidden');
+                authForm.reset();
+            }
         }
 
         function setAuthMode(mode) {
             authMode = mode;
             clearAuthAlert();
+
+            if (authSignupConfirmationBox) authSignupConfirmationBox.classList.add('hidden');
+            if (authForm) authForm.classList.remove('hidden');
 
             if (mode === 'signin') {
                 authModalTitle.textContent = 'Sign in to BIS Assistant';
@@ -3085,6 +3553,8 @@ function initApp() {
                 if (authFooterText) authFooterText.textContent = '';
                 if (authFooterSwitchBtn) authFooterSwitchBtn.classList.add('hidden');
             }
+
+            updateAuthCooldownUI();
         }
 
         function showAuthAlert(type, message) {
@@ -3135,11 +3605,32 @@ function initApp() {
             const password = authPasswordInput?.value || '';
             const confirmPassword = authConfirmPasswordInput?.value || '';
 
-            // Validation
-            if (authMode !== 'reset' && (!email || !email.includes('@'))) {
-                showAuthAlert('error', 'Please enter a valid work email address.');
-                if (authEmailInput) authEmailInput.focus();
-                return;
+            // Strict Deliverable Email Validation (for signin, signup, forgot)
+            if (authMode !== 'reset') {
+                const validation = validateDeliverableEmail(email);
+                if (!validation.valid) {
+                    showAuthAlert('error', validation.error || 'Please enter a valid work email address.');
+                    if (authEmailInput) authEmailInput.focus();
+                    return;
+                }
+                if (validation.warning) {
+                    showAuthAlert('warning', validation.warning);
+                }
+            }
+
+            // Client-side Cooldown Check before touching Supabase
+            if (authMode === 'signup') {
+                if (isEmailCooldownActive(EMAIL_COOLDOWN_ACTIONS.SIGNUP)) {
+                    const rem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+                    showAuthAlert('error', `Please wait ${rem} seconds before initiating another registration.`);
+                    return;
+                }
+            } else if (authMode === 'forgot') {
+                if (isEmailCooldownActive(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET)) {
+                    const rem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET);
+                    showAuthAlert('error', `A password reset link was recently requested. Please wait ${rem} seconds before requesting another.`);
+                    return;
+                }
             }
 
             if (authMode === 'signup' || authMode === 'reset') {
@@ -3168,14 +3659,15 @@ function initApp() {
                 } else if (authMode === 'signup') {
                     const res = await signUpWithEmail(email, password);
                     if (res.user && !res.session) {
-                        showAuthAlert('success', 'Registration initiated! Please check your email to verify your account.');
+                        showAuthSignupConfirmation(email);
                         setAuthSubmitting(false);
                         return;
                     }
                     closeAuthModal();
                 } else if (authMode === 'forgot') {
                     await sendPasswordReset(email);
-                    showAuthAlert('success', 'A password reset link has been sent to your email.');
+                    showAuthAlert('success', 'If that account exists, a password reset link has been sent. Please check your inbox.');
+                    startAuthCooldownTicker();
                     setAuthSubmitting(false);
                     return;
                 } else if (authMode === 'reset') {
@@ -3188,7 +3680,12 @@ function initApp() {
                 }
             } catch (err) {
                 console.error('[BIS Auth Form Error]', err);
-                showAuthAlert('error', err.message || 'Authentication operation failed.');
+                const isRateLimit = err?.status === 429 || /rate limit|too many requests/i.test(err?.message || '');
+                if (isRateLimit) {
+                    showAuthAlert('error', 'Rate limit reached. Please wait a few minutes before trying again.');
+                } else {
+                    showAuthAlert('error', err.message || 'Authentication operation failed.');
+                }
             } finally {
                 setAuthSubmitting(false);
             }
@@ -3227,6 +3724,13 @@ function initApp() {
             authFooterSwitchBtn.addEventListener('click', () => {
                 if (authMode === 'signin' || authMode === 'forgot') setAuthMode('signup');
                 else setAuthMode('signin');
+            });
+        }
+        if (btnAuthBackToSignIn) {
+            btnAuthBackToSignIn.addEventListener('click', () => {
+                if (authSignupConfirmationBox) authSignupConfirmationBox.classList.add('hidden');
+                if (authForm) authForm.classList.remove('hidden');
+                setAuthMode('signin');
             });
         }
         if (btnTogglePassword) {
@@ -3364,6 +3868,10 @@ function initApp() {
                         svg.innerHTML = '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>';
                     }
                 }
+
+                if (effectiveUser && effectiveUser.id && !isGuestSession()) {
+                    syncConversationsFromSupabase(effectiveUser.id);
+                }
             } else {
                 if (btnOpenAuthModal) btnOpenAuthModal.classList.remove('hidden');
                 if (userProfilePill) userProfilePill.classList.add('hidden');
@@ -3402,6 +3910,11 @@ function initApp() {
                 }
                 clearAuthenticatedPreferences();
                 applyPersonalization(DEFAULT_USER_PREFERENCES);
+                if (event === 'SIGNED_OUT') {
+                    conversations = [];
+                    localStorage.removeItem('bis_ai_conversations_v2');
+                    createNewConversation(false);
+                }
             }
         }
 
@@ -3440,6 +3953,8 @@ function initApp() {
             switchView('assistant');
         } else if (hash === '#labs' || hash === '#labfinder') {
             switchView('labfinder');
+        } else if (hash === '#compliance' || hash === '#journey') {
+            switchView('compliance');
         } else if (hash === '#login' || hash === '#signin') {
             switchView('home');
             openAuthModal('signin');
@@ -3457,10 +3972,12 @@ function initApp() {
     }
 
     try {
+        initTheme();
         initLanguageSelectors();
         loadI18n();
+        initSubComponents();
     } catch (err) {
-        console.error('[BIS Init] i18n initialization error:', err);
+        console.error('[BIS Init] i18n / subcomponents initialization error:', err);
     }
 
     try {

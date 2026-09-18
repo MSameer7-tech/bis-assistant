@@ -34,15 +34,15 @@ export const CANONICAL_TO_RESPONSE_STYLE = {
 };
 
 export function toCanonicalResponseStyle(style) {
-    if (!style) return 'professional';
+    if (!style) return 'detailed';
     const key = String(style).trim();
-    return RESPONSE_STYLE_TO_CANONICAL[key] || RESPONSE_STYLE_TO_CANONICAL[key.toLowerCase()] || 'professional';
+    return RESPONSE_STYLE_TO_CANONICAL[key] || RESPONSE_STYLE_TO_CANONICAL[key.toLowerCase()] || 'detailed';
 }
 
 export function toUiResponseStyle(canonical) {
-    if (!canonical) return 'Professional & Compliance-focused';
+    if (!canonical) return 'Detailed & Explanatory';
     const key = String(canonical).trim().toLowerCase();
-    return CANONICAL_TO_RESPONSE_STYLE[key] || CANONICAL_TO_RESPONSE_STYLE[canonical] || 'Professional & Compliance-focused';
+    return CANONICAL_TO_RESPONSE_STYLE[key] || CANONICAL_TO_RESPONSE_STYLE[canonical] || 'Detailed & Explanatory';
 }
 
 export const DEFAULT_USER_PREFERENCES = {
@@ -54,7 +54,7 @@ export const DEFAULT_USER_PREFERENCES = {
         city: 'New Delhi'
     },
     language: 'en',
-    responseStyle: 'Professional & Compliance-focused', // default corresponds to canonical 'professional'
+    responseStyle: 'Detailed & Explanatory', // default corresponds to canonical 'detailed'
     onboarding_completed: false,
     completedAt: null
 };

@@ -1,21 +1,46 @@
 {
-  "timestamp": "2026-09-06T06:55:41.420701+00:00",
-  "total_raw_laboratories": 28,
-  "unique_laboratories": 24,
-  "lab_duplicates_filtered": 0,
-  "total_raw_scopes": 165,
-  "unique_scopes": 149,
-  "scope_duplicates_filtered": 16,
-  "total_rejected_records": 0,
-  "rejected_records": [],
-  "flagged_conflicts": [],
-  "statistics": {
-    "total_unique_laboratories": 24,
-    "bis_owned_count": 1,
-    "bis_recognized_count": 19,
-    "bis_empanelled_count": 4,
-    "total_scope_records": 149,
-    "total_standards_associated": 133,
-    "total_states_covered": 12
-  }
+  "catalog_version": "Phase F3 Step 3E (Expanded)",
+  "authority": "Bureau of Indian Standards (BIS LIMS)",
+  "source_url": "https://lims.bis.gov.in/",
+  "timestamp": "2026-09-11T17:12:00+00:00",
+  "total_bis_lims_records_discovered": 581,
+  "valid_active_records": 580,
+  "recognized_labs": 430,
+  "empanelled_labs": 140,
+  "bis_owned_labs": 10,
+  "invalid_or_inactive_records": 0,
+  "duplicates": 0,
+  "records_excluded": 1,
+  "records_with_missing_scope": 39,
+  "records_with_complete_scope": 541,
+  "records_added_to_f3": 580,
+  "new_valid_laboratories_added": 556,
+  "records_rejected": 1,
+  "rejected_records": [
+    {
+      "record_type": "LABORATORY",
+      "raw_identifier": "RAW_LAB_BIS_RECOGNIZED_313_921ce960",
+      "internal_id": 313,
+      "lab_code": "9134816",
+      "lab_name": "ECO Laboratories & Consultants Pvt Ltd",
+      "rejection_reason": "MISSING_ADDRESS: Address is empty or insufficient (<4 chars). BIS LIMS raw address listed as \"-\".",
+      "source_url": "https://lims.bis.gov.in/home/labs/?page=9"
+    }
+  ],
+  "scope_statistics": {
+    "total_scope_records": 6327,
+    "total_standards_associated": 1264,
+    "total_clause_records": 368886,
+    "scope_retrieval_failures": 0,
+    "scope_parse_failures": 0
+  },
+  "directory_page_manifest": {
+    "bis_owned_pages": 1,
+    "bis_empanelled_pages": 7,
+    "bis_recognized_pages": 22,
+    "total_pages_retrieved": 30
+  },
+  "synthetic_laboratories_added": 0,
+  "inferred_capabilities": 0,
+  "external_sources_used": 0
 }

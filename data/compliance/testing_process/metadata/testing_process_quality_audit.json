@@ -1,0 +1,45 @@
+{
+  "audit_version": "PC-4.0",
+  "generated_at": "2026-09-12T00:00:00+00:00",
+  "total_composite_relationships": 665,
+  "unique_products": 656,
+  "unique_standards": 221,
+  "testing_status_breakdown": {
+    "TESTING_REQUIREMENTS_CONFIRMED": 150,
+    "TESTING_REQUIREMENTS_UNKNOWN": 306,
+    "TESTING_REQUIREMENTS_PARTIAL": 209
+  },
+  "inspection_status_breakdown": {
+    "INSPECTION_REQUIREMENTS_CONFIRMED": 150,
+    "INSPECTION_REQUIREMENTS_UNKNOWN": 306,
+    "INSPECTION_REQUIREMENTS_PARTIAL": 209
+  },
+  "sampling_status_breakdown": {
+    "SAMPLING_REQUIREMENTS_CONFIRMED": 150,
+    "SAMPLING_REQUIREMENTS_UNKNOWN": 306,
+    "SAMPLING_REQUIREMENTS_PARTIAL": 209
+  },
+  "certification_process_status_breakdown": {
+    "CERTIFICATION_PROCESS_PARTIAL": 359,
+    "CERTIFICATION_PROCESS_UNKNOWN": 306
+  },
+  "clause_level_evidence_coverage": {
+    "testing_records_with_clause": 18,
+    "total_testing_records": 120,
+    "coverage_percent": 15.0
+  },
+  "source_verification_summary": {
+    "SOURCE_VERIFIED": 665,
+    "SOURCE_UNVERIFIED": 0
+  },
+  "conflict_preservation": {
+    "total_conflicts_preserved": 105,
+    "composite_records_affected_by_conflicts": 194
+  },
+  "data_quality_checks": {
+    "zero_orphan_records": true,
+    "zero_duplicate_records": true,
+    "complete_provenance_coverage": true,
+    "deterministic_deduplication": true
+  }
+}

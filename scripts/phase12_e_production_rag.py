@@ -459,8 +459,17 @@ class ProductionHTTPHandler(SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_body.decode("utf-8"))
                 query_text = data.get("query", "")
-                
-                result = query_production_rag(query_text)
+                target_lang = data.get("target_language") or data.get("language")
+                if target_lang == "auto":
+                    target_lang = None
+                from scripts.phase12_f2_orchestrator import orchestrate_assistant_query, normalize_language_code
+                normalized_lang = normalize_language_code(target_lang) if target_lang else None
+                result = orchestrate_assistant_query(
+                    query_text,
+                    target_language=normalized_lang,
+                    response_style=data.get("response_style"),
+                    conversation_history=data.get("history")
+                )
                 if current_user and isinstance(result, dict):
                     result["authenticated_user"] = {
                         "user_id": current_user["user_id"],

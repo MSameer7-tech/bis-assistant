@@ -1,0 +1,51 @@
+{
+  "audit_version": "PC-3.0",
+  "generated_at": "2026-09-12T00:00:00+00:00",
+  "total_relationships": 665,
+  "unique_products": 661,
+  "unique_standards": 431,
+  "standard_qco_breakdown": {
+    "QCO_NOT_ESTABLISHED": 181,
+    "QCO_STATUS_UNKNOWN": 190,
+    "QCO_APPLIES": 31,
+    "QCO_CONFLICT": 6,
+    "QCO_AMENDED": 23
+  },
+  "composite_qco_status_breakdown": {
+    "QCO_CONFLICT": 37,
+    "QCO_AMENDED": 127,
+    "QCO_APPLIES": 95,
+    "QCO_NOT_ESTABLISHED": 398,
+    "QCO_STATUS_UNKNOWN": 8
+  },
+  "mandatory_certification_breakdown": {
+    "QCO_CONFLICT": 37,
+    "MANDATORY_CERTIFICATION_CONFIRMED": 222,
+    "MANDATORY_CERTIFICATION_NOT_ESTABLISHED": 398,
+    "QCO_STATUS_UNKNOWN": 8
+  },
+  "product_manual_status_breakdown": {
+    "PRODUCT_MANUAL_CONFLICT": 187,
+    "PRODUCT_MANUAL_AVAILABLE": 138,
+    "PRODUCT_MANUAL_NOT_FOUND": 340
+  },
+  "scheme_applicability_breakdown": {
+    "CERTIFICATION_SCHEME_UNKNOWN": 665
+  },
+  "source_verification_summary": {
+    "SOURCE_VERIFIED": 665,
+    "SOURCE_UNVERIFIED": 0
+  },
+  "conflict_preservation": {
+    "total_conflicts_preserved": 105,
+    "composite_records_affected_by_conflicts": 194
+  },
+  "data_quality_checks": {
+    "zero_orphan_products": true,
+    "zero_orphan_standards": true,
+    "zero_fabricated_dates": true,
+    "zero_fabricated_schemes": true,
+    "complete_provenance_coverage": true,
+    "deterministic_deduplication": true
+  }
+}

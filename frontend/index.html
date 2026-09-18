@@ -10,7 +10,32 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=12.f.5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
-    <link rel="stylesheet" href="./styles.css?v=14.4.0" id="appStyles">
+    <link rel="stylesheet" href="./styles.css?v=14.7.4" id="appStyles">
+    <!-- Dev backend auto-resolution when served on local dev port -->
+    <script>
+        (function() {
+            if (typeof window !== 'undefined' && !window.__BIS_API_BASE_URL__) {
+                var h = window.location.hostname;
+                var p = window.location.port;
+                if ((h === 'localhost' || h === '127.0.0.1') && p && p !== '8000' && p !== '3000') {
+                    window.__BIS_API_BASE_URL__ = 'http://' + h + ':8000';
+                }
+            }
+        })();
+    </script>
+    <!-- Synchronous Early Theme Guard to prevent FOUC / flash of wrong theme -->
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('bis_theme') || 'system';
+                var resolvedTheme = theme;
+                if (theme === 'system') {
+                    resolvedTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+                }
+                document.documentElement.setAttribute('data-theme', resolvedTheme);
+            } catch(e) {}
+        })();
+    </script>
     <!-- Synchronous Early Entry-Guard to prevent FOUC (flash of unauthenticated content) -->
     <script>
         (function() {
@@ -42,7 +67,10 @@
             } catch(e) {}
 
             if (!hasCandidateToken) {
-                var isStatic = window.location.protocol === 'file:' || window.location.pathname.endsWith('.html');
+                var isLocalDev = window.location.hostname === 'localhost' || 
+                                 window.location.hostname === '127.0.0.1' || 
+                                 window.location.port === '3000';
+                var isStatic = window.location.protocol === 'file:' || window.location.pathname.endsWith('.html') || isLocalDev;
                 var target = isStatic ? './login.html' : '/login';
                 window.location.replace(target);
             }
@@ -84,6 +112,10 @@
                 <button type="button" class="nav-link" id="navAssistant" title="Assistant Workspace">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
                     <span data-i18n="nav.assistant">Assistant</span>
+                </button>
+                <button type="button" class="nav-link" id="navComplianceJourney" title="Product Compliance Journey">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                    <span data-i18n="nav.compliance_journey">Compliance Journey</span>
                 </button>
                 <button type="button" class="nav-link" id="navLabFinder" title="BIS Laboratory Finder">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -145,6 +177,11 @@
                     <button type="button" class="btn-sidebar-user-action" id="btnSidebarPreferences" title="Personalization preferences" aria-label="Preferences">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         <span data-i18n="nav.preferences">Preferences</span>
+                    </button>
+                    <button type="button" class="btn-sidebar-user-action" id="btnThemeToggle" title="Switch Theme (Light / Dark / System)" aria-label="Toggle theme">
+                        <svg class="theme-icon-sun hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        <span id="themeToggleText">Theme</span>
                     </button>
                     <button type="button" class="btn-sidebar-user-action" id="btnSidebarTour" title="Quick workspace tour" aria-label="Quick Tour">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
@@ -278,6 +315,9 @@
                                 <button type="button" class="hero-suggestion-pill" data-query="Is there authoritative evidence for this requirement?" data-i18n="assistant.suggestions.show_evidence">
                                     Show authoritative evidence
                                 </button>
+                                <button type="button" class="hero-suggestion-pill" data-query="Show compliance journey for IS 4985" data-i18n="assistant.suggestions.compliance_is4985">
+                                    IS 4985 Compliance Journey
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -316,7 +356,10 @@
             <!-- 2. VIEW: LAB FINDER (Authoritative BIS LIMS Laboratory Discovery & Proximity Workbench) -->
             <section class="lab-finder-workspace hidden" id="viewLabFinder" role="region" aria-label="BIS Laboratory Finder"></section>
 
-            <!-- 3. VIEW: HOME (Professional BIS Research Workspace Landing) -->
+            <!-- 3. VIEW: COMPLIANCE JOURNEY (Deterministic Product Compliance & Regulatory Pathway Workbench) -->
+            <section class="compliance-journey-workspace hidden" id="viewComplianceJourney" role="region" aria-label="Product Compliance Journey"></section>
+
+            <!-- 4. VIEW: HOME (Professional BIS Research Workspace Landing) -->
             <section class="home-view" id="viewHome" role="region" aria-label="BIS Research Workspace Home">
                 <div class="home-content-container">
                     <div class="home-hero-grid">
@@ -675,13 +718,33 @@
                 <span class="auth-alert-msg" id="authAlertMsg"></span>
             </div>
 
+            <!-- Signup Confirmation Locked State -->
+            <div id="authSignupConfirmationBox" class="auth-confirmation-box hidden" role="region" aria-live="polite">
+                <div class="auth-confirmation-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <h3 class="auth-confirmation-title">Check Your Inbox</h3>
+                <p class="auth-confirmation-desc">
+                    We sent a confirmation link to <strong id="authConfirmationTargetEmail" style="color:#fff;"></strong>. Click the link to complete registration before logging in.
+                </p>
+                <div class="auth-cooldown-badge" id="authSignupCooldownBadge">
+                    <span id="authSignupCooldownText">Resend available in 60s</span>
+                </div>
+                <div style="margin-top: 18px;">
+                    <button type="button" class="btn-auth-switch" id="btnAuthBackToSignIn" style="font-size: 13.5px;">Return to Sign In</button>
+                </div>
+            </div>
+
             <!-- Email & Password Form -->
             <form id="authForm" class="auth-form" novalidate>
                 <!-- Email Field -->
                 <div class="auth-form-group">
                     <label for="authEmailInput" class="auth-label">Work Email</label>
                     <div class="auth-input-wrap">
-                        <input type="email" id="authEmailInput" class="auth-input" placeholder="name@organization.com" autocomplete="email" required>
+                        <input type="email" id="authEmailInput" class="auth-input" placeholder="name@your-domain.com" autocomplete="email" required>
                     </div>
                 </div>
 
@@ -1046,6 +1109,40 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Appearance / Theme Selection -->
+                    <div class="ob-section-subblock">
+                        <label class="ob-block-label" data-i18n="onboarding.step4.theme_label">Workspace Appearance</label>
+                        <div class="onboarding-styles-grid onboarding-themes-grid" id="onboardingThemesGrid" role="radiogroup" aria-label="Theme selection">
+                            <button type="button" class="onboarding-style-card onboarding-theme-card" data-theme-val="light" role="radio" aria-checked="false">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.themes.light">Light</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.themes.light_desc">Apple-style clean off-white workspace.</span>
+                                </div>
+                            </button>
+                            <button type="button" class="onboarding-style-card onboarding-theme-card" data-theme-val="dark" role="radio" aria-checked="false">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.themes.dark">Dark</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.themes.dark_desc">Cinematic dark workspace.</span>
+                                </div>
+                            </button>
+                            <button type="button" class="onboarding-style-card onboarding-theme-card selected" data-theme-val="system" role="radio" aria-checked="true">
+                                <div class="style-icon-wrap">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                </div>
+                                <div class="style-content">
+                                    <span class="style-title" data-i18n="onboarding.step4.themes.system">System</span>
+                                    <span class="style-desc" data-i18n="onboarding.step4.themes.system_desc">Follows your operating system theme.</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -1121,6 +1218,6 @@
     <script src="./vendor/leaflet/leaflet.js"></script>
 
     <!-- Application Script -->
-    <script type="module" src="./app.js?v=14.6.1"></script>
+    <script type="module" src="./app.js?v=14.7.4"></script>
 </body>
 </html>

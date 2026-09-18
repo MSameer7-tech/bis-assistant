@@ -1,0 +1,33 @@
+{
+  "manifest_version": "PC-3.0",
+  "generated_at": "2026-09-12T00:00:00+00:00",
+  "input_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/normalized",
+  "output_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/relationships",
+  "relationship_counts": {
+    "product_standard_relationships": 665,
+    "standard_qco_relationships": 431,
+    "qco_requirement_relationships": 313,
+    "certification_scheme_relationships": 665,
+    "compliance_relationships": 665,
+    "total_relationship_records": 2739
+  },
+  "artifact_hashes": {
+    "product_standard_relationships.jsonl": "2bc3142c47d8b058ec36a2e925b3664a4c070c4ec6bf7ed39274b05b7e1bc555",
+    "standard_qco_relationships.jsonl": "bf24a87ae30c5364d42ae9b43c7450c5a9b1752e0ae24b39a0ffc6c54a6bcd0b",
+    "qco_requirement_relationships.jsonl": "d7c09f480ff65b6e88afb8bfa3bbb8b6a9b17f32a89aa3374dc8a7b0ad383355",
+    "certification_scheme_relationships.jsonl": "21a7648ff37ee022960bbad8cf78605c03d35d170d65edea5944817dcd323ee2",
+    "compliance_relationships.jsonl": "7e56c96c4aec96a54a160bf5b1a7ea38979fd382cb8d790c25d8108b38776d1a"
+  },
+  "lineage_summary": {
+    "orphan_products": 0,
+    "orphan_standards": 0,
+    "orphan_relationships": 0,
+    "provenance_coverage_percent": 100.0
+  },
+  "zero_invention_guarantees": {
+    "standards_do_not_imply_mandatory": true,
+    "missing_evidence_not_converted_to_no": true,
+    "unestablished_schemes_preserved_as_unknown": true,
+    "conflicts_disclosed_without_silent_resolution": true
+  }
+}

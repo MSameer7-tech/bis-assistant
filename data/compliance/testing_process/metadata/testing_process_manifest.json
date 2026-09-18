@@ -1,0 +1,34 @@
+{
+  "manifest_version": "PC-4.0",
+  "evaluation_reference_time": "2026-09-12T00:00:00+00:00",
+  "generated_at": "2026-09-12T00:00:00+00:00",
+  "input_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/relationships",
+  "output_directory": "/Users/sameer/Documents/SIH 2026/bis-ai-assistant/data/compliance/testing_process",
+  "input_hashes": {
+    "compliance_relationships.jsonl": "7e56c96c4aec96a54a160bf5b1a7ea38979fd382cb8d790c25d8108b38776d1a",
+    "testing_requirements.jsonl": "1e9c08f380819dd7ec8521b359dd83f9211af163e7a3c2436011bf609944073f",
+    "product_manual_registry.jsonl": "22c8d60a1a765047393e2f06fbd543a4bb46db52888ba877a8fa7e648f82e260",
+    "certification_process.jsonl": "96accd0114db206a3f3c6b93bdc276810db2801dc7b889fea1c8c24675ef51b0",
+    "conflicts.jsonl": "65d12765b6eedd7518f1fcf98693b871f52778646196f15161f37a083a90286c"
+  },
+  "artifact_hashes": {
+    "testing_requirement_relationships.jsonl": "54d8aa8f29ba8e7ab4f261e528bc123db8e379e48511e125af03b45fce7dc9c2",
+    "inspection_requirement_relationships.jsonl": "53624c5d8148c5069e6241cd61d9d1d186f75359cb4e06fa3d154cd8dcc4bfc6",
+    "sampling_requirement_relationships.jsonl": "36f7a816be9fd806280ab44b3cc84f5b71e9f57a932f17d74a6d9a5b0a18082e",
+    "testing_process_relationships.jsonl": "746399bdabc96e73b3102e18e0ea2d0108ddf087142683cd7dedea42e8b99a43"
+  },
+  "relationship_counts": {
+    "testing_requirement_relationships": 120,
+    "inspection_requirement_relationships": 120,
+    "sampling_requirement_relationships": 120,
+    "testing_process_relationships": 665,
+    "total_pc4_relationship_records": 1025
+  },
+  "zero_invention_guarantees": {
+    "testing_does_not_imply_mandatory": true,
+    "generic_process_not_stamped_on_products": true,
+    "schemes_preserved_as_unknown": true,
+    "missing_evidence_not_converted_to_no_testing": true,
+    "conflicts_disclosed_without_silent_resolution": true
+  }
+}

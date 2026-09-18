@@ -7,8 +7,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css?v=14.0.1">
+    <!-- Dev backend auto-resolution when served on local dev port -->
+    <script>
+        (function() {
+            if (typeof window !== 'undefined' && !window.__BIS_API_BASE_URL__) {
+                var h = window.location.hostname;
+                var p = window.location.port;
+                if ((h === 'localhost' || h === '127.0.0.1') && p && p !== '8000' && p !== '3000') {
+                    window.__BIS_API_BASE_URL__ = 'http://' + h + ':8000';
+                }
+            }
+        })();
+    </script>
     <style>
         .login-page-wrap {
             min-height: 100vh;
@@ -184,10 +195,61 @@
             color: #fecdd3;
         }
 
+        .login-alert.warning {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fde68a;
+        }
+
         .login-alert.success {
             background: rgba(16, 185, 129, 0.12);
             border: 1px solid rgba(16, 185, 129, 0.35);
             color: #a7f3d0;
+        }
+
+        .signup-confirmation-box {
+            text-align: center;
+            padding: 28px 18px;
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .signup-confirmation-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.12);
+            margin-bottom: 16px;
+        }
+
+        .signup-confirmation-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 8px;
+        }
+
+        .signup-confirmation-desc {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.72);
+            line-height: 1.55;
+            margin: 0 0 16px;
+        }
+
+        .signup-cooldown-badge {
+            display: inline-block;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .login-form-group {
@@ -647,7 +709,7 @@
             <!-- Active Session View (shown if already logged in) -->
             <div id="activeSessionView" class="already-signed-in-box hidden">
                 <div class="active-user-avatar" id="activeUserAvatar">U</div>
-                <div class="active-user-email" id="activeUserEmail">user@example.com</div>
+                <div class="active-user-email" id="activeUserEmail">Authenticated User</div>
                 <div class="active-user-status">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
                     Authenticated via Supabase
@@ -705,13 +767,33 @@
                     <span id="pageAlertMsg"></span>
                 </div>
 
+                <!-- Signup Confirmation Lockout View (hidden by default) -->
+                <div id="signupConfirmationBox" class="signup-confirmation-box hidden" role="status" aria-live="polite">
+                    <div class="signup-confirmation-icon" aria-hidden="true">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                    </div>
+                    <h2 class="signup-confirmation-title">Check Your Inbox</h2>
+                    <p class="signup-confirmation-desc">
+                        A verification link has been sent to <strong id="confirmationTargetEmail" style="color: #fff;">your email</strong>. Please check your inbox and spam folder to confirm your account.
+                    </p>
+                    <div class="signup-cooldown-badge" id="signupCooldownBadge">
+                        <span id="signupCooldownText">Resend available in 60s</span>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button type="button" id="btnBackToSignIn" class="btn-login-submit" style="width: 100%;">Back to Sign In</button>
+                    </div>
+                </div>
+
                 <!-- Email / Password Form -->
                 <form id="pageAuthForm" novalidate>
                     <!-- Email -->
                     <div class="login-form-group">
                         <label for="emailInput" class="login-label">Work Email</label>
                         <div class="login-input-wrap">
-                            <input type="email" id="emailInput" class="login-input" placeholder="name@organization.com" autocomplete="email" required>
+                            <input type="email" id="emailInput" class="login-input" placeholder="name@your-domain.com" autocomplete="email" required>
                         </div>
                     </div>
 
@@ -776,8 +858,13 @@
             sendPasswordReset,
             updatePassword,
             getHomeUrl,
-            setGuestSession
-        } from './auth.js?v=14.1.0';
+            setGuestSession,
+            validateDeliverableEmail,
+            getEmailCooldownRemaining,
+            setEmailCooldown,
+            isEmailCooldownActive,
+            EMAIL_COOLDOWN_ACTIONS
+        } from './auth.js?v=14.2.0';
 
         // Canonical environment-aware workspace home URL resolver
         const resolveHome = () => {
@@ -809,6 +896,12 @@
         const pageAlertIcon = document.getElementById('pageAlertIcon');
         const pageAlertMsg = document.getElementById('pageAlertMsg');
 
+        const signupConfirmationBox = document.getElementById('signupConfirmationBox');
+        const confirmationTargetEmail = document.getElementById('confirmationTargetEmail');
+        const signupCooldownBadge = document.getElementById('signupCooldownBadge');
+        const signupCooldownText = document.getElementById('signupCooldownText');
+        const btnBackToSignIn = document.getElementById('btnBackToSignIn');
+
         const pageAuthForm = document.getElementById('pageAuthForm');
         const emailInput = document.getElementById('emailInput');
         const passwordGroup = document.getElementById('passwordGroup');
@@ -828,10 +921,11 @@
         const btnSwitchMode = document.getElementById('btnSwitchMode');
 
         let mode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'reset'
+        let cooldownTimerId = null;
 
         function showAlert(type, msg) {
             pageAlert.className = `login-alert ${type}`;
-            pageAlertIcon.textContent = type === 'success' ? '✓' : '⚠️';
+            pageAlertIcon.textContent = type === 'success' ? '✓' : (type === 'warning' ? '💡' : '⚠️');
             pageAlertMsg.textContent = msg;
             pageAlert.classList.remove('hidden');
         }
@@ -852,9 +946,69 @@
             }
         }
 
+        function updateCooldownUI() {
+            const actionType = mode === 'forgot' ? EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET : EMAIL_COOLDOWN_ACTIONS.SIGNUP;
+            const remaining = getEmailCooldownRemaining(actionType);
+
+            // Update signup confirmation card countdown if visible
+            const signupRemaining = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+            if (signupCooldownText) {
+                if (signupRemaining > 0) {
+                    signupCooldownText.textContent = `Resend available in ${signupRemaining}s`;
+                } else {
+                    signupCooldownText.textContent = 'Resend link available if needed';
+                }
+            }
+
+            if ((mode === 'signup' || mode === 'forgot') && remaining > 0) {
+                submitBtn.disabled = true;
+                submitBtnText.textContent = `Resend available in ${remaining}s`;
+                if (!cooldownTimerId) {
+                    cooldownTimerId = setInterval(updateCooldownUI, 1000);
+                }
+            } else {
+                if (cooldownTimerId && remaining <= 0) {
+                    clearInterval(cooldownTimerId);
+                    cooldownTimerId = null;
+                }
+                if (submitSpinner.classList.contains('hidden')) {
+                    if (mode === 'signup') {
+                        submitBtnText.textContent = 'Create Account';
+                        submitBtn.disabled = false;
+                    } else if (mode === 'forgot') {
+                        submitBtnText.textContent = 'Send Reset Link';
+                        submitBtn.disabled = false;
+                    }
+                }
+            }
+        }
+
+        function showSignupConfirmation(targetEmail) {
+            clearAlert();
+            pageAuthForm.classList.add('hidden');
+            pageTabs.classList.add('hidden');
+            pageSocialGroup.classList.add('hidden');
+            pageDivider.classList.add('hidden');
+            pageTitle.textContent = 'Check Your Inbox';
+            pageSubtitle.textContent = 'Verify your email to complete registration';
+            if (confirmationTargetEmail) {
+                confirmationTargetEmail.textContent = targetEmail;
+            }
+            if (signupConfirmationBox) {
+                signupConfirmationBox.classList.remove('hidden');
+            }
+            updateCooldownUI();
+        }
+
         function setMode(newMode) {
             mode = newMode;
             clearAlert();
+
+            // Restore elements if returning from confirmation lockout state
+            if (signupConfirmationBox && !signupConfirmationBox.classList.contains('hidden')) {
+                signupConfirmationBox.classList.add('hidden');
+                pageAuthForm.classList.remove('hidden');
+            }
 
             if (mode === 'signin') {
                 pageTitle.textContent = 'Sign in to BIS Assistant';
@@ -869,6 +1023,7 @@
                 btnForgotPwd.classList.remove('hidden');
                 confirmPasswordGroup.classList.add('hidden');
                 submitBtnText.textContent = 'Sign In';
+                submitBtn.disabled = false;
                 footerPromptText.textContent = "Don't have an account?";
                 btnSwitchMode.textContent = 'Create an account';
                 btnSwitchMode.classList.remove('hidden');
@@ -911,9 +1066,11 @@
                 btnForgotPwd.classList.add('hidden');
                 confirmPasswordGroup.classList.remove('hidden');
                 submitBtnText.textContent = 'Update Password';
+                submitBtn.disabled = false;
                 footerPromptText.textContent = '';
                 btnSwitchMode.classList.add('hidden');
             }
+            updateCooldownUI();
         }
 
         function togglePassword(inputEl) {
@@ -932,6 +1089,10 @@
             if (mode === 'signin' || mode === 'forgot') setMode('signup');
             else setMode('signin');
         });
+
+        if (btnBackToSignIn) {
+            btnBackToSignIn.addEventListener('click', () => setMode('signin'));
+        }
 
         btnTogglePwd.addEventListener('click', () => togglePassword(passwordInput));
         btnToggleConfirmPwd.addEventListener('click', () => togglePassword(confirmPasswordInput));
@@ -986,10 +1147,32 @@
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
 
-            if (!email) {
-                showAlert('error', 'Please enter your work email address.');
-                emailInput.focus();
-                return;
+            // 1. Cooldown check
+            if (mode === 'signup') {
+                const rem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+                if (rem > 0) {
+                    showAlert('error', `Signup request recently sent. Please wait ${rem}s before requesting another confirmation email.`);
+                    return;
+                }
+            } else if (mode === 'forgot') {
+                const rem = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET);
+                if (rem > 0) {
+                    showAlert('error', `Password reset request recently sent. Please wait ${rem}s before requesting another reset email.`);
+                    return;
+                }
+            }
+
+            // 2. Strict deliverability validation for email-based flows
+            if (mode !== 'reset') {
+                const val = validateDeliverableEmail(email);
+                if (!val.valid) {
+                    showAlert('error', val.error || 'Please enter a valid, deliverable email address. Test or placeholder domains are not permitted.');
+                    emailInput.focus();
+                    return;
+                }
+                if (val.warning) {
+                    showAlert('warning', val.warning);
+                }
             }
 
             if (mode !== 'forgot') {
@@ -1026,11 +1209,13 @@
                             window.location.href = resolveHome();
                         }, 800);
                     } else {
-                        showAlert('success', 'Account created! Please check your email inbox to confirm your registration.');
+                        // Lockout form into confirmation state
+                        showSignupConfirmation(email);
                     }
                 } else if (mode === 'forgot') {
                     await sendPasswordReset(email);
-                    showAlert('success', 'A password reset link has been sent to your email.');
+                    showAlert('success', 'A password reset link has been sent to your email. Please check your inbox and spam folder.');
+                    updateCooldownUI();
                 } else if (mode === 'reset') {
                     await updatePassword(password);
                     setGuestSession(false);
@@ -1041,9 +1226,12 @@
                 }
             } catch (err) {
                 console.error('[BIS Auth Form Error]', err);
-                showAlert('error', err.message || 'Authentication operation failed.');
+                const errMsg = err?.message || 'Authentication operation failed.';
+                showAlert('error', errMsg);
+                updateCooldownUI();
             } finally {
                 setSubmitting(false);
+                updateCooldownUI();
             }
         });
 
@@ -1074,6 +1262,7 @@
         });
 
         initializeAuth();
+        updateCooldownUI();
     </script>
 </body>
 </html>

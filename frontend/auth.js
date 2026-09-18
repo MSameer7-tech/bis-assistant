@@ -20,6 +20,190 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { apiUrl } from './config.js';
 
+/**
+ * Known non-deliverable, RFC 2606 reserved, or placeholder domains that must never be sent to Supabase.
+ */
+export const BLOCKED_EMAIL_DOMAINS = new Set([
+    'example.com',
+    'example.org',
+    'example.net',
+    'test.com',
+    'fake.com',
+    'sample.com',
+    'organization.com',
+    'localhost',
+    'invalid'
+]);
+
+export const BLOCKED_DOMAIN_SUFFIXES = [
+    '.invalid',
+    '.localhost',
+    '.example',
+    '.test'
+];
+
+export const COMMON_DOMAIN_TYPOS = {
+    'gamil.com': 'gmail.com',
+    'gmial.com': 'gmail.com',
+    'gmaill.com': 'gmail.com',
+    'yaho.com': 'yahoo.com',
+    'yahooo.com': 'yahoo.com',
+    'hotmial.com': 'hotmail.com',
+    'outlok.com': 'outlook.com'
+};
+
+/**
+ * Action types for email rate-limiting cooldowns
+ */
+export function EMAIL_COOLDOWN_ACTIONS() {
+    return {
+        SIGNUP: 'signup',
+        PASSWORD_RESET: 'password_reset'
+    };
+}
+EMAIL_COOLDOWN_ACTIONS.SIGNUP = 'signup';
+EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET = 'password_reset';
+Object.freeze(EMAIL_COOLDOWN_ACTIONS);
+
+/**
+ * Validates whether an email is structurally sound, deliverable, and not on any test/blocked lists.
+ * Returns { valid: boolean, error?: string, warning?: string, email?: string }
+ */
+export function validateDeliverableEmail(rawEmail) {
+    if (!rawEmail || typeof rawEmail !== 'string') {
+        return { valid: false, error: 'Please enter your work email address.' };
+    }
+
+    const trimmed = rawEmail.trim();
+    if (!trimmed) {
+        return { valid: false, error: 'Please enter your work email address.' };
+    }
+
+    // Must contain exactly one @
+    const parts = trimmed.split('@');
+    if (parts.length !== 2) {
+        return { valid: false, error: 'Please enter a valid email address containing exactly one "@".' };
+    }
+
+    const [localPart, domainPart] = parts;
+    if (!localPart || !domainPart) {
+        return { valid: false, error: 'Please enter a valid email address with a username and domain.' };
+    }
+
+    // Local part constraints: no leading/trailing dots, no consecutive dots
+    if (localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
+        return { valid: false, error: 'Email username cannot start, end, or contain consecutive dots.' };
+    }
+
+    // Basic permitted characters in local part
+    const localRegex = /^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~.-]+$/;
+    if (!localRegex.test(localPart)) {
+        return { valid: false, error: 'Email username contains invalid characters.' };
+    }
+
+    // Domain part constraints: no leading/trailing dots, no consecutive dots
+    if (domainPart.startsWith('.') || domainPart.endsWith('.') || domainPart.includes('..')) {
+        return { valid: false, error: 'Email domain cannot start, end, or contain consecutive dots.' };
+    }
+
+    const domainLower = domainPart.toLowerCase();
+
+    // Check if domain is blocked
+    if (BLOCKED_EMAIL_DOMAINS.has(domainLower)) {
+        return { valid: false, error: 'Please enter a valid, deliverable email address. Test or placeholder domains are not permitted.' };
+    }
+
+    for (const suffix of BLOCKED_DOMAIN_SUFFIXES) {
+        if (domainLower === suffix.replace(/^\./, '') || domainLower.endsWith(suffix)) {
+            return { valid: false, error: 'Please enter a valid, deliverable email address. Test or placeholder domains are not permitted.' };
+        }
+    }
+
+    // Domain structure: must contain at least one dot separating domain label and TLD
+    const domainLabels = domainLower.split('.');
+    if (domainLabels.length < 2) {
+        return { valid: false, error: 'Please enter a valid email domain with an extension (e.g. .com, .in).' };
+    }
+
+    // Validate each domain label
+    const labelRegex = /^[a-z0-9-]+$/;
+    for (let i = 0; i < domainLabels.length; i++) {
+        const lbl = domainLabels[i];
+        if (!lbl || lbl.startsWith('-') || lbl.endsWith('-') || !labelRegex.test(lbl)) {
+            return { valid: false, error: 'Email domain contains invalid characters or formatting.' };
+        }
+    }
+
+    // TLD must be at least 2 alphabetic characters
+    const tld = domainLabels[domainLabels.length - 1];
+    if (!/^[a-z]{2,}$/.test(tld)) {
+        return { valid: false, error: 'Email top-level domain must contain at least 2 letters (e.g. .com, .gov.in).' };
+    }
+
+    // Check for typo warning (without rewriting address)
+    let warning = undefined;
+    if (COMMON_DOMAIN_TYPOS[domainLower]) {
+        warning = `Did you mean @${COMMON_DOMAIN_TYPOS[domainLower]}?`;
+    }
+
+    return {
+        valid: true,
+        email: `${localPart}@${domainLower}`,
+        warning
+    };
+}
+
+function getSafeSessionStorage() {
+    try {
+        if (typeof sessionStorage !== 'undefined') return sessionStorage;
+        if (typeof window !== 'undefined' && window.sessionStorage) return window.sessionStorage;
+    } catch {
+        return null;
+    }
+    return null;
+}
+
+/**
+ * Returns remaining seconds for a given email cooldown action from sessionStorage.
+ */
+export function getEmailCooldownRemaining(actionType) {
+    const storage = getSafeSessionStorage();
+    if (!storage) return 0;
+    try {
+        const key = `bis_auth_cooldown_${actionType}`;
+        const untilStr = storage.getItem(key);
+        if (!untilStr) return 0;
+        const until = parseInt(untilStr, 10);
+        if (isNaN(until)) return 0;
+        const remaining = Math.ceil((until - Date.now()) / 1000);
+        return remaining > 0 ? remaining : 0;
+    } catch {
+        return 0;
+    }
+}
+
+/**
+ * Sets an expiration timestamp for a given action in sessionStorage.
+ */
+export function setEmailCooldown(actionType, seconds = 60) {
+    const storage = getSafeSessionStorage();
+    if (!storage) return;
+    try {
+        const key = `bis_auth_cooldown_${actionType}`;
+        const until = Date.now() + (seconds * 1000);
+        storage.setItem(key, until.toString());
+    } catch {
+        // silent
+    }
+}
+
+/**
+ * Checks whether an email cooldown is currently active.
+ */
+export function isEmailCooldownActive(actionType) {
+    return getEmailCooldownRemaining(actionType) > 0;
+}
+
 // Module-level singleton state
 let supabase = null;
 let publicConfig = null;
@@ -277,22 +461,60 @@ export async function signInWithEmail(email, password) {
  * Handles both instant session creation and email-verification required cases.
  */
 export async function signUpWithEmail(email, password) {
+    // 1. Strict deliverability validation before any Supabase call
+    const val = validateDeliverableEmail(email);
+    if (!val.valid) {
+        throw new Error(val.error || 'Please enter a valid, deliverable email address. Test or placeholder domains are not permitted.');
+    }
+
+    // 2. Cooldown check
+    const remaining = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.SIGNUP);
+    if (remaining > 0) {
+        throw new Error(`Signup request recently sent. Please wait ${remaining}s before requesting another confirmation email.`);
+    }
+
+    // 3. Supabase client initialization & guarded call
     await initializeAuth();
     if (!supabase) {
         throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your .env file.');
     }
-    const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password,
-        options: {
-            emailRedirectTo: (typeof window !== 'undefined' && window.location && window.location.origin) 
-                ? `${window.location.origin}/auth/callback` 
-                : '/auth/callback'
+
+    let result;
+    try {
+        result = await supabase.auth.signUp({
+            email: val.email || email.trim(),
+            password: password,
+            options: {
+                emailRedirectTo: (typeof window !== 'undefined' && window.location && window.location.origin) 
+                    ? `${window.location.origin}/auth/callback` 
+                    : '/auth/callback'
+            }
+        });
+    } catch (err) {
+        if (err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.toLowerCase().includes('seconds')) {
+            setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.SIGNUP, 60);
+            const rateErr = new Error('Rate limit reached. Too many requests sent. Please wait a moment before trying again.');
+            rateErr.status = 429;
+            throw rateErr;
         }
-    });
-    if (error) throw error;
-    currentSession = data.session;
-    currentUser = data.user;
+        throw err;
+    }
+
+    const { data, error } = result || {};
+    if (error) {
+        if (error.status === 429 || error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('seconds')) {
+            setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.SIGNUP, 60);
+            const rateErr = new Error('Rate limit reached. Too many requests sent. Please wait a moment before trying again.');
+            rateErr.status = 429;
+            throw rateErr;
+        }
+        throw error;
+    }
+
+    // Start 60s cooldown after successful signup dispatch
+    setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.SIGNUP, 60);
+    currentSession = data?.session || null;
+    currentUser = data?.user || null;
     return data;
 }
 
@@ -378,15 +600,53 @@ export async function signOut() {
  * Sends a password reset email using Supabase's official flow.
  */
 export async function sendPasswordReset(email) {
+    // 1. Strict deliverability validation before calling Supabase
+    const val = validateDeliverableEmail(email);
+    if (!val.valid) {
+        throw new Error(val.error || 'Please enter a valid, deliverable email address. Test or placeholder domains are not permitted.');
+    }
+
+    // 2. Cooldown check
+    const remaining = getEmailCooldownRemaining(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET);
+    if (remaining > 0) {
+        throw new Error(`Password reset request recently sent. Please wait ${remaining}s before requesting another reset email.`);
+    }
+
+    // 3. Supabase client initialization & guarded call
     await initializeAuth();
     if (!supabase) {
         throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your .env file.');
     }
+
     const redirectTo = `${window.location.origin}/auth/callback?type=recovery`;
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: redirectTo
-    });
-    if (error) throw error;
+    let result;
+    try {
+        result = await supabase.auth.resetPasswordForEmail(val.email || email.trim(), {
+            redirectTo: redirectTo
+        });
+    } catch (err) {
+        if (err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.toLowerCase().includes('seconds')) {
+            setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET, 60);
+            const rateErr = new Error('Rate limit reached. Too many requests sent. Please wait a moment before trying again.');
+            rateErr.status = 429;
+            throw rateErr;
+        }
+        throw err;
+    }
+
+    const { data, error } = result || {};
+    if (error) {
+        if (error.status === 429 || error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('seconds')) {
+            setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET, 60);
+            const rateErr = new Error('Rate limit reached. Too many requests sent. Please wait a moment before trying again.');
+            rateErr.status = 429;
+            throw rateErr;
+        }
+        throw error;
+    }
+
+    // Start 60s cooldown after successful reset dispatch
+    setEmailCooldown(EMAIL_COOLDOWN_ACTIONS.PASSWORD_RESET, 60);
     return data;
 }
 
@@ -411,7 +671,10 @@ export async function updatePassword(newPassword) {
 export function getLoginUrl() {
     if (typeof window === 'undefined') return '/login';
     const path = window.location.pathname || '';
-    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
+    const isLocalDev = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.port === '3000';
+    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html') || isLocalDev;
     return isStaticOrFile ? './login.html' : '/login';
 }
 
@@ -421,7 +684,10 @@ export function getLoginUrl() {
 export function getHomeUrl() {
     if (typeof window === 'undefined') return '/#home';
     const path = window.location.pathname || '';
-    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html');
+    const isLocalDev = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' || 
+                       window.location.port === '3000';
+    const isStaticOrFile = window.location.protocol === 'file:' || path.endsWith('.html') || isLocalDev;
     return isStaticOrFile ? './index.html#home' : '/#home';
 }
 
