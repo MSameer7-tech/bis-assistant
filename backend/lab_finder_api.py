@@ -245,6 +245,14 @@ class LabNaturalSearchRequest(BaseModel):
         None,
         description="Optional maximum number of laboratory candidates to return."
     )
+    city: Optional[str] = Field(
+        None,
+        description="Optional city filter override (e.g. 'Delhi', 'Kolkata')."
+    )
+    state: Optional[str] = Field(
+        None,
+        description="Optional state filter override (e.g. 'Delhi', 'West Bengal')."
+    )
 
 
 class LabNaturalSearchResponse(BaseModel):
@@ -470,6 +478,31 @@ def execute_search(
 
     # If max_distance_km filtered all candidates out
     if total_matching == 0:
+        nearest_info = None
+        if req.max_distance_km and matching_res.candidates and req.latitude is not None and req.longitude is not None:
+            all_ranked = ranker.rank_candidates(
+                candidates=matching_res.candidates,
+                user_lat=req.latitude,
+                user_lon=req.longitude,
+                max_distance_km=None
+            )
+            if all_ranked:
+                nearest = all_ranked[0]
+                geo = nearest.external_geographic_metadata or {}
+                dist_val = geo.get("distance_km")
+                near_city = nearest.city
+                if not near_city and nearest.original_address:
+                    parts = [p.strip() for p in nearest.original_address.split(",") if p.strip()]
+                    if len(parts) >= 3:
+                        near_city = parts[-3]
+                nearest_info = {
+                    "internal_id": nearest.internal_id,
+                    "laboratory_identity": nearest.laboratory_identity,
+                    "city": near_city,
+                    "state": nearest.state,
+                    "distance_km": round(dist_val, 1) if dist_val is not None else None
+                }
+
         return LabSearchResponse(
             status="NO_MATCH",
             match_status=matching_res.status.value,
@@ -483,7 +516,8 @@ def execute_search(
                 "geographic_ranking": {
                     "user_coordinates": user_coords,
                     "max_distance_km": req.max_distance_km,
-                    "filtered_out_all": True
+                    "filtered_out_all": True,
+                    "nearest_candidate": nearest_info
                 }
             }
         )
@@ -611,6 +645,8 @@ def execute_natural_search(
 
     effective_category = req.category or parsed.category
     effective_scope = req.require_complete_scope if req.require_complete_scope is not None else parsed.require_complete_scope
+    effective_city = req.city or parsed.city
+    effective_state = req.state or parsed.state
     cat_enum: Optional[LabCategory] = None
     if effective_category:
         cat_enum = LabCategory(effective_category.strip().upper())
@@ -625,7 +661,7 @@ def execute_natural_search(
         standards_to_search = [parsed.standard]
 
     # If no standards yet, check generic scope-text fallback before giving up
-    if not standards_to_search and not parsed.state and not parsed.city and not parsed.lab_name:
+    if not standards_to_search and not effective_state and not effective_city and not parsed.lab_name:
         text_scopes = matcher.retrieval_layer.search_scopes_by_text(req.query)
         if text_scopes:
             from ai.lims.retrieval_layer import LimsRetrievalLayer
@@ -644,11 +680,17 @@ def execute_natural_search(
         merged_by_id: Dict[int, LabCandidateMatch] = {}
         matched_standards: Set[str] = set()
 
+        # When reference coordinates are supplied, geographic ranking & radius filtering
+        # handles the spatial restriction around those coordinates. We only pass state/city
+        # to the capability matcher if coordinates were NOT supplied.
+        search_state = effective_state if (req.latitude is None or req.longitude is None) else None
+        search_city = effective_city if (req.latitude is None or req.longitude is None) else None
+
         for std in standards_to_search:
             m_req = LabMatchingRequest(
                 standard=std,
-                state=parsed.state,
-                city=parsed.city,
+                state=search_state,
+                city=search_city,
                 category=cat_enum,
                 require_complete_scope=effective_scope
             )
@@ -685,21 +727,46 @@ def execute_natural_search(
 
         query_criteria = QueryCriteriaResponse(
             standard=primary_std,
-            state=parsed.state,
-            city=parsed.city,
-            latitude=req.latitude,
-            longitude=req.longitude,
+            state=effective_state,
+            city=effective_city,
+            user_coordinates=user_coords,
             max_distance_km=req.max_distance_km,
             category=effective_category,
             require_complete_scope=effective_scope,
             limit=req.limit
         )
 
+        nearest_candidate_info = None
+        if total_matching == 0 and req.max_distance_km and raw_candidates and req.latitude is not None and req.longitude is not None:
+            all_ranked = ranker.rank_candidates(
+                candidates=raw_candidates,
+                user_lat=req.latitude,
+                user_lon=req.longitude,
+                max_distance_km=None
+            )
+            if all_ranked:
+                nearest = all_ranked[0]
+                geo = nearest.external_geographic_metadata or {}
+                dist_val = geo.get("distance_km")
+                near_city = nearest.city
+                if not near_city and nearest.original_address:
+                    parts = [p.strip() for p in nearest.original_address.split(",") if p.strip()]
+                    if len(parts) >= 3:
+                        near_city = parts[-3]
+                nearest_candidate_info = {
+                    "internal_id": nearest.internal_id,
+                    "laboratory_identity": nearest.laboratory_identity,
+                    "city": near_city,
+                    "state": nearest.state,
+                    "distance_km": round(dist_val, 1) if dist_val is not None else None
+                }
+
         ranking_provenance = {
             "user_coordinates": user_coords,
             "ranked_candidate_count": total_matching,
             "returned_candidate_count": len(serialized),
             "max_distance_km_filter": req.max_distance_km,
+            "nearest_candidate": nearest_candidate_info,
             "ranking_engine": "Phase F3 Step 6 Deterministic Haversine Ranking",
             "authority_disclaimer": (
                 "Geographic ranking is strictly a proximity ordering of already-qualified "
@@ -733,13 +800,13 @@ def execute_natural_search(
 
     # Scenario 2: Location-only or Laboratory-name discovery (No specific standard required)
     target_lab_name = parsed.lab_name
-    if not target_lab_name and not (parsed.state or parsed.city):
+    if not target_lab_name and not (effective_state or effective_city):
         target_lab_name = req.query.strip()
 
     discovered_labs = matcher.retrieval_layer.search_laboratories(
         name=target_lab_name,
-        state=parsed.state,
-        city=parsed.city,
+        state=effective_state,
+        city=effective_city,
         category=cat_enum,
         limit=580
     )
@@ -769,7 +836,7 @@ def execute_natural_search(
                 )
                 score = 0.5
 
-            reasons_list = [MatchReason.LOCATION_FILTER_MATCH] if (parsed.state or parsed.city) else ([MatchReason.EXACT_STANDARD_SCOPE] if scopes else [])
+            reasons_list = [MatchReason.LOCATION_FILTER_MATCH] if (effective_state or effective_city) else ([MatchReason.EXACT_STANDARD_SCOPE] if scopes else [])
 
             cand = LabCandidateMatch(
                 internal_id=lab.internal_id,
@@ -816,17 +883,16 @@ def execute_natural_search(
         serialized = [_serialize_candidate(c) for c in returned_candidates]
 
         discovery_label = (
-            f"Location: {parsed.city or parsed.state}"
-            if (parsed.city or parsed.state)
+            f"Location: {effective_city or effective_state}"
+            if (effective_city or effective_state)
             else f"Laboratory: {target_lab_name}"
         )
 
         query_criteria = QueryCriteriaResponse(
             standard=discovery_label,
-            state=parsed.state,
-            city=parsed.city,
-            latitude=req.latitude,
-            longitude=req.longitude,
+            state=effective_state,
+            city=effective_city,
+            user_coordinates=user_coords,
             max_distance_km=req.max_distance_km,
             category=effective_category,
             require_complete_scope=effective_scope,
@@ -847,7 +913,7 @@ def execute_natural_search(
 
         search_res = LabSearchResponse(
             status="MATCH" if total_matching > 0 else "NO_MATCH",
-            match_status="LOCATION_DISCOVERY" if (parsed.state or parsed.city) else "LAB_DISCOVERY",
+            match_status="LOCATION_DISCOVERY" if (effective_state or effective_city) else "LAB_DISCOVERY",
             standard=discovery_label,
             total_matching=total_matching,
             returned_candidates=len(serialized),
@@ -855,7 +921,7 @@ def execute_natural_search(
             candidates=serialized,
             provenance={
                 "bis_lims_matching": {
-                    "discovery_type": "LOCATION" if (parsed.state or parsed.city) else "LAB_NAME",
+                    "discovery_type": "LOCATION" if (effective_state or effective_city) else "LAB_NAME",
                     "total_discovered": len(discovered_labs)
                 },
                 "geographic_ranking": ranking_provenance
@@ -952,7 +1018,9 @@ async def search_labs_natural_get(
     max_distance_km: Optional[float] = Query(None, description="Max radius in km"),
     category: Optional[str] = Query(None, description="Category filter override"),
     require_complete_scope: Optional[bool] = Query(None, description="Require complete scope override"),
-    limit: Optional[int] = Query(None, description="Max results")
+    limit: Optional[int] = Query(None, description="Max results"),
+    city: Optional[str] = Query(None, description="Optional city filter override"),
+    state: Optional[str] = Query(None, description="Optional state filter override")
 ) -> LabNaturalSearchResponse:
     """
     GET endpoint for natural-language laboratory search.
@@ -964,7 +1032,9 @@ async def search_labs_natural_get(
         max_distance_km=max_distance_km,
         category=category,
         require_complete_scope=require_complete_scope,
-        limit=limit
+        limit=limit,
+        city=city,
+        state=state
     )
     return execute_natural_search(req)
 

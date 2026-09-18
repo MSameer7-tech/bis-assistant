@@ -91,6 +91,12 @@ export class LabFinderComponent {
                                     <input type="text" id="labInputQuery" class="search-input" placeholder="Search by standard, product, or laboratory..." data-i18n-placeholder="lab_finder.input_placeholder" autocomplete="off" spellcheck="false" aria-label="Search laboratories">
                                     <input type="hidden" id="labInputStandard" value="">
                                     <input type="hidden" id="labInputLocation" value="">
+                                    <button type="button" id="btnClearLabQuery" class="btn-input-action btn-clear-query hidden" title="Clear query" aria-label="Clear query" data-i18n-title="lab_finder.clear_query">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
                                     <button type="button" id="btnLabMic" class="btn-input-action btn-lab-mic" title="Voice search" aria-label="Voice search" data-i18n-title="lab_finder.voice_search">
                                         <svg class="mic-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -304,6 +310,34 @@ export class LabFinderComponent {
             });
         }
 
+        // Clear Query Input Button
+        const inputQuery = this.container.querySelector('#labInputQuery');
+        const inputStd = this.container.querySelector('#labInputStandard');
+        const btnClearQuery = this.container.querySelector('#btnClearLabQuery');
+
+        const updateClearQueryBtn = () => {
+            if (btnClearQuery && inputQuery) {
+                if (inputQuery.value.trim().length > 0) {
+                    btnClearQuery.classList.remove('hidden');
+                } else {
+                    btnClearQuery.classList.add('hidden');
+                }
+            }
+        };
+
+        if (inputQuery && btnClearQuery) {
+            inputQuery.addEventListener('input', updateClearQueryBtn);
+            inputQuery.addEventListener('change', updateClearQueryBtn);
+
+            btnClearQuery.addEventListener('click', () => {
+                inputQuery.value = '';
+                if (inputStd) inputStd.value = '';
+                btnClearQuery.classList.add('hidden');
+                inputQuery.focus();
+                this.renderInitialGuide();
+            });
+        }
+
         // GPS Geolocation
         const btnGeolocate = this.container.querySelector('#btnGeolocate');
         if (btnGeolocate) {
@@ -318,9 +352,11 @@ export class LabFinderComponent {
         if (btnClearLoc) {
             btnClearLoc.addEventListener('click', () => {
                 this.clearUserLocation();
-                const inputQuery = this.container.querySelector('#labInputQuery');
-                const inputStd = this.container.querySelector('#labInputStandard');
-                if ((inputQuery && inputQuery.value.trim()) || (inputStd && inputStd.value.trim())) {
+                const filterRadius = this.container.querySelector('#labFilterRadius');
+                if (filterRadius) filterRadius.value = '';
+                const qEl = this.container.querySelector('#labInputQuery');
+                const sEl = this.container.querySelector('#labInputStandard');
+                if ((qEl && qEl.value.trim()) || (sEl && sEl.value.trim())) {
                     this.executeSearchFromInputs();
                 }
             });
@@ -333,6 +369,26 @@ export class LabFinderComponent {
                 const name = btn.getAttribute('data-name');
                 const lat = parseFloat(btn.getAttribute('data-lat'));
                 const lon = parseFloat(btn.getAttribute('data-lon'));
+
+                // Toggle off if already active
+                if (this.userLocation && this.userLocation.name === name) {
+                    this.clearUserLocation();
+                    const filterRadius = this.container.querySelector('#labFilterRadius');
+                    if (filterRadius) filterRadius.value = '';
+                    const qEl = this.container.querySelector('#labInputQuery');
+                    const sEl = this.container.querySelector('#labInputStandard');
+                    if ((qEl && qEl.value.trim()) || (sEl && sEl.value.trim())) {
+                        this.executeSearchFromInputs();
+                    }
+                    return;
+                }
+
+                // If radius is currently "Any Distance", auto-set sensible default radius of 100 km
+                const filterRadius = this.container.querySelector('#labFilterRadius');
+                if (filterRadius && !filterRadius.value) {
+                    filterRadius.value = '100';
+                }
+
                 this.setUserLocation(lat, lon, name);
                 this.executeSearchFromInputs();
             });
@@ -347,9 +403,9 @@ export class LabFinderComponent {
         [filterCategory, filterRadius, filterComplete, filterLimit].forEach(filterEl => {
             if (filterEl) {
                 filterEl.addEventListener('change', () => {
-                    const inputQuery = this.container.querySelector('#labInputQuery');
-                    const inputStd = this.container.querySelector('#labInputStandard');
-                    if ((inputQuery && inputQuery.value.trim()) || (inputStd && inputStd.value.trim())) {
+                    const qEl = this.container.querySelector('#labInputQuery');
+                    const sEl = this.container.querySelector('#labInputStandard');
+                    if ((qEl && qEl.value.trim()) || (sEl && sEl.value.trim())) {
                         this.executeSearchFromInputs();
                     }
                 });
@@ -362,13 +418,15 @@ export class LabFinderComponent {
             if (pill) {
                 const query = pill.getAttribute('data-query');
                 const std = pill.getAttribute('data-standard');
-                const inputQuery = this.container.querySelector('#labInputQuery');
-                const inputStd = this.container.querySelector('#labInputStandard');
-                if (inputQuery && query) {
-                    inputQuery.value = query;
+                const qEl = this.container.querySelector('#labInputQuery');
+                const sEl = this.container.querySelector('#labInputStandard');
+                const btnClear = this.container.querySelector('#btnClearLabQuery');
+                if (qEl && query) {
+                    qEl.value = query;
+                    if (btnClear) btnClear.classList.remove('hidden');
                 }
-                if (inputStd && std) {
-                    inputStd.value = std;
+                if (sEl && std) {
+                    sEl.value = std;
                 }
                 this.executeSearchFromInputs();
             }
@@ -442,6 +500,10 @@ export class LabFinderComponent {
                 if (textSpan) textSpan.textContent = this.t('lab_finder.near_me', 'Near me');
             }
         }
+
+        if (this.mapComponent && this.mapComponent._isInitialized) {
+            this.mapComponent.setView(lat, lon, 10);
+        }
     }
 
     /**
@@ -462,6 +524,10 @@ export class LabFinderComponent {
         }
         const presets = this.container.querySelectorAll('.btn-location-preset');
         if (presets) presets.forEach(p => p.classList.remove('active'));
+
+        if (this.mapComponent && this.mapComponent._isInitialized) {
+            this.mapComponent.setView(20.5937, 78.9629, 5);
+        }
     }
 
     /**
@@ -485,6 +551,10 @@ export class LabFinderComponent {
                 if (btnGeolocate) btnGeolocate.classList.remove('loading');
                 const lat = pos.coords.latitude;
                 const lon = pos.coords.longitude;
+                const filterRadius = this.container.querySelector('#labFilterRadius');
+                if (filterRadius && !filterRadius.value) {
+                    filterRadius.value = '100';
+                }
                 this.setUserLocation(lat, lon, 'Current GPS Location');
                 this.executeSearchFromInputs();
             },
@@ -967,16 +1037,26 @@ export class LabFinderComponent {
 
         // Empty Results check
         if (data.status === 'NO_MATCH' || !data.candidates || data.candidates.length === 0) {
-            const hasRadius = Boolean(data.query_criteria.max_distance_km);
-            if (hasRadius) {
+            const hasRadius = Boolean(data.query_criteria && data.query_criteria.max_distance_km);
+            const nearestCandidate = data.provenance?.geographic_ranking?.nearest_candidate;
+            const locName = this.userLocation ? this.userLocation.name : (data.query_criteria?.city || null);
+
+            if (hasRadius || this.userLocation || (data.query_criteria && (data.query_criteria.city || data.query_criteria.state))) {
                 this.renderEmptyState('RADIUS_EXHAUSTED', {
                     standard: data.standard,
-                    radius: data.query_criteria.max_distance_km
+                    radius: data.query_criteria?.max_distance_km || 100,
+                    locationName: locName,
+                    nearestCandidate: nearestCandidate
                 });
             } else {
                 this.renderEmptyState('NO_CAPABILITY_MATCH', { standard: data.standard });
             }
-            if (countElem) countElem.textContent = this.t('lab_finder.no_matches', 'No matching laboratories');
+            if (countElem) {
+                const isHi = this.getLanguage() === 'hi';
+                countElem.textContent = locName
+                    ? (isHi ? `${locName} में कोई प्रयोगशाला नहीं मिली` : `No laboratories found in ${locName}`)
+                    : this.t('lab_finder.no_matches', 'No matching laboratories');
+            }
             this.updateMapMarkers([]);
             return;
         }
@@ -985,14 +1065,23 @@ export class LabFinderComponent {
             const returned = data.returned_candidates;
             const total = data.total_matching;
             const isHi = this.getLanguage() === 'hi';
+
+            let locNotice = '';
+            if (this.userLocation && this.userLocation.name) {
+                const dist = data.query_criteria?.max_distance_km;
+                locNotice = dist
+                    ? (isHi ? ` (${this.userLocation.name} के ${dist} किमी के भीतर)` : ` within ${dist} km of ${this.userLocation.name}`)
+                    : (isHi ? ` (${this.userLocation.name} के पास)` : ` near ${this.userLocation.name}`);
+            }
+
             if (returned < total) {
                 countElem.textContent = isHi
-                    ? `${total} प्रयोगशालाओं में से ${returned} दिखाई जा रही हैं`
-                    : `Showing ${returned} of ${total} laboratories found`;
+                    ? `${total} प्रयोगशालाओं में से ${returned} दिखाई जा रही हैं${locNotice}`
+                    : `Showing ${returned} of ${total} laboratories found${locNotice}`;
             } else {
                 countElem.textContent = isHi
-                    ? `${total} ${total === 1 ? 'प्रयोगशाला मिली' : 'प्रयोगशालाएं मिलीं'}`
-                    : `${total} ${total === 1 ? 'laboratory found' : 'laboratories found'}`;
+                    ? `${total} ${total === 1 ? 'प्रयोगशाला मिली' : 'प्रयोगशालाएं मिलीं'}${locNotice}`
+                    : `${total} ${total === 1 ? 'laboratory found' : 'laboratories found'}${locNotice}`;
             }
         }
 
@@ -1456,15 +1545,37 @@ export class LabFinderComponent {
         let title = 'No Laboratories Found';
         let desc = 'No accredited testing laboratories matched your criteria.';
         let icon = 'search';
+        let actionsHtml = '';
 
         if (type === 'NO_CAPABILITY_MATCH') {
             title = `No Capability Scope for ${context.standard || 'Standard'}`;
             desc = `None of the 580 laboratories in the BIS LIMS catalog currently hold accredited testing scope for <strong>${this.escapeHtml(context.standard || '')}</strong>. BIS testing scope is normative and capability cannot be synthesized.`;
             icon = 'shield';
+            actionsHtml = `
+                <button type="button" class="btn-empty-reset" id="btnResetFilters">Reset Location &amp; Filters</button>
+            `;
         } else if (type === 'RADIUS_EXHAUSTED') {
-            title = `No Laboratories Within ${context.radius} km`;
-            desc = `Laboratories with testing scope for <strong>${this.escapeHtml(context.standard || '')}</strong> exist in the BIS catalog, but none fall within ${context.radius} km of your reference location. Expand the distance filter to see qualified facilities.`;
+            const locName = context.locationName || 'your reference location';
+            title = `No Laboratories Within ${context.radius} km of ${locName}`;
+            desc = `Accredited laboratories with testing scope for <strong>${this.escapeHtml(context.standard || '')}</strong> exist in the BIS catalog, but none fall within ${context.radius} km of <strong>${this.escapeHtml(locName)}</strong>.`;
             icon = 'pin';
+
+            if (context.nearestCandidate && context.nearestCandidate.laboratory_identity) {
+                const near = context.nearestCandidate;
+                const nearLoc = [near.city, near.state].filter(Boolean).join(', ');
+                const distStr = near.distance_km ? ` (${near.distance_km} km away)` : '';
+                desc += `<br><br><span class="nearest-hint" style="display:inline-block; margin-top: 6px; padding: 6px 10px; background: rgba(141, 155, 243, 0.1); border-radius: 6px; border: 1px solid rgba(141, 155, 243, 0.2); color: #c5ccff;">Nearest accredited facility: <strong>${this.escapeHtml(near.laboratory_identity)}</strong> in ${this.escapeHtml(nearLoc || 'India')}${distStr}.</span>`;
+            }
+
+            const targetDist = context.nearestCandidate && context.nearestCandidate.distance_km
+                ? Math.min(500, Math.max(250, Math.ceil(context.nearestCandidate.distance_km / 50) * 50))
+                : 500;
+
+            actionsHtml = `
+                <button type="button" class="btn-empty-action" id="btnExpandRadius" data-dist="${targetDist}">Expand Radius to ${targetDist} km</button>
+                <button type="button" class="btn-empty-action" id="btnShowAllNationwide">Show All Across India</button>
+                <button type="button" class="btn-empty-reset" id="btnClearLocationFilter">Clear Location</button>
+            `;
         }
 
         container.innerHTML = `
@@ -1475,10 +1586,39 @@ export class LabFinderComponent {
                 <h3 class="empty-state-title">${title}</h3>
                 <p class="empty-state-desc">${desc}</p>
                 <div class="empty-state-actions">
-                    <button type="button" class="btn-empty-reset" id="btnResetFilters">Reset Location &amp; Filters</button>
+                    ${actionsHtml}
                 </div>
             </div>
         `;
+
+        const btnExpand = container.querySelector('#btnExpandRadius');
+        if (btnExpand) {
+            btnExpand.addEventListener('click', () => {
+                const dist = btnExpand.getAttribute('data-dist') || '500';
+                const selRadius = this.container.querySelector('#labFilterRadius');
+                if (selRadius) selRadius.value = dist;
+                this.executeSearchFromInputs();
+            });
+        }
+
+        const btnAll = container.querySelector('#btnShowAllNationwide');
+        if (btnAll) {
+            btnAll.addEventListener('click', () => {
+                const selRadius = this.container.querySelector('#labFilterRadius');
+                if (selRadius) selRadius.value = '';
+                this.executeSearchFromInputs();
+            });
+        }
+
+        const btnClearLocFilter = container.querySelector('#btnClearLocationFilter');
+        if (btnClearLocFilter) {
+            btnClearLocFilter.addEventListener('click', () => {
+                this.clearUserLocation();
+                const selRadius = this.container.querySelector('#labFilterRadius');
+                if (selRadius) selRadius.value = '';
+                this.executeSearchFromInputs();
+            });
+        }
 
         const resetBtn = container.querySelector('#btnResetFilters');
         if (resetBtn) {
@@ -1492,6 +1632,48 @@ export class LabFinderComponent {
                 if (chkComplete) chkComplete.checked = false;
                 this.executeSearchFromInputs();
             });
+        }
+    }
+
+    /**
+     * Resets the results pane, counters, and map markers back to the initial landing guide.
+     */
+    renderInitialGuide() {
+        const container = this.container.querySelector('#resultsListContainer');
+        const countElem = this.container.querySelector('#resultsCountTotal');
+        const noticeElem = this.container.querySelector('#searchInterpretationNotice');
+        const mapCounter = this.container.querySelector('#mapMarkerCounter');
+
+        if (countElem) countElem.textContent = this.t('lab_finder.initial_count', 'Find a laboratory');
+        if (noticeElem) {
+            noticeElem.classList.add('hidden');
+            noticeElem.innerHTML = '';
+        }
+        if (mapCounter) {
+            mapCounter.classList.add('hidden');
+            mapCounter.textContent = '';
+        }
+
+        if (this.mapComponent) {
+            this.mapComponent.clearMarkers();
+        }
+
+        if (container) {
+            container.innerHTML = `
+                <div class="results-empty-state" id="initialGuideState">
+                    <div class="empty-state-emblem" aria-hidden="true">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
+                    </div>
+                    <h3 class="empty-state-title" data-i18n="lab_finder.empty_state_title">Find a BIS laboratory</h3>
+                    <p class="empty-state-desc" data-i18n="lab_finder.empty_state_desc">Search by standard, product, or laboratory to find facilities with the required testing scope.</p>
+                    <div class="empty-state-shortcuts">
+                        <button type="button" class="shortcut-pill" data-query="find me the lab for is 4985 testing" data-standard="IS 4985">IS 4985 testing</button>
+                        <button type="button" class="shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">LED lamp testing</button>
+                        <button type="button" class="shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">Water heater labs in Delhi</button>
+                        <button type="button" class="shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">Drinking water testing in Gujarat</button>
+                    </div>
+                </div>
+            `;
         }
     }
 

@@ -134,6 +134,7 @@
     "near_me": "Near me",
     "near_me_gps": "Near me",
     "voice_search": "Voice search",
+    "clear_query": "Clear search query",
     "voice_listening": "Listening... speak now",
     "voice_not_supported": "Voice input (Speech recognition not supported in this browser)",
     "filter_category": "Category:",

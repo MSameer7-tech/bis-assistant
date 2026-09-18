@@ -134,6 +134,7 @@
     "near_me": "मेरे पास",
     "near_me_gps": "मेरे पास",
     "voice_search": "आवाज़ से खोजें",
+    "clear_query": "खोज हटाएं",
     "voice_listening": "सुन रहे हैं... बोलिए",
     "voice_not_supported": "आवाज़ इनपुट (इस ब्राउज़र में वाक् पहचान समर्थित नहीं है)",
     "filter_category": "श्रेणी:",
