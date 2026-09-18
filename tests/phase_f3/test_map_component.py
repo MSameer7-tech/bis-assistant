@@ -121,6 +121,12 @@ class TestMapFoundation:
             tileLayer: function() { return { addTo: function() { return this; } }; },
             layerGroup: function() { return mockLayerGroup; },
             divIcon: function(opts) { return opts; },
+            circle: function(coords, opts) {
+                return {
+                    coords, opts,
+                    addTo: function() { return this; }
+                };
+            },
             marker: function(coords, opts) {
                 return {
                     coords, opts,
@@ -132,21 +138,39 @@ class TestMapFoundation:
         };
 
         import("./frontend/mapComponent.js").then(mod => {
-            const { createBisMap } = mod;
+            const { createBisMap, createAnchorIcon } = mod;
             const comp = createBisMap("testMap", { center: [20.59, 78.96], zoom: 5 });
             if (!comp._isInitialized) throw new Error("Init failed");
 
             comp.setView(28.61, 77.20, 11);
             if (mockMap.center[0] !== 28.61) throw new Error("setView failed");
 
+            // Test anchor functionality
+            const anchorIcon = createAnchorIcon("Bengaluru");
+            if (!anchorIcon || !anchorIcon.html.includes("Bengaluru")) throw new Error("createAnchorIcon failed");
+
+            comp.setAnchor(12.9716, 77.5946, "Bengaluru (City Center)", 100);
+            if (!comp.anchorData || comp.anchorData.lat !== 12.9716) throw new Error("setAnchor data failed");
+            if (!comp.anchorMarker) throw new Error("setAnchor marker failed");
+            if (!comp.anchorCircle) throw new Error("setAnchor circle failed");
+
+            // Setting markers should include anchor in bounds
             comp.setMarkers([
-                { lat: 28.68, lng: 77.43, title: "Lab 1", category: "BIS_OWNED" },
-                { lat: 28.69, lng: 77.21, title: "Lab 2", category: "BIS_RECOGNIZED" }
+                { lat: 13.0827, lng: 80.2707, title: "Lab Chennai", category: "BIS_OWNED" }
             ]);
-            if (comp.getMarkersCount() !== 2) throw new Error("setMarkers failed");
+            if (comp.getMarkersCount() !== 1) throw new Error("setMarkers failed");
+            if (!mockMap.bounds || mockMap.bounds.length !== 2) throw new Error("fitBounds with anchor failed");
 
             comp.clearMarkers();
             if (comp.getMarkersCount() !== 0) throw new Error("clearMarkers failed");
+
+            // Anchor still persists when lab markers are cleared
+            if (!comp.anchorMarker) throw new Error("clearMarkers should not erase anchor");
+
+            comp.clearAnchor();
+            if (comp.anchorData !== null || comp.anchorMarker !== null || comp.anchorCircle !== null) {
+                throw new Error("clearAnchor failed");
+            }
 
             comp.invalidateSize();
             if (!mockMap.invalidated) throw new Error("invalidateSize failed");

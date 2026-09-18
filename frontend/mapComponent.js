@@ -65,6 +65,34 @@ export function createPinIcon(category = "DEFAULT") {
     });
 }
 
+/**
+ * Creates custom styled HTML anchor beacon marker for Leaflet
+ */
+export function createAnchorIcon(label = "City Center") {
+    if (typeof window.L === "undefined") return null;
+
+    return window.L.divIcon({
+        className: "bis-map-anchor-marker",
+        html: `
+            <div class="anchor-pin-beacon">
+                <div class="anchor-pulse-halo"></div>
+                <div class="anchor-pin-badge">
+                    <span class="anchor-pin-icon">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+                        </svg>
+                    </span>
+                    <span class="anchor-pin-text">${label}</span>
+                </div>
+            </div>
+        `,
+        iconSize: [160, 36],
+        iconAnchor: [80, 18],
+        popupAnchor: [0, -20]
+    });
+}
+
 export class BisMapComponent {
     /**
      * @param {HTMLElement|string} container - DOM element or ID
@@ -86,6 +114,10 @@ export class BisMapComponent {
         this.map = null;
         this.tileLayer = null;
         this.markerLayerGroup = null;
+        this.anchorLayerGroup = null;
+        this.anchorData = null;
+        this.anchorMarker = null;
+        this.anchorCircle = null;
         this.markers = new Map();
         this._isInitialized = false;
     }
@@ -121,6 +153,8 @@ export class BisMapComponent {
 
         // Initialize Layer Group for Markers
         this.markerLayerGroup = window.L.layerGroup().addTo(this.map);
+        // Initialize Layer Group for Anchor Reference
+        this.anchorLayerGroup = window.L.layerGroup().addTo(this.map);
 
         this._isInitialized = true;
         return this;
@@ -133,6 +167,94 @@ export class BisMapComponent {
         if (!this.map) return this;
         const targetZoom = typeof zoom === "number" ? zoom : this.map.getZoom();
         this.map.setView([lat, lng], targetZoom);
+        return this;
+    }
+
+    /**
+     * Set or update reference proximity anchor (city center / GPS) and optional radius circle on the map.
+     * @param {number} lat - Latitude
+     * @param {number} lng - Longitude
+     * @param {string} [label="City Center"] - Anchor display label
+     * @param {number|null} [radiusKm=null] - Maximum radius in km
+     */
+    setAnchor(lat, lng, label = "City Center", radiusKm = null) {
+        this.clearAnchor();
+
+        if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) {
+            return this;
+        }
+
+        this.anchorData = { lat, lng, label, radiusKm };
+
+        if (!this.map || !this.anchorLayerGroup) return this;
+
+        // 1. Draw radius boundary circle if radius is active
+        if (typeof radiusKm === "number" && radiusKm > 0 && typeof window.L.circle === "function") {
+            try {
+                this.anchorCircle = window.L.circle([lat, lng], {
+                    radius: radiusKm * 1000,
+                    color: '#8B5CF6',
+                    weight: 1.5,
+                    dashArray: '5, 5',
+                    fillColor: '#8B5CF6',
+                    fillOpacity: 0.05,
+                    interactive: false
+                });
+                this.anchorCircle.addTo(this.anchorLayerGroup);
+            } catch (e) {
+                console.warn("BisMapComponent: Failed to render anchor radius circle", e);
+            }
+        }
+
+        // 2. Add Anchor Marker with custom pulsing beacon and badge
+        const icon = createAnchorIcon(label);
+        const markerOptions = {
+            zIndexOffset: 2000,
+            title: `Proximity Anchor: ${label}`
+        };
+        if (icon) markerOptions.icon = icon;
+
+        const marker = window.L.marker([lat, lng], markerOptions);
+
+        const radiusStr = (typeof radiusKm === "number" && radiusKm > 0)
+            ? `<div class="bis-popup-footer"><span class="popup-scope-tag">Radius Filter: ≤ ${radiusKm} km</span></div>`
+            : '';
+
+        const popupHtml = `
+            <div class="bis-popup-card bis-anchor-popup">
+                <div class="bis-popup-header">
+                    <span class="bis-popup-badge anchor">Reference Anchor</span>
+                    <span class="bis-popup-coords">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E</span>
+                </div>
+                <h4 class="bis-popup-title">📍 ${label}</h4>
+                <p class="bis-popup-address">Center origin point for all laboratory distance measurements and proximity ranking.</p>
+                ${radiusStr}
+            </div>
+        `;
+
+        if (typeof marker.bindPopup === "function") {
+            marker.bindPopup(popupHtml, {
+                className: "bis-map-popup",
+                maxWidth: 320
+            });
+        }
+
+        marker.addTo(this.anchorLayerGroup);
+        this.anchorMarker = marker;
+
+        return this;
+    }
+
+    /**
+     * Remove the reference proximity anchor and radius circle from the map.
+     */
+    clearAnchor() {
+        if (this.anchorLayerGroup) {
+            this.anchorLayerGroup.clearLayers();
+        }
+        this.anchorMarker = null;
+        this.anchorCircle = null;
+        this.anchorData = null;
         return this;
     }
 
@@ -189,24 +311,29 @@ export class BisMapComponent {
     setMarkers(markersList = [], autoFitBounds = true) {
         this.clearMarkers();
 
-        if (!Array.isArray(markersList) || markersList.length === 0) {
-            return this;
+        const bounds = [];
+        // If an anchor is set, include anchor in the viewport bounds
+        if (this.anchorData) {
+            bounds.push([this.anchorData.lat, this.anchorData.lng]);
         }
 
-        const bounds = [];
-        for (const item of markersList) {
-            const marker = this.addMarker(item);
-            if (marker && typeof item.lat === "number" && typeof item.lng === "number") {
-                bounds.push([item.lat, item.lng]);
+        if (Array.isArray(markersList)) {
+            for (const item of markersList) {
+                const marker = this.addMarker(item);
+                if (marker && typeof item.lat === "number" && typeof item.lng === "number") {
+                    bounds.push([item.lat, item.lng]);
+                }
             }
         }
 
         if (autoFitBounds && bounds.length > 0 && this.map) {
             if (bounds.length === 1) {
-                this.setView(bounds[0][0], bounds[0][1], 12);
+                this.setView(bounds[0][0], bounds[0][1], 11);
             } else {
-                this.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+                this.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
             }
+        } else if (markersList.length === 0 && this.anchorData && this.map) {
+            this.setView(this.anchorData.lat, this.anchorData.lng, 10);
         }
 
         return this;
@@ -256,10 +383,12 @@ export class BisMapComponent {
     destroy() {
         if (this.map) {
             this.clearMarkers();
+            this.clearAnchor();
             this.map.remove();
             this.map = null;
             this.tileLayer = null;
             this.markerLayerGroup = null;
+            this.anchorLayerGroup = null;
             this._isInitialized = false;
         }
     }

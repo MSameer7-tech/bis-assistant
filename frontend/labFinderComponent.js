@@ -228,6 +228,7 @@ export class LabFinderComponent {
                                 <span class="legend-chip owned"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_owned">BIS Owned</span></span>
                                 <span class="legend-chip recognized"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_recognized">BIS Recognized</span></span>
                                 <span class="legend-chip empanelled"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_empanelled">BIS Empanelled</span></span>
+                                <span class="legend-chip anchor hidden" id="legendAnchorChip" title="Click to center map on anchor"><span class="chip-dot anchor-dot"></span><span id="legendAnchorText">City Center</span></span>
                             </div>
                             <div class="map-deck-controls">
                                 <span id="mapMarkerCounter" class="map-counter-tag hidden"></span>
@@ -403,6 +404,15 @@ export class LabFinderComponent {
         [filterCategory, filterRadius, filterComplete, filterLimit].forEach(filterEl => {
             if (filterEl) {
                 filterEl.addEventListener('change', () => {
+                    if (filterEl === filterRadius && this.userLocation && this.mapComponent && typeof this.mapComponent.setAnchor === 'function') {
+                        const rKm = filterRadius.value ? parseFloat(filterRadius.value) : null;
+                        this.mapComponent.setAnchor(
+                            this.userLocation.latitude,
+                            this.userLocation.longitude,
+                            this.userLocation.label,
+                            rKm
+                        );
+                    }
                     const qEl = this.container.querySelector('#labInputQuery');
                     const sEl = this.container.querySelector('#labInputStandard');
                     if ((qEl && qEl.value.trim()) || (sEl && sEl.value.trim())) {
@@ -432,15 +442,38 @@ export class LabFinderComponent {
             }
         });
 
+        // Legend Anchor Chip (Click to center map on anchor)
+        const legendAnchor = this.container.querySelector('#legendAnchorChip');
+        if (legendAnchor) {
+            legendAnchor.addEventListener('click', () => {
+                if (this.userLocation && this.mapComponent && this.mapComponent._isInitialized) {
+                    this.mapComponent.setView(this.userLocation.latitude, this.userLocation.longitude, 11);
+                }
+            });
+        }
+
         // Map Buttons
         const btnFit = this.container.querySelector('#btnFitMapBounds');
         if (btnFit) {
             btnFit.addEventListener('click', () => {
-                if (this.mapComponent && this.mapComponent.map && this.mapComponent.markers.size > 0) {
+                if (this.mapComponent && this.mapComponent.map) {
+                    const bounds = [];
+                    if (this.mapComponent.anchorData) {
+                        bounds.push([this.mapComponent.anchorData.lat, this.mapComponent.anchorData.lng]);
+                    }
                     const group = this.mapComponent.markerLayerGroup;
-                    if (group && group.getLayers().length > 0) {
-                        const bounds = window.L.featureGroup(group.getLayers()).getBounds();
-                        this.mapComponent.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+                    if (group && typeof group.getLayers === 'function') {
+                        group.getLayers().forEach(layer => {
+                            if (layer.getLatLng) {
+                                const ll = layer.getLatLng();
+                                bounds.push([ll.lat, ll.lng]);
+                            }
+                        });
+                    }
+                    if (bounds.length > 1) {
+                        this.mapComponent.map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+                    } else if (bounds.length === 1) {
+                        this.mapComponent.setView(bounds[0][0], bounds[0][1], 11);
                     }
                 }
             });
@@ -469,12 +502,25 @@ export class LabFinderComponent {
      * Sets user location reference coordinates and synchronizes active control states.
      */
     setUserLocation(lat, lon, name = null) {
-        this.userLocation = { latitude: lat, longitude: lon, name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
+        let anchorLabel = name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        if (['Delhi', 'Mumbai', 'Bengaluru', 'Chennai', 'Kolkata'].includes(name)) {
+            anchorLabel = `${name} (City Center)`;
+        } else if (name === 'Current GPS Location') {
+            anchorLabel = 'Your Location (GPS)';
+        }
+
+        this.userLocation = {
+            latitude: lat,
+            longitude: lon,
+            name: name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+            label: anchorLabel
+        };
+
         const banner = this.container.querySelector('#activeLocationBanner');
         const text = this.container.querySelector('#activeLocationText');
         if (banner && text) {
             banner.classList.remove('hidden');
-            text.textContent = `Proximity Anchor: ${this.userLocation.name} (${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E)`;
+            text.textContent = `Proximity Anchor: ${anchorLabel} (${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E)`;
         }
 
         // Update active class on presets and GPS button
@@ -501,8 +547,28 @@ export class LabFinderComponent {
             }
         }
 
-        if (this.mapComponent && this.mapComponent._isInitialized) {
-            this.mapComponent.setView(lat, lon, 10);
+        // Synchronize map legend anchor chip
+        const legendAnchor = this.container.querySelector('#legendAnchorChip');
+        const legendAnchorText = this.container.querySelector('#legendAnchorText');
+        if (legendAnchor && legendAnchorText) {
+            legendAnchor.classList.remove('hidden');
+            legendAnchorText.textContent = anchorLabel;
+        }
+
+        // Get active radius filter in km
+        const filterRadius = this.container.querySelector('#labFilterRadius');
+        const radiusKm = filterRadius && filterRadius.value ? parseFloat(filterRadius.value) : null;
+
+        if (this.mapComponent) {
+            if (!this.mapComponent._isInitialized && typeof this.mapComponent.init === 'function') {
+                this.mapComponent.init();
+            }
+            if (typeof this.mapComponent.setAnchor === 'function') {
+                this.mapComponent.setAnchor(lat, lon, anchorLabel, radiusKm);
+            }
+            if (typeof this.mapComponent.setView === 'function') {
+                this.mapComponent.setView(lat, lon, 10);
+            }
         }
     }
 
@@ -516,6 +582,9 @@ export class LabFinderComponent {
         const inputLoc = this.container.querySelector('#labInputLocation');
         if (inputLoc) inputLoc.value = '';
 
+        const legendAnchor = this.container.querySelector('#legendAnchorChip');
+        if (legendAnchor) legendAnchor.classList.add('hidden');
+
         const btnGeolocate = this.container.querySelector('#btnGeolocate');
         if (btnGeolocate) {
             btnGeolocate.classList.remove('active');
@@ -525,8 +594,13 @@ export class LabFinderComponent {
         const presets = this.container.querySelectorAll('.btn-location-preset');
         if (presets) presets.forEach(p => p.classList.remove('active'));
 
-        if (this.mapComponent && this.mapComponent._isInitialized) {
-            this.mapComponent.setView(20.5937, 78.9629, 5);
+        if (this.mapComponent) {
+            if (typeof this.mapComponent.clearAnchor === 'function') {
+                this.mapComponent.clearAnchor();
+            }
+            if (this.mapComponent._isInitialized && typeof this.mapComponent.setView === 'function') {
+                this.mapComponent.setView(20.5937, 78.9629, 5);
+            }
         }
     }
 
@@ -1129,10 +1203,12 @@ export class LabFinderComponent {
         // Distance or Location Unavailable Badge
         let distanceHtml = '';
         if (geo.has_coordinates && typeof geo.distance_km === 'number') {
+            const anchorName = this.userLocation?.label || this.userLocation?.name;
+            const distFromStr = anchorName ? ` from ${anchorName}` : '';
             const distStr = this.getLanguage() === 'hi'
-                ? `${geo.distance_km.toFixed(1)} किमी दूर`
-                : `${geo.distance_km.toFixed(1)} km away`;
-            distanceHtml = `<span class="card-distance-badge">${distStr}</span>`;
+                ? `${geo.distance_km.toFixed(1)} किमी दूर${this.userLocation?.name ? ` (${this.userLocation.name} से)` : ''}`
+                : `${geo.distance_km.toFixed(1)} km away${distFromStr}`;
+            distanceHtml = `<span class="card-distance-badge" title="Estimated distance from ${anchorName || 'reference anchor'}">${distStr}</span>`;
         } else if (!geo.has_coordinates) {
             distanceHtml = `<span class="card-distance-badge unavailable" title="No validated geographic coordinates in metadata cache">${this.t('lab_finder.location_unavailable', 'Location unavailable')}</span>`;
         }
@@ -1228,7 +1304,25 @@ export class LabFinderComponent {
             this.mapComponent.init();
         }
 
-        this.mapComponent.clearMarkers();
+        // Synchronize proximity anchor on map
+        if (this.userLocation) {
+            if (typeof this.mapComponent.setAnchor === 'function') {
+                const filterRadius = this.container.querySelector('#labFilterRadius');
+                const radiusKm = filterRadius && filterRadius.value ? parseFloat(filterRadius.value) : null;
+                this.mapComponent.setAnchor(
+                    this.userLocation.latitude,
+                    this.userLocation.longitude,
+                    this.userLocation.label,
+                    radiusKm
+                );
+            }
+        } else if (typeof this.mapComponent.clearAnchor === 'function') {
+            this.mapComponent.clearAnchor();
+        }
+
+        if (typeof this.mapComponent.clearMarkers === 'function') {
+            this.mapComponent.clearMarkers();
+        }
 
         const markersList = [];
         let mappedCount = 0;
@@ -1245,7 +1339,11 @@ export class LabFinderComponent {
                 else if (catLower.includes('recognized')) catEnum = 'BIS_RECOGNIZED';
                 else if (catLower.includes('empanelled')) catEnum = 'BIS_EMPANELLED';
 
-                const distText = (typeof geo.distance_km === 'number') ? ` • <strong>${geo.distance_km.toFixed(1)} km</strong>` : '';
+                const anchorName = this.userLocation?.label || this.userLocation?.name;
+                const distFrom = anchorName ? ` from ${anchorName}` : '';
+                const distText = (typeof geo.distance_km === 'number')
+                    ? ` • <strong>${geo.distance_km.toFixed(1)} km${distFrom}</strong>`
+                    : '';
 
                 const popupHtml = `
                     <div class="bis-popup-card">
@@ -1597,6 +1695,14 @@ export class LabFinderComponent {
                 const dist = btnExpand.getAttribute('data-dist') || '500';
                 const selRadius = this.container.querySelector('#labFilterRadius');
                 if (selRadius) selRadius.value = dist;
+                if (this.userLocation && this.mapComponent && typeof this.mapComponent.setAnchor === 'function') {
+                    this.mapComponent.setAnchor(
+                        this.userLocation.latitude,
+                        this.userLocation.longitude,
+                        this.userLocation.label,
+                        parseFloat(dist)
+                    );
+                }
                 this.executeSearchFromInputs();
             });
         }
@@ -1606,6 +1712,14 @@ export class LabFinderComponent {
             btnAll.addEventListener('click', () => {
                 const selRadius = this.container.querySelector('#labFilterRadius');
                 if (selRadius) selRadius.value = '';
+                if (this.userLocation && this.mapComponent && typeof this.mapComponent.setAnchor === 'function') {
+                    this.mapComponent.setAnchor(
+                        this.userLocation.latitude,
+                        this.userLocation.longitude,
+                        this.userLocation.label,
+                        null
+                    );
+                }
                 this.executeSearchFromInputs();
             });
         }
@@ -1655,7 +1769,26 @@ export class LabFinderComponent {
         }
 
         if (this.mapComponent) {
-            this.mapComponent.clearMarkers();
+            if (typeof this.mapComponent.clearMarkers === 'function') {
+                this.mapComponent.clearMarkers();
+            }
+            if (this.userLocation) {
+                if (typeof this.mapComponent.setAnchor === 'function') {
+                    const filterRadius = this.container.querySelector('#labFilterRadius');
+                    const radiusKm = filterRadius && filterRadius.value ? parseFloat(filterRadius.value) : null;
+                    this.mapComponent.setAnchor(
+                        this.userLocation.latitude,
+                        this.userLocation.longitude,
+                        this.userLocation.label,
+                        radiusKm
+                    );
+                }
+                if (typeof this.mapComponent.setView === 'function') {
+                    this.mapComponent.setView(this.userLocation.latitude, this.userLocation.longitude, 10);
+                }
+            } else if (typeof this.mapComponent.clearAnchor === 'function') {
+                this.mapComponent.clearAnchor();
+            }
         }
 
         if (container) {
