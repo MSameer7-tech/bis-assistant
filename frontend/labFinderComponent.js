@@ -77,7 +77,8 @@ export class LabFinderComponent {
                 <!-- Topbar / Search Control Deck -->
                 <header class="lab-finder-topbar">
                     <div class="topbar-title-group">
-                        <h2 class="lab-finder-heading" data-i18n="lab_finder.title">Accredited Laboratory Finder</h2>
+                        <h2 class="lab-finder-heading" data-i18n="lab_finder.title">BIS Laboratory Finder</h2>
+                        <p class="lab-finder-sub" data-i18n="lab_finder.subtitle">Find laboratories with verified BIS testing scope.</p>
                     </div>
 
                     <!-- Search Form Deck -->
@@ -87,7 +88,7 @@ export class LabFinderComponent {
                             <div class="search-field field-query">
                                 <div class="search-input-wrap">
                                     <svg class="input-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                    <input type="text" id="labInputQuery" class="search-input" placeholder="Search by Indian Standard (e.g. IS 4985, IS 10500), product, or city..." data-i18n-placeholder="lab_finder.input_placeholder" autocomplete="off" spellcheck="false" aria-label="Search laboratories">
+                                    <input type="text" id="labInputQuery" class="search-input" placeholder="Search by standard, product, or laboratory..." data-i18n-placeholder="lab_finder.input_placeholder" autocomplete="off" spellcheck="false" aria-label="Search laboratories">
                                     <input type="hidden" id="labInputStandard" value="">
                                     <input type="hidden" id="labInputLocation" value="">
                                     <button type="button" id="btnLabMic" class="btn-input-action btn-lab-mic" title="Voice search" aria-label="Voice search" data-i18n-title="lab_finder.voice_search">
@@ -100,7 +101,7 @@ export class LabFinderComponent {
                                     <button type="button" id="btnGeolocate" class="btn-input-action btn-gps-highlight" title="Use current GPS coordinates to locate nearest laboratories" aria-label="Use current location">
                                         <span class="gps-pulse-beacon"></span>
                                         <svg class="gps-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
-                                        <span class="gps-btn-text" data-i18n="lab_finder.near_me_gps">Near Me (GPS)</span>
+                                        <span class="gps-btn-text" data-i18n="lab_finder.near_me">Near me</span>
                                     </button>
                                 </div>
                             </div>
@@ -120,7 +121,7 @@ export class LabFinderComponent {
                             <div class="filter-chip-group">
                                 <span class="filter-label" data-i18n="lab_finder.filter_category">Category:</span>
                                 <select id="labFilterCategory" class="filter-select" aria-label="Filter by Laboratory Category">
-                                    <option value="" data-i18n="lab_finder.category_all">All Categories (580 Labs)</option>
+                                    <option value="" data-i18n="lab_finder.category_all">All laboratories (580)</option>
                                     <option value="BIS_OWNED" data-i18n="lab_finder.category_bis_owned">BIS Owned (10 Labs)</option>
                                     <option value="BIS_RECOGNIZED" data-i18n="lab_finder.category_bis_recognized">BIS Recognized (430 Labs)</option>
                                     <option value="BIS_EMPANELLED" data-i18n="lab_finder.category_bis_empanelled">BIS Empanelled (140 Labs)</option>
@@ -157,17 +158,17 @@ export class LabFinderComponent {
                                     <option value="580" data-i18n="lab_finder.limit_all">All Matches</option>
                                 </select>
                             </div>
+                        </div>
 
-                            <!-- Preset Quick Locations -->
-                            <div class="quick-locations-wrap">
-                                <span class="filter-label quick-anchor-label" data-i18n="lab_finder.popular_cities">Popular cities</span>
-                                <div class="quick-presets-list">
-                                    <button type="button" class="btn-location-preset" data-name="Delhi" data-lat="28.6139" data-lon="77.2090" data-i18n="lab_finder.city_delhi">Delhi</button>
-                                    <button type="button" class="btn-location-preset" data-name="Mumbai" data-lat="19.0760" data-lon="72.8777" data-i18n="lab_finder.city_mumbai">Mumbai</button>
-                                    <button type="button" class="btn-location-preset" data-name="Bengaluru" data-lat="12.9716" data-lon="77.5946" data-i18n="lab_finder.city_bengaluru">Bengaluru</button>
-                                    <button type="button" class="btn-location-preset" data-name="Chennai" data-lat="13.0827" data-lon="80.2707" data-i18n="lab_finder.city_chennai">Chennai</button>
-                                    <button type="button" class="btn-location-preset" data-name="Kolkata" data-lat="22.5726" data-lon="88.3639" data-i18n="lab_finder.city_kolkata">Kolkata</button>
-                                </div>
+                        <!-- Secondary Discovery / Presets Row -->
+                        <div class="search-shortcuts-row">
+                            <span class="filter-label quick-anchor-label" data-i18n="lab_finder.popular_cities">Popular:</span>
+                            <div class="quick-presets-list">
+                                <button type="button" class="btn-location-preset" data-name="Delhi" data-lat="28.6139" data-lon="77.2090" data-i18n="lab_finder.city_delhi">Delhi</button>
+                                <button type="button" class="btn-location-preset" data-name="Mumbai" data-lat="19.0760" data-lon="72.8777" data-i18n="lab_finder.city_mumbai">Mumbai</button>
+                                <button type="button" class="btn-location-preset" data-name="Bengaluru" data-lat="12.9716" data-lon="77.5946" data-i18n="lab_finder.city_bengaluru">Bengaluru</button>
+                                <button type="button" class="btn-location-preset" data-name="Chennai" data-lat="13.0827" data-lon="80.2707" data-i18n="lab_finder.city_chennai">Chennai</button>
+                                <button type="button" class="btn-location-preset" data-name="Kolkata" data-lat="22.5726" data-lon="88.3639" data-i18n="lab_finder.city_kolkata">Kolkata</button>
                             </div>
                         </div>
 
@@ -189,7 +190,7 @@ export class LabFinderComponent {
                     <aside class="lab-results-panel" aria-label="Laboratory Results List">
                         <!-- Results Status Bar -->
                         <div class="results-status-bar" id="resultsStatusBar">
-                            <span id="resultsCountTotal" class="results-count">0 laboratories</span>
+                            <span id="resultsCountTotal" class="results-count" data-i18n="lab_finder.initial_count">Find a laboratory</span>
                             <span id="searchInterpretationNotice" class="search-interpretation-notice hidden"></span>
                         </div>
 
@@ -200,13 +201,13 @@ export class LabFinderComponent {
                                 <div class="empty-state-emblem" aria-hidden="true">
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
                                 </div>
-                                <h3 class="empty-state-title">Search Qualified BIS Laboratories</h3>
-                                <p class="empty-state-desc">Search by standard number or product description (e.g. <code>find labs for IS 4985 testing</code> or <code>testing LED lamps</code>) to inspect accredited laboratory scopes.</p>
+                                <h3 class="empty-state-title" data-i18n="lab_finder.empty_state_title">Find a BIS laboratory</h3>
+                                <p class="empty-state-desc" data-i18n="lab_finder.empty_state_desc">Search by standard, product, or laboratory to find facilities with the required testing scope.</p>
                                 <div class="empty-state-shortcuts">
                                     <button type="button" class="shortcut-pill" data-query="find me the lab for is 4985 testing" data-standard="IS 4985">IS 4985 testing</button>
-                                    <button type="button" class="shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">Testing LED lamps</button>
-                                    <button type="button" class="shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">Water heaters near Delhi</button>
-                                    <button type="button" class="shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">Drinking water in Gujarat</button>
+                                    <button type="button" class="shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">LED lamp testing</button>
+                                    <button type="button" class="shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">Water heater labs in Delhi</button>
+                                    <button type="button" class="shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">Drinking water testing in Gujarat</button>
                                 </div>
                             </div>
                         </div>
@@ -221,10 +222,10 @@ export class LabFinderComponent {
                                 <span class="legend-chip empanelled"><span class="chip-dot"></span><span data-i18n="lab_finder.legend_empanelled">BIS Empanelled</span></span>
                             </div>
                             <div class="map-deck-controls">
-                                <span id="mapMarkerCounter" class="map-counter-tag">0 on map</span>
-                                <button type="button" id="btnFitMapBounds" class="btn-map-control" title="Fit all mapped laboratories">
+                                <span id="mapMarkerCounter" class="map-counter-tag hidden"></span>
+                                <button type="button" id="btnFitMapBounds" class="btn-map-control" title="Fit map to visible laboratories">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                                    <span data-i18n="lab_finder.fit_view">Fit View</span>
+                                    <span data-i18n="lab_finder.fit_view">Fit map</span>
                                 </button>
                                 <button type="button" id="btnResetMapCenter" class="btn-map-control" title="Reset map to India centroid">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
@@ -432,11 +433,11 @@ export class LabFinderComponent {
             if (name === 'Current GPS Location') {
                 btnGeolocate.classList.add('active');
                 const textSpan = btnGeolocate.querySelector('.gps-btn-text');
-                if (textSpan) textSpan.textContent = 'GPS Active';
+                if (textSpan) textSpan.textContent = this.t('lab_finder.gps_active', 'Near me (Active)');
             } else {
                 btnGeolocate.classList.remove('active');
                 const textSpan = btnGeolocate.querySelector('.gps-btn-text');
-                if (textSpan) textSpan.textContent = 'Near Me (GPS)';
+                if (textSpan) textSpan.textContent = this.t('lab_finder.near_me', 'Near me');
             }
         }
     }
@@ -455,7 +456,7 @@ export class LabFinderComponent {
         if (btnGeolocate) {
             btnGeolocate.classList.remove('active');
             const textSpan = btnGeolocate.querySelector('.gps-btn-text');
-            if (textSpan) textSpan.textContent = 'Near Me (GPS)';
+            if (textSpan) textSpan.textContent = this.t('lab_finder.near_me', 'Near me');
         }
         const presets = this.container.querySelectorAll('.btn-location-preset');
         if (presets) presets.forEach(p => p.classList.remove('active'));
@@ -474,7 +475,7 @@ export class LabFinderComponent {
         if (btnGeolocate) {
             btnGeolocate.classList.add('loading');
             const textSpan = btnGeolocate.querySelector('.gps-btn-text');
-            if (textSpan) textSpan.textContent = 'Locating...';
+            if (textSpan) textSpan.textContent = this.t('lab_finder.locating', 'Locating...');
         }
 
         navigator.geolocation.getCurrentPosition(
@@ -489,7 +490,7 @@ export class LabFinderComponent {
                 if (btnGeolocate) {
                     btnGeolocate.classList.remove('loading');
                     const textSpan = btnGeolocate.querySelector('.gps-btn-text');
-                    if (textSpan) textSpan.textContent = 'Near Me (GPS)';
+                    if (textSpan) textSpan.textContent = this.t('lab_finder.near_me', 'Near me');
                 }
                 console.warn('Geolocation failed or denied:', err);
                 alert('Could not determine your location. You can select one of the city presets below.');
@@ -767,8 +768,11 @@ export class LabFinderComponent {
         const countElem = this.container.querySelector('#resultsCountTotal');
         const mapCounter = this.container.querySelector('#mapMarkerCounter');
 
-        if (countElem) countElem.textContent = 'Clarification needed';
-        if (mapCounter) mapCounter.textContent = '0 on map';
+        if (countElem) countElem.textContent = this.t('lab_finder.clarification_needed', 'Clarification needed');
+        if (mapCounter) {
+            mapCounter.classList.add('hidden');
+            mapCounter.textContent = '';
+        }
 
         if (container) {
             container.innerHTML = `
@@ -960,7 +964,7 @@ export class LabFinderComponent {
             } else {
                 this.renderEmptyState('NO_CAPABILITY_MATCH', { standard: data.standard });
             }
-            if (countElem) countElem.textContent = this.getLanguage() === 'hi' ? '0 प्रयोगशालाएं' : '0 laboratories';
+            if (countElem) countElem.textContent = this.t('lab_finder.no_matches', 'No matching laboratories');
             this.updateMapMarkers([]);
             return;
         }
@@ -971,12 +975,12 @@ export class LabFinderComponent {
             const isHi = this.getLanguage() === 'hi';
             if (returned < total) {
                 countElem.textContent = isHi
-                    ? `${total} योग्य प्रयोगशालाओं में से ${returned} दिखाई जा रही हैं`
-                    : `Showing ${returned} of ${total} qualified laboratories`;
+                    ? `${total} प्रयोगशालाओं में से ${returned} दिखाई जा रही हैं`
+                    : `Showing ${returned} of ${total} laboratories found`;
             } else {
                 countElem.textContent = isHi
-                    ? `${total} योग्य ${total === 1 ? 'प्रयोगशाला' : 'प्रयोगशालाएं'}`
-                    : `${total} qualified ${total === 1 ? 'laboratory' : 'laboratories'}`;
+                    ? `${total} ${total === 1 ? 'प्रयोगशाला मिली' : 'प्रयोगशालाएं मिलीं'}`
+                    : `${total} ${total === 1 ? 'laboratory found' : 'laboratories found'}`;
             }
         }
 
@@ -1169,15 +1173,21 @@ export class LabFinderComponent {
         });
 
         if (counter) {
-            const isHi = this.getLanguage() === 'hi';
-            if (mappedCount < candidates.length) {
-                counter.textContent = isHi
-                    ? `${candidates.length} में से ${mappedCount} मानचित्र पर`
-                    : `${mappedCount} of ${candidates.length} on map`;
+            if (mappedCount > 0) {
+                counter.classList.remove('hidden');
+                const isHi = this.getLanguage() === 'hi';
+                if (mappedCount < candidates.length) {
+                    counter.textContent = isHi
+                        ? `${candidates.length} में से ${mappedCount} मानचित्र पर`
+                        : `${mappedCount} of ${candidates.length} on map`;
+                } else {
+                    counter.textContent = isHi
+                        ? `${mappedCount} मानचित्र पर`
+                        : `${mappedCount} on map`;
+                }
             } else {
-                counter.textContent = isHi
-                    ? `${mappedCount} मानचित्र पर`
-                    : `${mappedCount} on map`;
+                counter.classList.add('hidden');
+                counter.textContent = '';
             }
         }
 
@@ -1427,6 +1437,8 @@ export class LabFinderComponent {
      */
     renderEmptyState(type, context = {}) {
         const container = this.container.querySelector('#resultsListContainer');
+        const countElem = this.container.querySelector('#resultsCountTotal');
+        if (countElem) countElem.textContent = this.t('lab_finder.no_matches', 'No matching laboratories');
         if (!container) return;
 
         let title = 'No Laboratories Found';

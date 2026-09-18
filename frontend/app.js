@@ -884,13 +884,6 @@ function initApp() {
                 if (labFinder && labFinder.mapComponent) {
                     setTimeout(() => labFinder.mapComponent.invalidateSize(), 60);
                 }
-                const prefs = getUserPreferences();
-                if (prefs?.location?.city) {
-                    const labInput = document.getElementById('labInputQuery');
-                    if (labInput && !labInput.value.trim()) {
-                        labInput.placeholder = `Search standards, or labs in ${prefs.location.city}...`;
-                    }
-                }
             }
             if (navLabFinder) navLabFinder.classList.add('active');
             navAssistant.classList.remove('active');
