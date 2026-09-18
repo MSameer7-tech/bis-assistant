@@ -204,20 +204,7 @@ export class LabFinderComponent {
 
                         <!-- Results Content Area (Cards, Empty State, or Spinner) -->
                         <div class="results-scroll-container no-scrollbar" id="resultsListContainer">
-                            <!-- Initial Landing Guide -->
-                            <div class="results-empty-state" id="initialGuideState">
-                                <div class="empty-state-emblem" aria-hidden="true">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
-                                </div>
-                                <h3 class="empty-state-title" data-i18n="lab_finder.empty_state_title">Find a BIS laboratory</h3>
-                                <p class="empty-state-desc" data-i18n="lab_finder.empty_state_desc">Search by standard, product, or laboratory to find facilities with the required testing scope.</p>
-                                <div class="empty-state-shortcuts">
-                                    <button type="button" class="shortcut-pill" data-query="find me the lab for is 4985 testing" data-standard="IS 4985">IS 4985 testing</button>
-                                    <button type="button" class="shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">LED lamp testing</button>
-                                    <button type="button" class="shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">Water heater labs in Delhi</button>
-                                    <button type="button" class="shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">Drinking water testing in Gujarat</button>
-                                </div>
-                            </div>
+                            ${this.getInitialGuideHtml()}
                         </div>
                     </aside>
 
@@ -1792,22 +1779,122 @@ export class LabFinderComponent {
         }
 
         if (container) {
-            container.innerHTML = `
-                <div class="results-empty-state" id="initialGuideState">
+            container.innerHTML = this.getInitialGuideHtml();
+        }
+    }
+
+    /**
+     * Generates rich, structured HTML for the initial discovery and workflow guide state.
+     * @returns {string} HTML markup
+     */
+    getInitialGuideHtml() {
+        const title = this.t('lab_finder.empty_state_title', 'Find a BIS laboratory');
+        const desc = this.t('lab_finder.empty_state_desc', 'Search by standard, product, or laboratory to find facilities with the required testing scope.');
+
+        return `
+            <div class="results-empty-state guide-rich-state" id="initialGuideState">
+                <!-- Hero Header -->
+                <div class="guide-hero">
                     <div class="empty-state-emblem" aria-hidden="true">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.7 3h11.2a2 2 0 0 0 1.7-3L14 8.5V3"/><path d="M8 15h8"/><path d="M7 18h10"/></svg>
                     </div>
-                    <h3 class="empty-state-title" data-i18n="lab_finder.empty_state_title">Find a BIS laboratory</h3>
-                    <p class="empty-state-desc" data-i18n="lab_finder.empty_state_desc">Search by standard, product, or laboratory to find facilities with the required testing scope.</p>
-                    <div class="empty-state-shortcuts">
-                        <button type="button" class="shortcut-pill" data-query="find me the lab for is 4985 testing" data-standard="IS 4985">IS 4985 testing</button>
-                        <button type="button" class="shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">LED lamp testing</button>
-                        <button type="button" class="shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">Water heater labs in Delhi</button>
-                        <button type="button" class="shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">Drinking water testing in Gujarat</button>
+                    <h3 class="empty-state-title" data-i18n="lab_finder.empty_state_title">${title}</h3>
+                    <p class="empty-state-desc" data-i18n="lab_finder.empty_state_desc">${desc}</p>
+                </div>
+
+                <!-- Popular Testing Standards Grid -->
+                <div class="guide-section">
+                    <div class="guide-section-header">
+                        <span class="guide-section-icon">⚡</span>
+                        <span>Popular Testing Standards</span>
+                    </div>
+                    <div class="guide-grid-cards">
+                        <button type="button" class="guide-card shortcut-pill" data-query="find me the lab for is 4985 testing" data-standard="IS 4985">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 4985</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">PVC Pipes &amp; Fittings</div>
+                        </button>
+                        <button type="button" class="guide-card shortcut-pill" data-query="find labs for testing led lamps" data-standard="IS 16102">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 16102</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">LED Lamps &amp; Drivers</div>
+                        </button>
+                        <button type="button" class="guide-card shortcut-pill" data-query="find labs for drinking water in Gujarat" data-standard="IS 10500">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 10500</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">Drinking Water Testing</div>
+                        </button>
+                        <button type="button" class="guide-card shortcut-pill" data-query="find me cement testing lab" data-standard="IS 269">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 269</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">Portland Cement (OPC)</div>
+                        </button>
+                        <button type="button" class="guide-card shortcut-pill" data-query="find recognized labs for water heaters near Delhi" data-standard="IS 8978">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 8978</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">Water Heaters &amp; Geysers</div>
+                        </button>
+                        <button type="button" class="guide-card shortcut-pill" data-query="find labs for testing helmets" data-standard="IS 4151">
+                            <div class="guide-card-top">
+                                <span class="guide-std-tag">IS 4151</span>
+                                <span class="guide-card-arrow">→</span>
+                            </div>
+                            <div class="guide-card-name">Protective Helmets</div>
+                        </button>
                     </div>
                 </div>
-            `;
-        }
+
+                <!-- How to Locate Facilities -->
+                <div class="guide-section">
+                    <div class="guide-section-header">
+                        <span class="guide-section-icon">🧭</span>
+                        <span>How to Locate Facilities</span>
+                    </div>
+                    <div class="guide-steps-list">
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">1</div>
+                            <div class="guide-step-content">
+                                <span class="guide-step-heading">Enter Standard or Product</span>
+                                <span class="guide-step-detail">Search by standard code like <code>IS 4985</code> or plain queries like <em>cement testing lab</em>.</span>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">2</div>
+                            <div class="guide-step-content">
+                                <span class="guide-step-heading">Set Proximity Anchor</span>
+                                <span class="guide-step-detail">Select a city center or tap <strong>Near me (GPS)</strong> to estimate travel distance on the map.</span>
+                            </div>
+                        </div>
+                        <div class="guide-step-item">
+                            <div class="guide-step-num">3</div>
+                            <div class="guide-step-content">
+                                <span class="guide-step-heading">Verify Accreditation Scope</span>
+                                <span class="guide-step-detail">Filter by <strong>BIS Owned</strong>, <strong>Recognized</strong>, or <strong>Empanelled</strong> and inspect clause coverage.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Directory Metric Footer -->
+                <div class="guide-footer-badge">
+                    <span class="guide-badge-item">🏛️ 580+ Accredited Labs</span>
+                    <span class="guide-badge-sep">•</span>
+                    <span class="guide-badge-item">📍 Geocoded Map View</span>
+                    <span class="guide-badge-sep">•</span>
+                    <span class="guide-badge-item">📋 BIS LIMS Verified</span>
+                </div>
+            </div>
+        `;
     }
 
     /**
