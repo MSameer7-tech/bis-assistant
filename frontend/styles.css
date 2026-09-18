@@ -906,7 +906,7 @@ html, body {
 }
 
 .conv-group-block {
-    margin-bottom: 8px;
+    margin-bottom: 14px;
 }
 
 .conv-group-heading {
@@ -914,8 +914,15 @@ html, body {
     font-weight: 700;
     color: rgba(255, 255, 255, 0.3);
     letter-spacing: 0.08em;
-    padding: 6px 8px 3px 8px;
+    padding: 8px 8px 6px 8px;
+    margin-bottom: 4px;
     text-transform: uppercase;
+}
+
+.conv-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .conv-item {
@@ -5606,6 +5613,8 @@ html, body {
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+    display: flex;
+    flex-direction: column;
 }
 
 .lab-cards-list {
@@ -6016,15 +6025,16 @@ html, body {
 
 /* Empty States & Loading Skeletons */
 .results-empty-state, .results-error-state {
-    padding: 48px 24px;
+    padding: 32px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     gap: 14px;
-    max-width: 400px;
-    margin: 20px auto;
+    max-width: 380px;
+    width: 100%;
+    margin: auto;
     box-sizing: border-box;
 }
 
@@ -6058,12 +6068,13 @@ html, body {
 }
 
 .empty-state-shortcuts {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    justify-content: center;
-    max-width: 380px;
+    width: 100%;
+    max-width: 340px;
     margin-top: 10px;
+    box-sizing: border-box;
 }
 
 .shortcut-pill {
@@ -6071,13 +6082,22 @@ html, body {
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #CBD5E1;
     border-radius: 9999px;
-    padding: 7px 14px;
+    padding: 0 10px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     font-size: 11.5px;
     font-weight: 500;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     box-sizing: border-box;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .shortcut-pill:hover {
@@ -7119,35 +7139,9 @@ html, body {
 .map-frame-wrapper .bis-map-container { border-radius: 0 0 14px 14px; }
 
 .results-empty-state, .results-error-state {
-    min-height: auto;
-    justify-content: flex-start;
-    padding: 32px 24px 36px;
-    gap: 14px;
-}
-
-.empty-state-emblem, .error-state-emblem {
-    width: 56px;
-    height: 56px;
-    display: inline-flex;
-    align-items: center;
+    margin: auto;
     justify-content: center;
-    border: 1px solid rgba(141, 155, 243, 0.25);
-    border-radius: 16px;
-    color: #a9a1ff;
-    background: linear-gradient(145deg, rgba(141, 155, 243, 0.15), rgba(104, 212, 194, 0.07));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 28px rgba(0, 0, 0, 0.18);
 }
-
-.empty-state-emblem .empty-state-shield-line,
-.empty-state-emblem .empty-state-pin-line { display: none; }
-.empty-state-emblem-shield .empty-state-shield-line { display: block; }
-.empty-state-emblem-pin .empty-state-pin-line { display: block; }
-.empty-state-title { font-size: 16px; letter-spacing: -0.15px; }
-.empty-state-desc { max-width: 330px; color: rgba(255, 255, 255, 0.5); }
-.empty-state-desc code { color: #c5ccff; background: rgba(141, 155, 243, 0.1); border-radius: 5px; padding: 2px 5px; }
-.empty-state-shortcuts { gap: 7px; margin-top: 10px; }
-.shortcut-pill { border-radius: 999px; padding: 7px 11px; background: rgba(255, 255, 255, 0.045); border-color: rgba(255, 255, 255, 0.11); }
-.shortcut-pill:hover { background: rgba(141, 155, 243, 0.14); border-color: rgba(141, 155, 243, 0.4); }
 
 @media (prefers-reduced-motion: reduce) {
     .lab-finder-workspace::before { animation: none; }
@@ -7740,37 +7734,49 @@ html, body {
 
 /* Sidebar User Actions (Preferences & Quick Tour) */
 .sidebar-user-actions-row {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr 1fr;
     gap: 6px;
     padding: 4px 0 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .sidebar.collapsed .sidebar-user-actions-row {
+    display: flex;
     flex-direction: column;
     padding: 4px 0;
     gap: 4px;
 }
 
 .btn-sidebar-user-action {
-    flex: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 6px 8px;
+    gap: 5px;
+    padding: 6px 4px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 8px;
     color: var(--text-secondary, #94a3b8);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     transition: all 180ms ease;
     user-select: none;
     white-space: nowrap;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.btn-sidebar-user-action span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .btn-sidebar-user-action svg {
