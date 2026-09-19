@@ -187,26 +187,21 @@ export class ComplianceJourneyLoader {
         const t = this.t;
         const mainTitle = escapeHtml(t('compliance_journey.loader_title', 'Building your compliance journey'));
         const subTitle = escapeHtml(t('compliance_journey.loader_subtitle', 'Analyzing your product against authoritative BIS evidence'));
-        const footerNote = escapeHtml(t('compliance_journey.loader_footer_note', 'Checking multiple BIS evidence sources and laboratory scopes.'));
-        const footerSubnote = escapeHtml(t('compliance_journey.loader_footer_subnote', 'This may take a few moments'));
+        const footerNote = escapeHtml(t('compliance_journey.loader_footer_note', 'Preparing your compliance assessment...'));
 
         let stagesHtml = '';
         this.stages.forEach((st, idx) => {
             const isFirst = idx === 0;
             const cls = isFirst ? 'loader-stage-item is-current' : 'loader-stage-item is-pending';
             const indicator = isFirst
-                ? `<div class="loader-icon-active" aria-hidden="true"><span class="loader-active-ring"></span><span class="loader-active-dot"></span></div>`
+                ? `<div class="loader-icon-active" aria-hidden="true"><span class="loader-active-dot"></span></div>`
                 : `<span class="loader-icon-pending" aria-hidden="true"></span>`;
-            const statusHtml = isFirst
-                ? `<span class="loader-stage-status">${escapeHtml(st.statusText)}</span>`
-                : '';
 
             stagesHtml += `
                 <li class="${cls}" role="listitem" data-stage="${idx}">
                     <div class="loader-stage-indicator" aria-hidden="true">${indicator}</div>
                     <div class="loader-stage-content">
                         <span class="loader-stage-title">${escapeHtml(st.title)}</span>
-                        ${statusHtml}
                     </div>
                 </li>
             `;
@@ -227,17 +222,12 @@ export class ComplianceJourneyLoader {
                     </div>
                 </div>
 
-                <ul class="compliance-loader-stages" role="list" aria-label="Journey preparation steps">
+                <ul class="compliance-loader-stages grid-layout" role="list" aria-label="Journey preparation steps">
                     ${stagesHtml}
                 </ul>
 
-                <div class="compliance-loader-percentage-wrap">
-                    <span class="compliance-loader-percentage font-mono">5%</span>
-                </div>
-
                 <div class="compliance-loader-footer">
-                    <div class="loader-footer-note">${footerNote}</div>
-                    <div class="loader-footer-subnote">${footerSubnote}</div>
+                    <div id="loaderGlobalStatus" class="loader-global-status">${escapeHtml(this.t('compliance_journey.loader_status_preparing', 'Preparing your compliance assessment...'))}</div>
                 </div>
             </div>
         `;
@@ -343,6 +333,12 @@ export class ComplianceJourneyLoader {
         this.currentStageIndex = stageIndex;
         if (!this.container) return;
 
+        // Update global status
+        const globalStatus = this.container.querySelector('#loaderGlobalStatus');
+        if (globalStatus && this.stages[stageIndex]) {
+            globalStatus.textContent = this.stages[stageIndex].statusText;
+        }
+
         const items = this.container.querySelectorAll('.loader-stage-item');
         items.forEach((item, idx) => {
             const stage = this.stages[idx];
@@ -354,33 +350,17 @@ export class ComplianceJourneyLoader {
             if (idx < stageIndex) {
                 item.classList.add('is-completed');
                 if (indicator) {
-                    indicator.innerHTML = `
-                        <svg class="loader-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    `;
+                    indicator.innerHTML = `<svg class="loader-icon-check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
                 }
                 const oldStatus = content?.querySelector('.loader-stage-status');
                 if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
             } else if (idx === stageIndex) {
                 item.classList.add('is-current');
                 if (indicator) {
-                    indicator.innerHTML = `
-                        <div class="loader-icon-active" aria-hidden="true">
-                            <span class="loader-active-ring"></span>
-                            <span class="loader-active-dot"></span>
-                        </div>
-                    `;
+                    indicator.innerHTML = `<div class="loader-icon-active" aria-hidden="true"><span class="loader-active-dot"></span></div>`;
                 }
-                if (content) {
-                    let statusEl = content.querySelector('.loader-stage-status');
-                    if (!statusEl) {
-                        statusEl = document.createElement('span');
-                        statusEl.className = 'loader-stage-status';
-                        content.appendChild(statusEl);
-                    }
-                    statusEl.textContent = stage.statusText;
-                }
+                const oldStatus = content?.querySelector('.loader-stage-status');
+                if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
             } else {
                 item.classList.add('is-pending');
                 if (indicator) {
@@ -451,17 +431,10 @@ export class ComplianceJourneyLoader {
                 if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
             });
 
-            const metricWrap = this.container.querySelector('.compliance-loader-percentage-wrap');
-            if (metricWrap) {
-                const readyLabel = escapeHtml(this.t('compliance_journey.loader_ready', 'Journey ready'));
-                metricWrap.innerHTML = `
-                    <div class="loader-ready-badge" role="status">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        <span>${readyLabel}</span>
-                    </div>
-                `;
+            
+            const globalStatus = this.container.querySelector('#loaderGlobalStatus');
+            if (globalStatus) {
+                globalStatus.textContent = this.t('compliance_journey.loader_status_ready', 'Assessment ready');
             }
         }
 
@@ -764,7 +737,7 @@ export class ComplianceJourneyComponent {
         const initialState = this.container?.querySelector('#complianceInitialState');
         
         if (initialState) {
-            initialState.style.display = 'none';
+            // initialState.style.display = 'none';
         }
         
         if (resultsContainer) {

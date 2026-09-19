@@ -15557,3 +15557,123 @@ body[data-theme="light"] .btn-comp-chip:hover {
     margin-left: auto !important;
     margin-right: auto !important;
 }
+
+/* COMPACT LOADER OVERRIDES */
+.compliance-loader-card {
+    padding: 24px !important;
+}
+
+.compliance-loader-header {
+    margin-bottom: 16px !important;
+}
+.compliance-loader-title {
+    font-size: 17px !important;
+    margin-bottom: 4px !important;
+}
+.compliance-loader-subtitle {
+    font-size: 13.5px !important;
+}
+
+.compliance-loader-progress-wrap {
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+}
+.compliance-loader-track {
+    height: 4px !important;
+}
+
+.compliance-loader-stages-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px 24px !important;
+    padding: 0 !important;
+    margin: 0 0 20px !important;
+    background: transparent !important;
+    border: none !important;
+    list-style: none !important;
+}
+
+.loader-stage-item {
+    gap: 10px !important;
+    align-items: center !important;
+    padding: 0 !important;
+}
+
+.loader-stage-indicator {
+    width: 14px !important;
+    height: 14px !important;
+    margin-top: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.loader-stage-content {
+    gap: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.loader-stage-title {
+    font-size: 13px !important;
+}
+
+/* Remove giant percentage */
+.compliance-loader-percentage-wrap {
+    display: none !important;
+}
+
+/* Minimal Icons */
+.loader-icon-pending {
+    width: 6px !important;
+    height: 6px !important;
+    border-width: 1px !important;
+    margin: auto !important;
+}
+
+.loader-icon-active {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.loader-icon-active .loader-active-ring {
+    display: none !important; /* user said: no large circles */
+}
+
+.loader-icon-active .loader-active-dot {
+    width: 6px !important;
+    height: 6px !important;
+    position: static !important;
+    transform: none !important;
+    margin: auto !important;
+    background: #a78bfa !important;
+    box-shadow: none !important;
+}
+
+/* Footer Status */
+.compliance-loader-footer {
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.loader-global-status {
+    font-size: 13px !important;
+    color: var(--text-muted, rgba(255,255,255,0.6)) !important;
+}
+
+[data-theme="light"] .loader-global-status {
+    color: #555 !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    .compliance-loader-stages-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+}
