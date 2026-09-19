@@ -388,9 +388,9 @@ class ComplianceSafetyValidator:
             q_text = f"{target_std} {getattr(input_data, 'user_question', '') or ''} {getattr(input_data, 'product', '') or ''}".lower()
             is_electronics = any(w in q_text for w in ["16046", "battery", "laptop", "mobile", "electronic", "it equipment"])
             if is_electronics:
-                scheme_ans = "Operates under Scheme-II (Compulsory Registration Scheme / CRS) for electronics and IT goods under BIS regulations."
-            elif not scheme_ans or "could not be confirmed" in scheme_ans.lower():
-                scheme_ans = "Operates under Scheme-I (ISI Mark Scheme) under the BIS (Conformity Assessment) Regulations, 2018 for product licensing."
+                scheme_ans = "Operates under Scheme-II (Compulsory Registration Scheme / CRS) for electronics and IT goods under BIS regulations. The specific scheme could not be confirmed from available BIS records."
+            else:
+                scheme_ans = "Operates under Scheme-I (ISI Mark Scheme) under the BIS (Conformity Assessment) Regulations, 2018 for product licensing. The specific scheme could not be confirmed from available BIS records."
 
         scheme_key_info = cls.deduplicate_key_information(
             raw_scheme.get("key_information", []),
@@ -767,7 +767,7 @@ class ComplianceJourneyV2Synthesizer:
             "   - Stage 8 (Sampling Requirements): Structured bullets for lot/sample requirements if established in evidence; otherwise concise unconfirmed statement without guessing numbers.\n"
             "   - Stage 9 (Laboratories): Single concise introductory sentence acknowledging the recognized laboratory facilities. Do NOT list or invent any laboratory names.\n"
             "   - Stage 10 (Certification Process): Numbered step-by-step sequence (1., 2., 3., etc.) for the conformity workflow.\n"
-            "   - Assessment: Direct answer to the user's question first, followed by a concise structured summary.\n"
+            "   - Assessment: This acts as the conversational chat response. Direct answer first. Use bullets for multiple facts. NEVER collapse multiple standards into one paragraph; always separate them. DO NOT write giant paragraphs.\n"
             "   - Next Steps: Numbered action items (1., 2., 3., etc.) for practical follow-up.\n"
             "7. User-Facing Terminology Restriction:\n"
             "   The generated user-facing text (answer, key_information, assessment, next_steps) must NEVER expose internal architecture jargon: do NOT use 'PC-3', 'PC-4', 'PC-5', 'RAG', 'UNKNOWN', 'GROUNDED', 'HYBRID', 'LLM_FALLBACK', 'retrieval status', 'evidence corpus', or 'EVIDENCE NOT ESTABLISHED'. Write in professional, natural language.\n"
@@ -776,7 +776,23 @@ class ComplianceJourneyV2Synthesizer:
             "9. Three Levels of Content (Zero Repetition):\n"
             "   - Level 1: 'answer' provides the primary conclusion and stage-appropriate structured explanation.\n"
             "   - Level 2: 'key_information' provides 1-3 compact supplemental chips containing ONLY new, additional facts (e.g. gazette notification number, implementation date). NEVER repeat facts, words, or values already present in 'answer'. If no additional facts exist, provide an empty list [].\n"
-            "   - Level 3: 'details' (structured cards for tests, candidate standards, and qualified labs are rendered automatically by the UI). Never duplicate entire tables in 'answer'."
+            "   - Level 3: 'details' (structured cards for tests, candidate standards, and qualified labs are rendered automatically by the UI). Never duplicate entire tables in 'answer'.\n"
+            "10. CONVERSATIONAL ASSESSMENT FORMATTING (CRITICAL):\n"
+            "   The 'assessment' acts as the main conversational chat response. It must be polished, readable, and strictly adhere to these formatting rules:\n"
+            "   - Direct Answer First: Start with the actual answer immediately (e.g., 'IS 4985:2021 covers unplasticized PVC...'). Do NOT start with 'IS 4985:2021 is an Indian Standard that specifies...' followed by a huge paragraph.\n"
+            "   - Bullets for Multiple Facts: If the answer contains 3 or more distinct facts (or clauses), use bullets. Do not combine separate clauses into one paragraph.\n"
+            "   - Multiple Standards: When referencing multiple Indian Standards, ALWAYS separate them into a bulleted list explaining what each standard contributes. Never place multiple standards in one giant paragraph.\n"
+            "   - Standard/Definition Questions: Prefer a short 1-2 sentence answer, then a bulleted 'It covers' list.\n"
+            "   - Technical Questions: Use compact tables or grouped bullets (Parameter, Test, Method, Clause, Frequency) rather than paragraphs.\n"
+            "   - Certification Questions: Structure as 'Answer' (one direct conclusion) -> 'Why' (bullets for QCO/standard) -> 'Process' (numbered steps). Do not mix conclusion and process.\n"
+            "   - QCO/Regulatory Questions: 'Regulatory status' (1 sentence) -> 'QCO details' (bullets for QCO, Notification, Date, Standard). Explain conflicts briefly. Do not bury regulatory conclusions in prose.\n"
+            "   - Testing Questions: Bulleted list of tests. Only provide frequency/laboratory if useful. Do not repeat test info in prose below the list.\n"
+            "   - Laboratory Questions: Structured numbered list (Name, Location, Status, Scope). Only use provided F3 data. Do not invent labs.\n"
+            "   - Process/How-to Questions: Use concise numbered steps.\n"
+            "   - Comparison Questions: Use a Markdown table.\n"
+            "   - Answer Length: Decide based on the query. 1-3 sentences for simple questions. Do not make a simple question unnecessarily long, and do not compress complex answers into one paragraph.\n"
+            "   - Remove Repetition: Do not repeat facts across the opening sentence, bullet lists, key information, and footers. State it once.\n"
+            "   - Semantic Markdown: Use **bold**, *italic*, bullets, numbered lists, and short headings. Do NOT output raw HTML. Do not use excessive bolding, emojis, or long horizontal separators."
         )
 
         # Build context summary

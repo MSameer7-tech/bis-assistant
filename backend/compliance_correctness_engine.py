@@ -567,6 +567,8 @@ class ComplianceCorrectnessEngine:
             if v2_response.certification_scheme.scheme_name is not None:
                 contradictions_detected.append(f"Stage 5 asserted scheme '{v2_response.certification_scheme.scheme_name}' without authoritative evidence")
                 v2_response.certification_scheme.scheme_name = None
+                # Force the answer to be remediated since the scheme was hallucinated
+                v2_response.certification_scheme.answer = ""
                 s5_score.contradictions += 1
                 s5_score.unsupported_claims_detected += 1
                 s5_score.unsupported_claims_resolved += 1
@@ -577,9 +579,9 @@ class ComplianceCorrectnessEngine:
             is_electronics = any(w in q_text for w in ["16046", "battery", "laptop", "mobile", "electronic"])
             if "could not be confirmed" in ans_lower or not v2_response.certification_scheme.answer:
                 if is_electronics:
-                    v2_response.certification_scheme.answer = "Operates under Scheme-II (Compulsory Registration Scheme / CRS) for electronics and IT goods under BIS regulations."
+                    v2_response.certification_scheme.answer = "Operates under Scheme-II (Compulsory Registration Scheme / CRS) for electronics and IT goods under BIS regulations. The specific scheme could not be confirmed from available BIS records."
                 else:
-                    v2_response.certification_scheme.answer = "Operates under Scheme-I (ISI Mark Scheme) under the BIS (Conformity Assessment) Regulations, 2018 for product licensing."
+                    v2_response.certification_scheme.answer = "Operates under Scheme-I (ISI Mark Scheme) under the BIS (Conformity Assessment) Regulations, 2018 for product licensing. The specific scheme could not be confirmed from available BIS records."
             s5_score.general_claims = 1
             s5_score.evidence_coverage = 0.5
         scores[5] = s5_score

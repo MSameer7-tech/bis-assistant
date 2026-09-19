@@ -2724,6 +2724,18 @@ Reference context:
 ---{style_inst}
 
 Please synthesize a HYBRID answer in {meta['name']} ({meta['native_name']}) strictly formatted with these two distinct sections:
+
+FORMATTING AND STRUCTURAL RULES (CRITICAL):
+1. DIRECT ANSWER FIRST: Start with the actual answer immediately.
+2. USE BULLETS WHEN MULTIPLE FACTS EXIST: Do not combine separate clauses or multiple standards into one giant paragraph.
+3. MULTIPLE STANDARDS: ALWAYS separate them into a bulleted list. Never place multiple standards in one paragraph.
+4. STRUCTURE BY QUESTION TYPE:
+   - Standard/Definition: Short 1-2 sentence answer, then a bulleted 'It covers' list.
+   - Certification: 'Answer' (one direct conclusion) -> 'Why' -> 'Process' (numbered steps).
+   - Conversational/Casual: Answer naturally in 2-4 short paragraphs or bullets.
+5. LENGTH & REPETITION: Decide length based on the query. Do not repeat facts.
+6. MARKDOWN: Use semantic Markdown (**bold**, *italic*, bullets). Do NOT output raw HTML or excessive bolding.
+
 ### {v_head}
 (Include only facts directly verified by the BIS reference context above)
 
@@ -2746,7 +2758,19 @@ Please synthesize a HYBRID answer in {meta['name']} ({meta['native_name']}) stri
             prod_hint += "\nTopic: Product Certification / Standards for Manufacturer. Provide general guidance on relevant Indian Standards (e.g. IS 2202, IS 1003 for timber doors), Scheme I ISI marking process, and clarify that mandatory status depends on Quality Control Orders (QCOs)."
         user_prompt = f"""User Query: {query}{prod_hint}{style_inst}
 
-Please provide a helpful, clear, and comprehensive general answer in {meta['name']} ({meta['native_name']}):
+Please provide a helpful, clear, and comprehensive general answer in {meta['name']} ({meta['native_name']}).
+
+FORMATTING AND STRUCTURAL RULES (CRITICAL):
+1. DIRECT ANSWER FIRST: Start with the actual answer immediately.
+2. USE BULLETS WHEN MULTIPLE FACTS EXIST: Do not combine multiple standards or clauses into one giant paragraph.
+3. MULTIPLE STANDARDS: ALWAYS separate multiple Indian Standards into a bulleted list. Never place multiple standards in one paragraph.
+4. STRUCTURE BY QUESTION TYPE:
+   - Standard/Definition: Short 1-2 sentence answer, then a bulleted 'It covers' list.
+   - Certification: 'Answer' (one direct conclusion) -> 'Why' -> 'Process' (numbered steps).
+   - Conversational/Casual: Answer naturally in 2-4 short paragraphs or bullets.
+5. LENGTH & REPETITION: Decide length based on the query. Do not repeat facts.
+6. MARKDOWN: Use semantic Markdown (**bold**, *italic*, bullets). Do NOT output raw HTML or excessive bolding.
+
 ### Answer
 (Your general knowledge answer)
 
@@ -2788,20 +2812,26 @@ Reference context:
 ---
 
 Please answer the user's query directly, authoritatively, and professionally based strictly on the provided BIS reference context.{domain_inst}{style_inst}
-Rules:
-1. Ground all facts strictly in the reference context. Never invent unindexed clauses, parameters, pressure limits, dielectric ratings, or standards.
-2. For standard definition inquiries (e.g. "What is IS 4985?"):
-   - For quick style: provide a concise, intent-focused definition (Standard Designation, Revision / Year, Official Title, Primary Scope).
-   - For detailed style: provide a comprehensive, structured explanation covering Standard Designation, Revision/Year, Official Title, Scope & Product Coverage, Key Technical Specifications & Testing Requirements from the reference context, and Practical Quality Significance.
-   - For professional style: organize under formal regulatory headings (Normative Scope & Authority, Normative Technical & Compliance Benchmarks, Standard Identification, Operational & Compliance Implications).
-   - In all styles: do NOT force repetitive sections duplicating the same standard number across 4 redundant headers.
-3. Never treat Product Manual titles (e.g. 'BIS Product Manual for IS 4985 ()') or laboratory names as official standard titles.
-4. Never treat test parameters (e.g. 'Hydrostatic Pressure Test') or arbitrary fragments ('BIS Certification Marking', 'General', 'Scope') as official standard titles.
-5. If evidence is insufficient for the queried product or standard, clearly state that it could not be verified from the available BIS records.
-6. Do NOT divide the answer into 'Topic:' or 'Subject:' labels.
-7. Do NOT include a 'Sources', 'References', or 'Bibliography' section at the end.
-8. Write clean markdown typography directly without card or text box structures.
-9. For regulatory or certification queries: never convert absence of evidence into an absolute legal conclusion (e.g. never say "there is no requirement for mandatory certification" or "certification is not mandatory"). State cautiously that the available BIS evidence does not establish whether certification is mandatory, and that mandatory certification depends on Quality Control Orders (QCOs) issued by the relevant Ministry."""
+
+FORMATTING AND STRUCTURAL RULES (CRITICAL):
+1. DIRECT ANSWER FIRST: Start with the actual answer immediately (e.g., 'IS 4985:2021 covers unplasticized PVC...'). Do NOT start with 'IS 4985:2021 is an Indian Standard that specifies...' followed by a huge paragraph.
+2. USE BULLETS WHEN MULTIPLE FACTS EXIST: If the answer contains 3 or more distinct facts or clauses, use bullets. Do not combine separate clauses into one giant paragraph.
+3. MULTIPLE STANDARDS: When referencing multiple Indian Standards, ALWAYS separate them into a bulleted list. Never place multiple standards in one paragraph.
+4. STRUCTURE BY QUESTION TYPE:
+   - Standard/Definition Questions: Prefer a short 1-2 sentence answer, then a bulleted 'It covers' list.
+   - Technical Questions: Use compact tables or grouped bullets (Parameter, Test, Method, Clause, Frequency).
+   - Certification Questions: Structure as 'Answer' (one direct conclusion) -> 'Why' (bullets for QCO/standard) -> 'Process' (numbered steps). Do not mix conclusion and process.
+   - QCO/Regulatory Questions: 'Regulatory status' (1 sentence) -> 'QCO details' (bullets for QCO, Notification, Date, Standard). Explain conflicts briefly.
+   - Testing Questions: Bulleted list of tests. Only provide frequency/laboratory if useful. Do not repeat test info in prose below the list.
+   - Laboratory Questions: Structured numbered list (Name, Location, Status, Scope). Only use provided data.
+   - Process/How-to Questions: Use concise numbered steps.
+   - Comparison Questions: Use a Markdown table.
+   - Conversational/Casual Questions: Answer naturally in 2-4 short paragraphs or bullets. Do NOT force formal structure.
+5. LENGTH & REPETITION: Decide length based on the query. 1-3 sentences for simple questions. Do not repeat facts across the opening sentence, bullet lists, and footers. State it once.
+6. MARKDOWN: Use semantic Markdown (**bold**, *italic*, bullets). Do NOT output raw HTML, excessive bolding, emojis, or long horizontal separators.
+7. GROUNDING: Ground all facts strictly in the reference context. Never invent unindexed clauses, parameters, pressure limits, dielectric ratings, standards, or laboratories.
+8. Do NOT divide the answer into 'Topic:' or 'Subject:' labels. Do NOT include a 'Sources' or 'References' section at the end.
+9. For regulatory or certification queries: never convert absence of evidence into an absolute legal conclusion (e.g. never say "there is no requirement for mandatory certification"). State cautiously that the available BIS evidence does not establish whether certification is mandatory, and that mandatory certification depends on Quality Control Orders (QCOs)."""
     else:
         meta = SUPPORTED_LANGUAGES.get(resp_lang, SUPPORTED_LANGUAGES["en"])
         user_prompt = f"""User Query: {query}

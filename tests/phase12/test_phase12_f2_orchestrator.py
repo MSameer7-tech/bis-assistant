@@ -189,8 +189,13 @@ class TestPhase12F2Orchestrator(unittest.TestCase):
         self.assertEqual(result["generation_mode"], "GROUNDED")
 
     def test_08_missing_groq_api_key_does_not_crash(self):
+        from scripts.phase12_f2_orchestrator import GroqClient
+        GroqClient._keys = []
+        GroqClient._key_state = {}
+        GroqClient._initialized = False
+
         """If GROQ_API_KEY is not set in the environment, returns RAG-only result safely."""
-        with patch.dict(os.environ, {"GROQ_API_KEY": ""}, clear=False):
+        with patch.dict(os.environ, {"GROQ_API_KEY": "", "GROQ_API_KEY_1": "", "GROQ_API_KEY_2": "", "GROQ_API_KEY_3": "", "GROQ_API_KEY_4": "", "GROQ_API_KEY_5": ""}, clear=False):
             unconfigured_groq = GroqClient(api_key="")
             result = orchestrate_assistant_query("What is IS 4985?", groq_client=unconfigured_groq)
 
