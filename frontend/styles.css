@@ -15511,7 +15511,7 @@ body[data-theme="light"] .btn-comp-chip:hover {
 #complianceResultsContainer {
     width: 100%;
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 56px auto 0;
 }
 
 /* TYPOGRAPHY HOTFIX */
@@ -15550,4 +15550,10 @@ body[data-theme="light"] .btn-comp-chip:hover {
 
 .quiz-chips {
     gap: 16px !important;
+}
+
+.compliance-error-card {
+    max-width: 680px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
