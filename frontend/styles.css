@@ -15513,3 +15513,16 @@ body[data-theme="light"] .btn-comp-chip:hover {
     max-width: 1200px;
     margin: 0 auto;
 }
+
+/* TYPOGRAPHY HOTFIX */
+.quiz-title, .quiz-subtitle, .quiz-label, .quiz-input, .quiz-button, .btn-comp-chip {
+    font-family: var(--font-main) !important;
+}
+.quiz-button {
+    white-space: nowrap !important;
+    padding: 0 32px !important;
+    width: auto !important;
+}
+.quiz-field.action-field {
+    flex: 0 0 auto !important;
+}
