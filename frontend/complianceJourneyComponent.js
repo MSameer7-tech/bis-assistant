@@ -1110,20 +1110,6 @@ export class ComplianceJourneyComponent {
 
         return `
             <div class="compliance-journey-card" role="article" aria-label="Product Compliance Journey: ${escapeHtml(productName)}">
-                <!-- Journey Header Banner -->
-                <div class="journey-header-banner">
-                    <div class="journey-header-eyebrow">PRODUCT COMPLIANCE JOURNEY</div>
-                    <div class="journey-product-summary">
-                        <div class="product-summary-item">
-                            <span class="product-summary-label">Product:</span>
-                            <span class="product-summary-val font-semibold">${escapeHtml(productName)}</span>
-                        </div>
-                        <div class="product-summary-item">
-                            <span class="product-summary-label">Applicable Standard:</span>
-                            <span class="product-summary-val font-mono font-semibold">${escapeHtml(standardName)}</span>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- ASSESSMENT Section -->
                 <section class="compliance-assessment-banner" aria-label="Compliance Assessment">
