@@ -2908,6 +2908,23 @@ def sanitize_final_answer(text: str) -> str:
     if not text:
         return ""
     text = text.replace('\u202f', ' ').replace('\xa0', ' ')
+    
+    # Strip headers and disclaimers to fulfill "remove additional info things"
+    for lang in HYBRID_SECTION_HEADERS_MAP:
+        v_head = HYBRID_SECTION_HEADERS_MAP[lang]["verified"]
+        g_head = HYBRID_SECTION_HEADERS_MAP[lang]["general"]
+        text = text.replace(f"### {v_head}", "")
+        text = text.replace(f"### {g_head}", "")
+    
+    for lang in OFFLINE_FALLBACK_UNAVAILABLE_MAP:
+        text = text.replace(OFFLINE_FALLBACK_UNAVAILABLE_MAP[lang], "")
+        
+    for lang in HYBRID_DISCLAIMER_MAP:
+        text = text.replace(HYBRID_DISCLAIMER_MAP[lang], "")
+        
+    for lang in LLM_FALLBACK_DISCLAIMER_MAP:
+        text = text.replace(LLM_FALLBACK_DISCLAIMER_MAP[lang], "")
+
     text = re.sub(r'!\[[^\]]*\]\([^\)]*\)', '', text)
     text = re.sub(r'\[image\]\([^\)]*\)', '', text, flags=re.IGNORECASE)
     text = re.sub(r'https?://(?:localhost|127\.0\.0\.1)(?::\d+)?/[^\s\)]+', '', text)

@@ -1449,78 +1449,54 @@ function initApp() {
             }
         }
 
-        // 4. Clean Minimal Footer (Zero irrelevant chips or cluttered tags)
+        // 4. Clean Minimal Footer
         let footerHtml = '';
-
-        if (genMode !== 'CONVERSATIONAL') {
-            let sourceTagHtml = '';
-            if (genMode === 'GROUNDED' && status === 'SUFFICIENT') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-verified" data-i18n="assistant.status.sufficient">&bull; ${t('assistant.status.sufficient', 'Verified BIS Grounded')}</span>`;
-            } else if (genMode === 'HYBRID' || status === 'PARTIAL') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-partial" data-i18n="assistant.status.hybrid">&bull; ${t('assistant.status.hybrid', 'Partially BIS-verified • Additional information is unverified')}</span>`;
-            } else if (genMode === 'LLM_FALLBACK') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-fallback" data-i18n="assistant.status.fallback">&bull; ${t('assistant.status.fallback', 'General knowledge • Not BIS-verified')}</span>`;
-            } else if (status === 'INSUFFICIENT') {
-                sourceTagHtml = `<span class="subtle-source-tag tag-insufficient" data-i18n="assistant.status.insufficient">&bull; ${t('assistant.status.insufficient', 'Insufficient Evidence')}</span>`;
-            }
-
-            if (sourceTagHtml) {
-                footerHtml = `
-                    <div class="answer-subtle-footer">
-                        <div class="footer-left">
-                            ${sourceTagHtml}
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        // 5. Lab Finder Interactive Bridge Widget (Only when user asked about laboratories)
-        let labFinderBridgeHtml = '';
+        const intent = data.intent || '';
         const stdMatch = (userQueryText || '').match(/\bIS[\s:-]?(\d+(?:\s*:\s*\d+)?)\b/i) ||
                          (data.answer || '').match(/\bIS[\s:-]?(\d+(?:\s*:\s*\d+)?)\b/i);
+        const matchedStd = stdMatch ? `IS ${stdMatch[1].replace(/\s+/g, ' ')}` : null;
 
-        if (stdMatch && isLabQuery) {
-            const matchedStd = `IS ${stdMatch[1].replace(/\s+/g, ' ')}`;
-            const locMatch = (userQueryText || '').match(/\b(?:in|near|at|around)\s+([A-Za-z]+)\b/i);
-            const locText = locMatch ? locMatch[1] : '';
-
-            labFinderBridgeHtml = `
-                <div class="chat-lab-finder-card">
-                    <div class="chat-lab-finder-info">
-                        <span class="chat-lab-finder-icon">🔬</span>
-                        <div>
-                            <h5 class="chat-lab-finder-title">Accredited Laboratory Finder: ${escapeHtml(matchedStd)}</h5>
-                            <p class="chat-lab-finder-desc">Discover and inspect qualified testing facilities${locText ? ` near ${escapeHtml(locText)}` : ''} on the interactive BIS Laboratory Map.</p>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-chat-open-lab" data-standard="${escapeHtml(matchedStd)}" data-location="${escapeHtml(locText)}">
-                        <span>Open in Lab Finder &rarr;</span>
-                    </button>
-                </div>
-            `;
+        if (genMode !== 'CONVERSATIONAL' && (genMode === 'HYBRID' || status === 'PARTIAL' || genMode === 'LLM_FALLBACK' || status === 'INSUFFICIENT')) {
+            const isRegulatoryQuestion = matchedStd || ['COMPLIANCE_REQUIREMENT', 'CERTIFICATION', 'QCO', 'LAB_SEARCH'].includes(intent);
+            if (isRegulatoryQuestion) { /* footer disabled */ }
         }
 
-        // 5.b Compliance Journey Interactive Bridge Widget (when standard mentioned and not already a full journey card)
-        let complianceJourneyBridgeHtml = '';
-        let complianceJourneyHtml = '';
+        // 5. Contextual Actions
+        let contextualActionsHtml = '';
+        let actions = [];
 
+        // 5a. Compliance Journey Action
+        let complianceJourneyHtml = '';
         if (data.compliance_journey) {
             complianceJourneyHtml = ComplianceJourneyComponent.renderJourneyCard(data.compliance_journey, { t: (k, fb) => t(k, fb) });
-        } else if (stdMatch) {
-            const matchedStd = `IS ${stdMatch[1].replace(/\s+/g, ' ')}`;
-            complianceJourneyBridgeHtml = `
-                <div class="chat-compliance-bridge-card">
-                    <div class="chat-compliance-bridge-info">
-                        <span class="chat-compliance-bridge-icon" aria-hidden="true">📋</span>
-                        <div>
-                            <h5 class="chat-compliance-bridge-title">${t('compliance_journey.chat_bridge_title', 'Product Compliance Journey')}: ${escapeHtml(matchedStd)}</h5>
-                            <p class="chat-compliance-bridge-desc">${t('compliance_journey.chat_bridge_desc', 'Explore complete regulatory status, mandatory certification, testing requirements, and qualified laboratories for this standard.')}</p>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-chat-open-compliance" data-standard="${escapeHtml(matchedStd)}">
-                        <span>${t('compliance_journey.chat_bridge_btn', 'View Full Compliance Journey')} &rarr;</span>
+        } else if (matchedStd) {
+            const isComplianceIntent = ['COMPLIANCE_REQUIREMENT', 'CERTIFICATION', 'QCO', 'PROCESS', 'MANDATORY_STATUS'].includes(intent) || 
+                                       /\b(compliance|certification|qco|mandatory|regulatory|process|requirements)\b/i.test(userQueryText);
+            
+            if (isComplianceIntent) {
+                actions.push(`
+                    <button type="button" class="btn-contextual-action btn-chat-open-compliance" data-standard="${escapeHtml(matchedStd)}">
+                        ${t('compliance_journey.chat_bridge_btn_short', 'Explore compliance requirements &rarr;')}
                     </button>
+                `);
+            }
+        }
+
+        // 5b. Lab Finder Action
+        if (matchedStd && isLabQuery) {
+            const locMatch = (userQueryText || '').match(/\b(?:in|near|at|around)\s+([A-Za-z]+)\b/i);
+            const locText = locMatch ? locMatch[1] : '';
+            actions.push(`
+                <button type="button" class="btn-contextual-action btn-chat-open-lab" data-standard="${escapeHtml(matchedStd)}" data-location="${escapeHtml(locText)}">
+                    ${t('assistant.actions.find_lab', 'Find a BIS laboratory &rarr;')}
+                </button>
+            `);
+        }
+
+        if (actions.length > 0) {
+            contextualActionsHtml = `
+                <div class="chat-contextual-actions">
+                    ${actions.join('\n')}
                 </div>
             `;
         }
@@ -1544,8 +1520,7 @@ function initApp() {
                     ${complianceJourneyHtml}
                     ${feeResultsHtml}
                     ${labResultsHtml}
-                    ${labFinderBridgeHtml}
-                    ${complianceJourneyBridgeHtml}
+                    ${contextualActionsHtml}
                     ${footerHtml}
                 </div>
             </div>
