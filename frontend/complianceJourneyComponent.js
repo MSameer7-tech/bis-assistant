@@ -645,9 +645,9 @@ export class ComplianceJourneyComponent {
           <label class="quiz-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'EXAMPLES'))}</label>
           <div class="quiz-chips">
             <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
-            <span style="color:#333;">|</span>
+            
             <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
-            <span style="color:#333;">|</span>
+            
             <button type="button" class="btn-comp-chip" data-product="secondary cell" data-standard="IS 16046 (Part 2)" title="Example: Lithium Battery · IS 16046 Part 2">Lithium Battery · IS 16046 Part 2</button>
           </div>
         </div>

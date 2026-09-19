@@ -15526,3 +15526,28 @@ body[data-theme="light"] .btn-comp-chip:hover {
 .quiz-field.action-field {
     flex: 0 0 auto !important;
 }
+
+/* LAYOUT FIX HOTFIX */
+.quiz-card {
+    max-width: 1040px !important;
+}
+
+.quiz-field-row.multi-col {
+    gap: 16px !important;
+}
+
+.quiz-field {
+    min-width: 0 !important; /* Allow shrinking below default input min-width */
+}
+
+.quiz-input {
+    min-width: 0 !important;
+}
+
+.quiz-button {
+    padding: 0 20px !important; /* Reduce excessive padding */
+}
+
+.quiz-chips {
+    gap: 16px !important;
+}
