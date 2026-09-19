@@ -605,158 +605,80 @@ export class ComplianceJourneyComponent {
         this.container.innerHTML = `
 <div class="compliance-layout" role="region" aria-label="Product Compliance Journey Workspace">
   <!-- Page Header -->
-  <header class="compliance-topbar">
+  <header class="compliance-topbar centered">
     <div class="compliance-title-group">
       <div class="compliance-eyebrow">
         <span class="compliance-eyebrow-dot"></span>
         <span data-i18n="compliance_journey.title">${escapeHtml(t('compliance_journey.title', 'PRODUCT COMPLIANCE JOURNEY'))}</span>
       </div>
       <h2 class="compliance-heading" data-i18n="compliance_journey.heading">
-        ${escapeHtml(t('compliance_journey.heading', 'Understand what your product needs to meet BIS requirements.'))}
+        ${escapeHtml(t('compliance_journey.heading', 'Find your BIS requirements.'))}
       </h2>
       <p class="compliance-heading-sub" data-i18n="compliance_journey.heading_sub">
-        ${escapeHtml(t('compliance_journey.heading_sub', 'Explore applicable Indian Standards, regulatory requirements, testing, BIS laboratories, and certification steps.'))}
+        ${escapeHtml(t('compliance_journey.heading_sub', 'Enter a product, Indian Standard, or compliance question to get a step-by-step assessment.'))}
       </p>
     </div>
   </header>
 
-  <!-- Main Two-Column Workspace (shown when no results) -->
-  <div id="complianceInitialState" class="compliance-workspace-grid">
-    <!-- LEFT: Primary Workspace (~55%) -->
-    <section class="compliance-workspace-left" aria-label="Journey Search Form">
-      <div class="compliance-workspace-surface">
-        <h3 class="compliance-section-heading" data-i18n="compliance_journey.workspace_title">${escapeHtml(t('compliance_journey.workspace_title', 'Start with your product'))}</h3>
-        <p class="compliance-section-sub" data-i18n="compliance_journey.workspace_sub">${escapeHtml(t('compliance_journey.workspace_sub', 'Describe what you manufacture, enter an Indian Standard, or ask a compliance question.'))}</p>
-        
-        <form id="complianceSearchForm" class="compliance-search-form" novalidate>
-          <!-- Natural Language Query: large textarea -->
-          <div class="compliance-query-row">
-            <label for="compInputQuery" class="compliance-form-label primary" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'Natural Language Query'))}</label>
+  <!-- Main Centered Workspace (shown when no results) -->
+  <div id="complianceInitialState" class="compliance-workspace-centered">
+    <div class="compliance-main-card">
+      <form id="complianceSearchForm" class="compliance-search-form" novalidate>
+        <!-- Natural Language Query: large textarea -->
+        <div class="compliance-query-row">
+          <label for="compInputQuery" class="compliance-form-label primary" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'Describe your product or ask a question'))}</label>
+          <div class="compliance-textarea-wrapper">
             <textarea id="compInputQuery" class="compliance-query-textarea"
               placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'e.g. I manufacture PVC pipes for drinking water. What BIS standards, certification, testing and laboratories apply?'))}"
               autocomplete="off" spellcheck="false" rows="4"></textarea>
-          </div>
-
-          <!-- Generate Button -->
-          <div class="compliance-submit-row">
-            <button type="submit" id="btnComplianceSubmit" class="btn-compliance-submit" aria-label="Generate Compliance Journey">
-              <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate Compliance Journey'))}</span>
-              <svg id="btnComplianceIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true"></div>
-            </button>
-          </div>
-
-          <!-- Structured Inputs: 3-column grid -->
-          <div class="compliance-form-grid">
-            <div class="compliance-form-group">
-              <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product Name'))}</label>
-              <input type="text" id="compInputProduct" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
-            </div>
-            <div class="compliance-form-group">
-              <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (IS)'))}</label>
-              <input type="text" id="compInputStandard" class="compliance-text-input font-mono" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
-            </div>
-            <div class="compliance-form-group">
-              <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (Optional)'))}</label>
-              <input type="text" id="compInputLocation" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
-            </div>
-          </div>
-
-          <!-- Example Chips -->
-          <div class="compliance-examples-row">
-            <span class="compliance-examples-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</span>
-            <div class="compliance-chips-wrap">
-              <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
-              <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
-              <button type="button" class="btn-comp-chip" data-product="secondary cell" data-standard="IS 16046 (Part 2)" title="Example: Lithium Battery · IS 16046 Part 2">Lithium Battery · IS 16046 Part 2</button>
-              <button type="button" class="btn-comp-chip" data-standard="IS 15750" title="Example: IS 15750">IS 15750</button>
-              <button type="button" class="btn-comp-chip" data-product="timber doors" title="Example: Timber doors">Timber Doors</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- RIGHT: Journey Preview Timeline (~45%) -->
-    <aside class="compliance-workspace-right" aria-label="Compliance Journey Preview">
-      <div class="compliance-preview-surface">
-        <h3 class="compliance-section-heading" data-i18n="compliance_journey.preview_title">${escapeHtml(t('compliance_journey.preview_title', 'Your compliance journey'))}</h3>
-        <p class="compliance-section-sub" data-i18n="compliance_journey.preview_sub">${escapeHtml(t('compliance_journey.preview_sub', 'From the product you make to the steps required for BIS compliance.'))}</p>
-        
-        <div class="compliance-journey-timeline" aria-label="10-stage compliance pathway">
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">01</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_01">${escapeHtml(t('compliance_journey.timeline_01', 'Product'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_01_desc">${escapeHtml(t('compliance_journey.timeline_01_desc', 'Identify the product'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">02</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_02">${escapeHtml(t('compliance_journey.timeline_02', 'Indian Standard'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_02_desc">${escapeHtml(t('compliance_journey.timeline_02_desc', 'Determine applicable standards'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">03</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_03">${escapeHtml(t('compliance_journey.timeline_03', 'Regulatory status'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_03_desc">${escapeHtml(t('compliance_journey.timeline_03_desc', 'Check QCO requirements'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">04</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_04">${escapeHtml(t('compliance_journey.timeline_04', 'Certification'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_04_desc">${escapeHtml(t('compliance_journey.timeline_04_desc', 'Determine the certification requirement'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">05</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_05">${escapeHtml(t('compliance_journey.timeline_05', 'Scheme'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_05_desc">${escapeHtml(t('compliance_journey.timeline_05_desc', 'Identify the applicable scheme'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">06</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_06">${escapeHtml(t('compliance_journey.timeline_06', 'Testing'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_06_desc">${escapeHtml(t('compliance_journey.timeline_06_desc', 'Required tests and controls'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">07</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_07">${escapeHtml(t('compliance_journey.timeline_07', 'Factory inspection'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_07_desc">${escapeHtml(t('compliance_journey.timeline_07_desc', 'Applicable inspection requirements'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">08</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_08">${escapeHtml(t('compliance_journey.timeline_08', 'Sampling'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_08_desc">${escapeHtml(t('compliance_journey.timeline_08_desc', 'Lot and sampling requirements'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">09</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_09">${escapeHtml(t('compliance_journey.timeline_09', 'BIS laboratories'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_09_desc">${escapeHtml(t('compliance_journey.timeline_09_desc', 'Find laboratories with the required scope'))}</span>
-            </div>
-          </div>
-          <div class="timeline-node">
-            <div class="timeline-marker"><span class="timeline-number">10</span></div>
-            <div class="timeline-content">
-              <span class="timeline-label" data-i18n="compliance_journey.timeline_10">${escapeHtml(t('compliance_journey.timeline_10', 'Certification process'))}</span>
-              <span class="timeline-desc" data-i18n="compliance_journey.timeline_10_desc">${escapeHtml(t('compliance_journey.timeline_10_desc', 'Application and conformity steps'))}</span>
-            </div>
+            <div class="compliance-char-count">0/1000</div>
           </div>
         </div>
+
+        <!-- Structured Inputs: 3-column grid -->
+        <div class="compliance-form-grid">
+          <div class="compliance-form-group">
+            <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product Name'))}</label>
+            <input type="text" id="compInputProduct" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="compliance-form-group">
+            <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (IS)'))}</label>
+            <input type="text" id="compInputStandard" class="compliance-text-input font-mono" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="compliance-form-group">
+            <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (Optional)'))}</label>
+            <input type="text" id="compInputLocation" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai, Bengaluru'))}" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="compliance-submit-row full-width">
+          <button type="submit" id="btnComplianceSubmit" class="btn-compliance-submit block" aria-label="Generate Compliance Journey">
+            <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate Compliance Journey'))}</span>
+            <svg id="btnComplianceIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true"></div>
+          </button>
+        </div>
+        
+        <!-- Supporting Line -->
+        <div class="compliance-supporting-line">
+          <span class="supporting-text" data-i18n="compliance_journey.supporting_line">${escapeHtml(t('compliance_journey.supporting_line', 'Standards • Certification • Testing • Laboratories'))}</span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Example Chips -->
+    <div class="compliance-examples-section">
+      <h3 class="compliance-examples-title" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</h3>
+      <p class="compliance-examples-sub" data-i18n="compliance_journey.examples_sub">${escapeHtml(t('compliance_journey.examples_sub', 'Click on an example to populate the form.'))}</p>
+      <div class="compliance-chips-wrap">
+        <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
+        <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
+        <button type="button" class="btn-comp-chip" data-product="secondary cell" data-standard="IS 16046 (Part 2)" title="Example: Lithium Battery · IS 16046 Part 2">Lithium Battery · IS 16046 Part 2</button>
+        <button type="button" class="btn-comp-chip" data-standard="IS 15750" title="Example: IS 15750">IS 15750</button>
+        <button type="button" class="btn-comp-chip" data-product="timber doors" title="Example: Timber doors">Timber Doors</button>
       </div>
-    </aside>
+    </div>
   </div>
 
   <!-- Results Viewport (hidden initially, shown when results arrive) -->

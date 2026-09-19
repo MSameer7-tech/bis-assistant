@@ -94,7 +94,7 @@ class TestPC6FrontendIntegrity:
         css = (FRONTEND_DIR / "styles.css").read_text(encoding="utf-8")
         assert ".compliance-journey-workspace" in css
         assert ".compliance-layout" in css
-        assert ".compliance-workspace-surface" in css
+        assert ".compliance-workspace-centered" in css
         assert ".compliance-timeline-container" in css
         assert ".stage-card" in css
         # Status badges
