@@ -15770,3 +15770,9 @@ body[data-theme="light"] .btn-comp-chip:hover {
         gap: 24px;
     }
 }
+
+/* Remove Warnings and Provenance from UI as requested */
+.compliance-warnings-section,
+.compliance-provenance-section {
+    display: none !important;
+}
