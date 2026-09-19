@@ -60,13 +60,6 @@ export function escapeHtml(str) {
  * - Responsive across desktop, tablet, and mobile
  */
 export class ComplianceJourneyLoader {
-    /**
-     * @param {HTMLElement|string} container - Target container element or selector
-     * @param {Object} [options] - Configuration options
-     * @param {Function} [options.t] - Translation function (key, fallback)
-     * @param {Object} [options.payload] - Query payload being resolved
-     * @param {Function} [options.onRetry] - Callback invoked when retry button in error state is clicked
-     */
     constructor(container, options = {}) {
         this.container = typeof container === 'string'
             ? document.querySelector(container)
@@ -82,370 +75,82 @@ export class ComplianceJourneyLoader {
             }
         };
         this.onRetry = options.onRetry || null;
-
-        this.currentStageIndex = 0;
-        this.progress = 5;
-        this.isRunning = false;
-        this.isCompleted = false;
         this.isDestroyed = false;
-
-        this.animationFrameId = null;
-        this.startTime = 0;
-
-        const t = this.t;
-        this.stages = [
-            {
-                id: 'product',
-                title: t('compliance_journey.loader_stage_product', 'Understanding your product'),
-                statusText: t('compliance_journey.loader_status_product', 'Understanding product specifications...'),
-                startMs: 0,
-                endMs: 3000,
-                startPct: 5,
-                endPct: 16
-            },
-            {
-                id: 'standard',
-                title: t('compliance_journey.loader_stage_standards', 'Identifying applicable Indian Standard'),
-                statusText: t('compliance_journey.loader_status_standards', 'Identifying matching Indian Standards from BIS corpus...'),
-                startMs: 3000,
-                endMs: 6000,
-                startPct: 16,
-                endPct: 28
-            },
-            {
-                id: 'qco',
-                title: t('compliance_journey.loader_stage_qco', 'Checking QCO and regulatory requirements'),
-                statusText: t('compliance_journey.loader_status_qco', 'Checking Quality Control Orders and statutory mandates...'),
-                startMs: 6000,
-                endMs: 12000,
-                startPct: 28,
-                endPct: 48
-            },
-            {
-                id: 'evidence',
-                title: t('compliance_journey.loader_stage_evidence', 'Retrieving authoritative BIS evidence'),
-                statusText: t('compliance_journey.loader_status_evidence', 'Retrieving authoritative BIS evidence...'),
-                startMs: 12000,
-                endMs: 18000,
-                startPct: 48,
-                endPct: 66
-            },
-            {
-                id: 'testing',
-                title: t('compliance_journey.loader_stage_testing', 'Evaluating testing and inspection requirements'),
-                statusText: t('compliance_journey.loader_status_testing', 'Evaluating testing requirements...'),
-                startMs: 18000,
-                endMs: 22000,
-                startPct: 66,
-                endPct: 77
-            },
-            {
-                id: 'certification',
-                title: t('compliance_journey.loader_stage_certification', 'Checking certification requirements'),
-                statusText: t('compliance_journey.loader_status_certification', 'Checking certification schemes and guidelines...'),
-                startMs: 22000,
-                endMs: 25000,
-                startPct: 77,
-                endPct: 83
-            },
-            {
-                id: 'laboratories',
-                title: t('compliance_journey.loader_stage_labs', 'Finding qualified BIS laboratories'),
-                statusText: t('compliance_journey.loader_status_labs', 'Finding matching BIS laboratory scopes...'),
-                startMs: 25000,
-                endMs: 28000,
-                startPct: 83,
-                endPct: 88
-            },
-            {
-                id: 'journey',
-                title: t('compliance_journey.loader_stage_journey', 'Preparing your compliance journey'),
-                statusText: t('compliance_journey.loader_status_journey', 'Preparing your compliance journey...'),
-                startMs: 28000,
-                endMs: 38000,
-                startPct: 88,
-                endPct: 91
-            }
-        ];
-
-        this.tick = this.tick.bind(this);
+        this.isCompleted = false;
     }
 
-    /**
-     * Renders initial loader DOM and starts animation loop.
-     */
     start() {
         if (!this.container || this.isDestroyed) return;
-        this.destroy(); // Clear any existing animation
         this.isDestroyed = false;
         this.isCompleted = false;
-        this.isRunning = true;
-        this.currentStageIndex = 0;
-        this.progress = 5;
-        this.startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-
-        const t = this.t;
-        const mainTitle = escapeHtml(t('compliance_journey.loader_title', 'Building your compliance journey'));
-        const subTitle = escapeHtml(t('compliance_journey.loader_subtitle', 'Analyzing your product against authoritative BIS evidence'));
-        const footerNote = escapeHtml(t('compliance_journey.loader_footer_note', 'Preparing your compliance assessment...'));
-
-        let stagesHtml = '';
-        this.stages.forEach((st, idx) => {
-            const isFirst = idx === 0;
-            const cls = isFirst ? 'loader-stage-item is-current' : 'loader-stage-item is-pending';
-            const indicator = isFirst
-                ? `<div class="loader-icon-active" aria-hidden="true"><span class="loader-active-dot"></span></div>`
-                : `<span class="loader-icon-pending" aria-hidden="true"></span>`;
-
-            stagesHtml += `
-                <li class="${cls}" role="listitem" data-stage="${idx}">
-                    <div class="loader-stage-indicator" aria-hidden="true">${indicator}</div>
-                    <div class="loader-stage-content">
-                        <span class="loader-stage-title">${escapeHtml(st.title)}</span>
-                    </div>
-                </li>
-            `;
-        });
-
+        
+        const mainTitle = escapeHtml(this.t('compliance_journey.loader_title', 'Product Compliance Journey'));
+        
+        // Minimal skeleton structure matching actual result layout
         this.container.innerHTML = `
-            <div class="compliance-loader-card" role="status" aria-live="polite" aria-label="${mainTitle}">
-                <div class="compliance-loader-header">
-                    <h3 class="compliance-loader-title">${mainTitle}</h3>
-                    <p class="compliance-loader-subtitle">${subTitle}</p>
+            <div class="compliance-skeleton-container" aria-busy="true" aria-label="Loading compliance journey">
+                <!-- Header skeleton -->
+                <div class="skeleton-header-block">
+                    <h3 class="skeleton-shimmer" style="width: 250px; height: 28px; border-radius: 6px; margin-bottom: 12px;"></h3>
+                    <div class="skeleton-shimmer" style="width: 400px; height: 16px; border-radius: 4px;"></div>
                 </div>
 
-                <div class="compliance-loader-progress-wrap">
-                    <div class="compliance-loader-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5" aria-label="${mainTitle}">
-                        <div class="compliance-loader-bar" style="width: 5%;">
-                            <div class="compliance-loader-bar-glow" aria-hidden="true"></div>
-                        </div>
+                <div class="skeleton-divider"></div>
+
+                <!-- Section 1 -->
+                <div class="skeleton-section">
+                    <div class="skeleton-shimmer section-title" style="width: 180px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 100%; height: 14px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 85%; height: 14px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 50%; height: 14px; border-radius: 4px;"></div>
+                </div>
+
+                <!-- Section 2: Two columns -->
+                <div class="skeleton-section grid-2">
+                    <div class="skeleton-col">
+                        <div class="skeleton-shimmer section-title" style="width: 200px; height: 20px; border-radius: 4px;"></div>
+                        <div class="skeleton-shimmer" style="width: 90%; height: 14px; border-radius: 4px;"></div>
+                        <div class="skeleton-shimmer" style="width: 60%; height: 14px; border-radius: 4px;"></div>
+                    </div>
+                    <div class="skeleton-col">
+                        <div class="skeleton-shimmer section-title" style="width: 160px; height: 20px; border-radius: 4px;"></div>
+                        <div class="skeleton-shimmer" style="width: 80%; height: 14px; border-radius: 4px;"></div>
+                        <div class="skeleton-shimmer" style="width: 50%; height: 14px; border-radius: 4px;"></div>
                     </div>
                 </div>
 
-                <ul class="compliance-loader-stages grid-layout" role="list" aria-label="Journey preparation steps">
-                    ${stagesHtml}
-                </ul>
-
-                <div class="compliance-loader-footer">
-                    <div id="loaderGlobalStatus" class="loader-global-status">${escapeHtml(this.t('compliance_journey.loader_status_preparing', 'Preparing your compliance assessment...'))}</div>
+                <!-- Section 3 -->
+                <div class="skeleton-section">
+                    <div class="skeleton-shimmer section-title" style="width: 220px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 95%; height: 14px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 80%; height: 14px; border-radius: 4px;"></div>
+                </div>
+                
+                <!-- Section 4 -->
+                <div class="skeleton-section">
+                    <div class="skeleton-shimmer section-title" style="width: 150px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 100%; height: 14px; border-radius: 4px;"></div>
+                    <div class="skeleton-shimmer" style="width: 60%; height: 14px; border-radius: 4px;"></div>
                 </div>
             </div>
         `;
-
-        this.progressBarEl = this.container.querySelector('.compliance-loader-bar');
-        this.trackEl = this.container.querySelector('.compliance-loader-track');
-        this.percentageEl = this.container.querySelector('.compliance-loader-percentage');
-
-        if (typeof requestAnimationFrame !== 'undefined') {
-            this.animationFrameId = requestAnimationFrame(this.tick);
-        }
     }
 
-    /**
-     * Animation frame handler calculating smooth time-based progress and stage updates.
-     */
-    tick(now) {
-        if (!this.isRunning || this.isDestroyed || this.isCompleted) return;
-
-        const currentNow = now || ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
-        const elapsed = Math.max(0, currentNow - this.startTime);
-
-        let currentStage = 0;
-        let calculatedProgress = 5;
-
-        if (elapsed < 3000) {
-            // Stage 0: 0-3s -> 5% - 16%
-            currentStage = 0;
-            const ratio = elapsed / 3000;
-            calculatedProgress = 5 + (16 - 5) * ratio;
-        } else if (elapsed < 6000) {
-            // Stage 1: 3-6s -> 16% - 28%
-            currentStage = 1;
-            const ratio = (elapsed - 3000) / 3000;
-            calculatedProgress = 16 + (28 - 16) * ratio;
-        } else if (elapsed < 12000) {
-            // Stage 2: 6-12s -> 28% - 48%
-            currentStage = 2;
-            const ratio = (elapsed - 6000) / 6000;
-            calculatedProgress = 28 + (48 - 28) * ratio;
-        } else if (elapsed < 18000) {
-            // Stage 3: 12-18s -> 48% - 66%
-            currentStage = 3;
-            const ratio = (elapsed - 12000) / 6000;
-            calculatedProgress = 48 + (66 - 48) * ratio;
-        } else if (elapsed < 22000) {
-            // Stage 4: 18-22s -> 66% - 77%
-            currentStage = 4;
-            const ratio = (elapsed - 18000) / 4000;
-            calculatedProgress = 66 + (77 - 66) * ratio;
-        } else if (elapsed < 25000) {
-            // Stage 5: 22-25s -> 77% - 83%
-            currentStage = 5;
-            const ratio = (elapsed - 22000) / 3000;
-            calculatedProgress = 77 + (83 - 77) * ratio;
-        } else if (elapsed < 28000) {
-            // Stage 6: 25-28s -> 83% - 88%
-            currentStage = 6;
-            const ratio = (elapsed - 25000) / 3000;
-            calculatedProgress = 83 + (88 - 83) * ratio;
-        } else {
-            // Stage 7: 28s onward -> slowly decelerate toward ~91%
-            currentStage = 7;
-            const beyond = elapsed - 28000;
-            calculatedProgress = 88 + (91.2 - 88) * (1 - Math.exp(-beyond / 16000));
-        }
-
-        // Hard cap at 91.5% before API response arrives
-        calculatedProgress = Math.min(91.5, Math.max(5, calculatedProgress));
-
-        if (currentStage !== this.currentStageIndex) {
-            this.setStage(currentStage);
-        }
-
-        this.updateProgress(calculatedProgress);
-
-        if (this.isRunning && typeof requestAnimationFrame !== 'undefined') {
-            this.animationFrameId = requestAnimationFrame(this.tick);
-        }
-    }
-
-    /**
-     * Updates progress bar style and percentage text.
-     */
-    updateProgress(pct) {
-        this.progress = pct;
-        if (this.progressBarEl) {
-            this.progressBarEl.style.width = `${pct.toFixed(1)}%`;
-        }
-        if (this.trackEl) {
-            this.trackEl.setAttribute('aria-valuenow', Math.round(pct));
-        }
-        if (this.percentageEl) {
-            this.percentageEl.textContent = `${Math.round(pct)}%`;
-        }
-    }
-
-    /**
-     * Updates active stage and refreshes stage item indicators and status text.
-     */
     setStage(stageIndex) {
-        if (stageIndex < 0 || stageIndex >= this.stages.length) return;
-        this.currentStageIndex = stageIndex;
-        if (!this.container) return;
-
-        // Update global status
-        const globalStatus = this.container.querySelector('#loaderGlobalStatus');
-        if (globalStatus && this.stages[stageIndex]) {
-            globalStatus.textContent = this.stages[stageIndex].statusText;
-        }
-
-        const items = this.container.querySelectorAll('.loader-stage-item');
-        items.forEach((item, idx) => {
-            const stage = this.stages[idx];
-            const indicator = item.querySelector('.loader-stage-indicator');
-            const content = item.querySelector('.loader-stage-content');
-
-            item.classList.remove('is-completed', 'is-current', 'is-pending');
-
-            if (idx < stageIndex) {
-                item.classList.add('is-completed');
-                if (indicator) {
-                    indicator.innerHTML = `<svg class="loader-icon-check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-                }
-                const oldStatus = content?.querySelector('.loader-stage-status');
-                if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
-            } else if (idx === stageIndex) {
-                item.classList.add('is-current');
-                if (indicator) {
-                    indicator.innerHTML = `<div class="loader-icon-active" aria-hidden="true"><span class="loader-active-dot"></span></div>`;
-                }
-                const oldStatus = content?.querySelector('.loader-stage-status');
-                if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
-            } else {
-                item.classList.add('is-pending');
-                if (indicator) {
-                    indicator.innerHTML = `<span class="loader-icon-pending" aria-hidden="true"></span>`;
-                }
-                const oldStatus = content?.querySelector('.loader-stage-status');
-                if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
-            }
-        });
+        // No-op for skeleton
     }
 
-    /**
-     * Fast-forwards progress to 100%, displays "✓ Journey ready", and resolves after hold.
-     * @returns {Promise<void>}
-     */
+    updateProgress(pct) {
+        // No-op for skeleton
+    }
+
     async complete() {
         if (this.isDestroyed || this.isCompleted) return;
         this.isCompleted = true;
-        this.isRunning = false;
-
-        if (this.animationFrameId && typeof cancelAnimationFrame !== 'undefined') {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-
-        const startPct = this.progress;
-        const targetPct = 100;
-        const duration = 220;
-        const animStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-
-        await new Promise((resolve) => {
-            if (typeof requestAnimationFrame === 'undefined') {
-                this.updateProgress(100);
-                return resolve();
-            }
-            const finishTick = (now) => {
-                const elapsed = now - animStart;
-                const ratio = Math.min(1, elapsed / duration);
-                const ease = 1 - Math.pow(1 - ratio, 3);
-                const currentVal = startPct + (targetPct - startPct) * ease;
-                this.updateProgress(currentVal);
-
-                if (ratio < 1) {
-                    requestAnimationFrame(finishTick);
-                } else {
-                    this.updateProgress(100);
-                    resolve();
-                }
-            };
-            requestAnimationFrame(finishTick);
-        });
-
-        // Mark all stages as completed
-        if (this.container) {
-            const items = this.container.querySelectorAll('.loader-stage-item');
-            items.forEach((item) => {
-                item.classList.remove('is-current', 'is-pending');
-                item.classList.add('is-completed');
-                const indicator = item.querySelector('.loader-stage-indicator');
-                if (indicator) {
-                    indicator.innerHTML = `
-                        <svg class="loader-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    `;
-                }
-                const oldStatus = item.querySelector('.loader-stage-status');
-                if (oldStatus && typeof oldStatus.remove === 'function') oldStatus.remove();
-            });
-
-            
-            const globalStatus = this.container.querySelector('#loaderGlobalStatus');
-            if (globalStatus) {
-                globalStatus.textContent = this.t('compliance_journey.loader_status_ready', 'Assessment ready');
-            }
-        }
-
-        // Brief hold to let user see completion state
-        await new Promise((r) => setTimeout(r, 380));
+        // Brief hold to let user see transition
+        await new Promise((r) => setTimeout(r, 200));
     }
 
-    /**
-     * Stops animation and renders clean error state with "Unable to build the compliance journey"
-     * and a "Try again" button.
-     */
     error(message, failedPayload = null) {
         this.destroy();
         if (!this.container) return;
@@ -484,18 +189,11 @@ export class ComplianceJourneyLoader {
         }
     }
 
-    /**
-     * Cancels animation frames and cleans up timers.
-     */
     destroy() {
-        this.isRunning = false;
         this.isDestroyed = true;
-        if (this.animationFrameId && typeof cancelAnimationFrame !== 'undefined') {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
     }
 }
+
 
 export class ComplianceJourneyComponent {
     /**
@@ -3216,7 +2914,7 @@ export class ComplianceJourneyComponent {
         return `
             <section class="compliance-warnings-section${hasContent ? '' : ' hidden'}" aria-label="Regulatory Warnings and Limitations">
                 <div class="warnings-header">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     <h4 data-i18n="compliance_journey.section_warnings">${escapeHtml(t('compliance_journey.section_warnings', 'Regulatory Warnings & Limitations'))}</h4>
                 </div>
                 <div class="warnings-body">

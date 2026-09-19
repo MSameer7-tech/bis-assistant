@@ -15582,7 +15582,7 @@ body[data-theme="light"] .btn-comp-chip:hover {
     height: 4px !important;
 }
 
-.compliance-loader-stages-grid {
+.compliance-loader-stages.grid-layout {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 12px 24px !important;
@@ -15672,8 +15672,101 @@ body[data-theme="light"] .btn-comp-chip:hover {
 
 /* Mobile responsive */
 @media (max-width: 600px) {
-    .compliance-loader-stages-grid {
+    .compliance-loader-stages.grid-layout {
         grid-template-columns: 1fr !important;
         gap: 10px !important;
+    }
+}
+
+/* COMPLIANCE SKELETON LOADER */
+.compliance-skeleton-container {
+    width: 100%;
+    max-width: 1040px;
+    margin: 0 auto 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.skeleton-header-block {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.skeleton-divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 8px 0;
+}
+
+.skeleton-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.skeleton-section.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+.skeleton-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.skeleton-shimmer {
+    background: rgba(255, 255, 255, 0.045);
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.skeleton-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.035) 50%, 
+        transparent 100%);
+    animation: shimmer 1.8s infinite;
+}
+
+.skeleton-shimmer.section-title {
+    margin-bottom: 4px;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+[data-theme="light"] .skeleton-divider {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .skeleton-shimmer {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .skeleton-shimmer::after {
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(0, 0, 0, 0.03) 50%, 
+        transparent 100%);
+}
+
+@media (max-width: 768px) {
+    .skeleton-section.grid-2 {
+        grid-template-columns: 1fr;
+        gap: 24px;
     }
 }
