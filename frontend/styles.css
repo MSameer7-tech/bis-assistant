@@ -15776,3 +15776,8 @@ body[data-theme="light"] .btn-comp-chip:hover {
 .compliance-provenance-section {
     display: none !important;
 }
+
+/* Remove redundant header from final results card since composer is frozen above it */
+.journey-header-banner {
+    display: none !important;
+}

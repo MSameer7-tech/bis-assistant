@@ -19,7 +19,7 @@
 
 import { AssistantService } from './mockData.js?v=14.2.0';
 import { LabFinderComponent } from './labFinderComponent.js';
-import { ComplianceJourneyComponent } from './complianceJourneyComponent.js?v=14.8.2_9482';
+import { ComplianceJourneyComponent } from './complianceJourneyComponent.js?v=14.8.2_9483';
 import { apiUrl } from './config.js';
 import {
     initializeAuth,
