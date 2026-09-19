@@ -600,7 +600,7 @@ export class ComplianceJourneyComponent {
     /**
      * Renders the base workbench shell.
      */
-    renderLayout() {
+        renderLayout() {
         const t = this.t.bind(this);
         this.container.innerHTML = `
 <div class="compliance-layout" role="region" aria-label="Product Compliance Journey Workspace">
@@ -615,62 +615,59 @@ export class ComplianceJourneyComponent {
         ${escapeHtml(t('compliance_journey.heading', 'Find your BIS requirements.'))}
       </h2>
       <p class="compliance-heading-sub" data-i18n="compliance_journey.heading_sub">
-        ${escapeHtml(t('compliance_journey.heading_sub', 'Enter a product, Indian Standard, or compliance question to get a step-by-step assessment.'))}
+        ${escapeHtml(t('compliance_journey.heading_sub', 'Describe your product, enter an Indian Standard, or ask a compliance question.'))}
       </p>
     </div>
   </header>
 
   <!-- Main Centered Workspace (shown when no results) -->
   <div id="complianceInitialState" class="compliance-workspace-centered">
-    <div class="compliance-main-card">
+    <div class="compliance-main-card workspace-panel">
       <form id="complianceSearchForm" class="compliance-search-form" novalidate>
-        <!-- Natural Language Query: large textarea -->
-        <div class="compliance-query-row">
-          <label for="compInputQuery" class="compliance-form-label primary" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'Describe your product or ask a question'))}</label>
-          <div class="compliance-textarea-wrapper">
-            <textarea id="compInputQuery" class="compliance-query-textarea"
-              placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'e.g. I manufacture PVC pipes for drinking water. What BIS standards, certification, testing and laboratories apply?'))}"
-              autocomplete="off" spellcheck="false" rows="4"></textarea>
-            <div class="compliance-char-count">0/1000</div>
-          </div>
-        </div>
-
-        <!-- Structured Inputs: 3-column grid -->
-        <div class="compliance-form-grid">
-          <div class="compliance-form-group">
-            <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product Name'))}</label>
-            <input type="text" id="compInputProduct" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="compliance-form-group">
-            <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (IS)'))}</label>
-            <input type="text" id="compInputStandard" class="compliance-text-input font-mono" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="compliance-form-group">
-            <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (Optional)'))}</label>
-            <input type="text" id="compInputLocation" class="compliance-text-input" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai, Bengaluru'))}" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-
-        <!-- Generate Button -->
-        <div class="compliance-submit-row full-width">
-          <button type="submit" id="btnComplianceSubmit" class="btn-compliance-submit block" aria-label="Generate Compliance Journey">
-            <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate Compliance Journey'))}</span>
-            <svg id="btnComplianceIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true"></div>
-          </button>
-        </div>
         
-        <!-- Supporting Line -->
-        <div class="compliance-supporting-line">
-          <span class="supporting-text" data-i18n="compliance_journey.supporting_line">${escapeHtml(t('compliance_journey.supporting_line', 'Standards • Certification • Testing • Laboratories'))}</span>
+        <!-- Natural Language Query: large textarea -->
+        <div class="compliance-query-row workspace-query">
+          <label for="compInputQuery" class="compliance-form-label primary" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'What do you want to know?'))}</label>
+          <div class="compliance-textarea-wrapper">
+            <textarea id="compInputQuery" class="compliance-query-textarea compact"
+              placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'Describe your product or ask a compliance question...'))}"
+              autocomplete="off" spellcheck="false" rows="3"></textarea>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="compliance-action-row">
+            <!-- Structured Inputs: 3-column grid -->
+            <div class="compliance-form-grid compact-grid">
+              <div class="compliance-form-group">
+                <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product'))}</label>
+                <input type="text" id="compInputProduct" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="compliance-form-group">
+                <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard'))}</label>
+                <input type="text" id="compInputStandard" class="compliance-text-input font-mono compact" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="compliance-form-group">
+                <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location'))}</label>
+                <input type="text" id="compInputLocation" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
+              </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="compliance-submit-wrapper">
+              <button type="submit" id="btnComplianceSubmit" class="btn-compliance-submit compact-action" aria-label="Generate Compliance Journey">
+                <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate journey'))}</span>
+                <svg id="btnComplianceIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true"></div>
+              </button>
+            </div>
         </div>
       </form>
     </div>
 
     <!-- Example Chips -->
-    <div class="compliance-examples-section">
-      <h3 class="compliance-examples-title" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</h3>
-      <p class="compliance-examples-sub" data-i18n="compliance_journey.examples_sub">${escapeHtml(t('compliance_journey.examples_sub', 'Click on an example to populate the form.'))}</p>
+    <div class="compliance-examples-section lightweight">
+      <span class="compliance-examples-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</span>
       <div class="compliance-chips-wrap">
         <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
         <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
@@ -679,6 +676,8 @@ export class ComplianceJourneyComponent {
         <button type="button" class="btn-comp-chip" data-product="timber doors" title="Example: Timber doors">Timber Doors</button>
       </div>
     </div>
+    
+    <div class="compliance-empty-whitespace"></div>
   </div>
 
   <!-- Results Viewport (hidden initially, shown when results arrive) -->
@@ -1187,7 +1186,7 @@ export class ComplianceJourneyComponent {
         const spinner = this.container?.querySelector('#compSpinner');
 
         if (btn) btn.disabled = isLoading;
-        if (text) text.textContent = isLoading ? this.t('compliance_journey.btn_generating', 'Querying Authoritative BIS Evidence...') : this.t('compliance_journey.btn_generate', 'Generate Compliance Journey');
+        if (text) text.textContent = isLoading ? this.t('compliance_journey.btn_generating', 'Querying Authoritative BIS Evidence...') : this.t('compliance_journey.btn_generate', 'Generate journey');
         if (icon) icon.classList.toggle('hidden', isLoading);
         if (spinner) spinner.classList.toggle('hidden', !isLoading);
     }

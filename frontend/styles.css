@@ -14231,3 +14231,384 @@ html, body {
 
 
 
+.chat-contextual-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-contextual-action {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(134, 120, 249, 0.14);
+    border: 1px solid rgba(134, 120, 249, 0.35);
+    color: var(--accent-hover, #8678f9);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-contextual-action:hover {
+    background: rgba(134, 120, 249, 0.22);
+    border-color: rgba(134, 120, 249, 0.5);
+}
+
+[data-theme="light"] .btn-contextual-action {
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #4F46E5;
+}
+
+[data-theme="light"] .btn-contextual-action:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+/* --- Redesigned Compliance Empty State --- */
+
+.compliance-topbar.centered {
+    margin: 0 auto 24px;
+}
+
+.workspace-panel {
+    background: var(--bg-surface, rgba(18, 22, 34, 0.6));
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: none; /* Removed heavy shadow */
+}
+
+/* Make text area quieter and compact */
+.compliance-query-textarea.compact {
+    min-height: 110px;
+    max-height: 130px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    background: rgba(0, 0, 0, 0.15); /* Slightly darker to embed it */
+    border-radius: 8px;
+}
+.compliance-query-textarea.compact:focus {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.compliance-action-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* Secondary inputs in a row */
+.compact-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    flex: 1;
+}
+
+/* Override previous grid for compact */
+.compliance-form-grid.compact-grid {
+    display: flex;
+    margin-bottom: 0;
+}
+
+.compliance-form-grid.compact-grid .compliance-form-group {
+    flex: 1;
+}
+
+.compliance-text-input.compact {
+    height: 42px;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.compliance-text-input.compact:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Compact action button */
+.compliance-submit-wrapper {
+    flex-shrink: 0;
+}
+
+.btn-compliance-submit.compact-action {
+    background: var(--accent-purple, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    width: 190px;
+}
+
+/* Examples */
+.compliance-examples-section.lightweight {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.compliance-examples-label {
+    font-size: 13px;
+    color: var(--text-muted, #888);
+    margin: 0;
+    font-weight: 500;
+}
+
+.compliance-examples-section.lightweight .compliance-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.compliance-examples-section.lightweight .btn-comp-chip {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #bbb);
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+.compliance-examples-section.lightweight .btn-comp-chip:hover {
+    color: #fff;
+}
+
+/* Whitespace */
+.compliance-empty-whitespace {
+    height: 30vh;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .compliance-action-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .compliance-form-grid.compact-grid {
+        flex-direction: column;
+    }
+    .btn-compliance-submit.compact-action {
+    background: var(--accent-purple, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+        width: 100%;
+        margin-top: 8px;
+    }
+    .compliance-examples-section.lightweight {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 16px;
+    }
+}
+/* --- Redesigned Compliance Empty State --- */
+
+.compliance-topbar.centered {
+    margin: 0 auto 24px;
+}
+
+.workspace-panel {
+    background: var(--bg-surface, rgba(18, 22, 34, 0.6));
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: none; /* Removed heavy shadow */
+}
+
+/* Make text area quieter and compact */
+.compliance-query-textarea.compact {
+    min-height: 110px;
+    max-height: 130px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    background: rgba(0, 0, 0, 0.15); /* Slightly darker to embed it */
+    border-radius: 8px;
+}
+.compliance-query-textarea.compact:focus {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.compliance-action-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* Secondary inputs in a row */
+.compact-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    flex: 1;
+}
+
+/* Override previous grid for compact */
+.compliance-form-grid.compact-grid {
+    display: flex;
+    margin-bottom: 0;
+}
+
+.compliance-form-grid.compact-grid .compliance-form-group {
+    flex: 1;
+}
+
+.compliance-text-input.compact {
+    height: 42px;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.compliance-text-input.compact:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Compact action button */
+.compliance-submit-wrapper {
+    flex-shrink: 0;
+}
+
+.btn-compliance-submit.compact-action {
+    background: var(--accent-purple, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    width: 190px;
+}
+
+/* Examples */
+.compliance-examples-section.lightweight {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.compliance-examples-label {
+    font-size: 13px;
+    color: var(--text-muted, #888);
+    margin: 0;
+    font-weight: 500;
+}
+
+.compliance-examples-section.lightweight .compliance-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.compliance-examples-section.lightweight .btn-comp-chip {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #bbb);
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+.compliance-examples-section.lightweight .btn-comp-chip:hover {
+    color: #fff;
+}
+
+/* Whitespace */
+.compliance-empty-whitespace {
+    height: 30vh;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .compliance-action-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .compliance-form-grid.compact-grid {
+        flex-direction: column;
+    }
+    .btn-compliance-submit.compact-action {
+    background: var(--accent-purple, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+        width: 100%;
+        margin-top: 8px;
+    }
+    .compliance-examples-section.lightweight {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 16px;
+    }
+}
+
+.btn-compliance-submit.compact-action {
+    background: var(--accent-purple, #8b5cf6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    background: var(--accent-purple, #635bff);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+.btn-compliance-submit.compact-action:hover:not(:disabled) {
+    background: #7364f5;
+    transform: none;
+}
+.btn-compliance-submit.compact-action:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
