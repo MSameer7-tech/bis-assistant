@@ -8753,7 +8753,7 @@ html, body {
 .compliance-layout {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 28px 28px 80px;
+    padding: 80px 32px 80px;
 }
 
 /* Topbar */
@@ -8799,15 +8799,12 @@ html, body {
 
 /* Centered Workspace */
 .compliance-workspace-centered {
-    max-width: 860px;
+    max-width: 1040px;
     margin: 0 auto;
     width: 100%;
 }
 
-.compliance-topbar.centered {
-    max-width: 860px;
-    margin: 0 auto 32px;
-}
+
 
 .compliance-main-card {
     background: rgba(18, 22, 34, 0.45);
@@ -14271,7 +14268,8 @@ html, body {
 /* --- Redesigned Compliance Empty State --- */
 
 .compliance-topbar.centered {
-    margin: 0 auto 24px;
+    margin: 0 0 32px 0;
+    max-width: 1040px;
 }
 
 .workspace-panel {
@@ -14285,16 +14283,18 @@ html, body {
 
 /* Make text area quieter and compact */
 .compliance-query-textarea.compact {
-    min-height: 110px;
-    max-height: 130px;
-    padding: 14px 16px;
+    min-height: 120px;
+    max-height: 140px;
+    padding: 16px;
     border: 1px solid transparent;
-    background: rgba(0, 0, 0, 0.15); /* Slightly darker to embed it */
+    background: transparent; /* No inner background */
     border-radius: 8px;
+    font-size: 15px;
+    resize: none;
 }
 .compliance-query-textarea.compact:focus {
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .compliance-action-row {
@@ -14325,11 +14325,13 @@ html, body {
 }
 
 .compliance-text-input.compact {
-    height: 42px;
-    padding: 8px 12px;
-    font-size: 13px;
-    background: rgba(255, 255, 255, 0.03);
+    height: 48px;
+    padding: 8px 12px 8px 40px;
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    width: 100%;
 }
 .compliance-text-input.compact:focus {
     background: rgba(255, 255, 255, 0.06);
@@ -14352,21 +14354,20 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 42px;
+    height: 48px;
     padding: 0 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
-    width: 190px;
+    width: 200px;
 }
 
 /* Examples */
 .compliance-examples-section.lightweight {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
-    flex-wrap: wrap;
     background: transparent;
     border: none;
     padding: 0;
@@ -14388,15 +14389,18 @@ html, body {
 
 .compliance-examples-section.lightweight .btn-comp-chip {
     background: transparent;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: var(--text-secondary, #bbb);
-    padding: 4px 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
     font-size: 13px;
     cursor: pointer;
-    transition: color 0.15s;
+    transition: all 0.15s;
 }
 .compliance-examples-section.lightweight .btn-comp-chip:hover {
     color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Whitespace */
@@ -14513,12 +14517,12 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 42px;
+    height: 48px;
     padding: 0 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
-    width: 190px;
+    width: 200px;
 }
 
 /* Examples */
@@ -14611,4 +14615,365 @@ html, body {
 .btn-compliance-submit.compact-action:disabled {
     opacity: 0.65;
     cursor: not-allowed;
+}
+
+/* FINAL REDESIGN OVERRIDES */
+
+.compliance-layout {
+    padding: 80px 32px 100px !important;
+}
+
+.compliance-workspace-centered {
+    max-width: 1040px !important;
+    margin: 0 !important; /* we want it left aligned? No, user says "centered content column" */
+    margin: 0 auto !important;
+}
+
+.compliance-topbar.centered {
+    max-width: 1040px !important;
+    margin: 0 auto 32px !important;
+    text-align: left !important;
+}
+
+.compliance-title-group {
+    text-align: left !important;
+}
+
+.compliance-heading {
+    font-size: 32px !important;
+    margin-bottom: 8px !important;
+}
+
+.compliance-heading-sub {
+    font-size: 16px !important;
+    color: var(--text-secondary) !important;
+}
+
+.workspace-panel {
+    background: rgba(18, 22, 34, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    margin-bottom: 32px !important;
+    box-shadow: none !important;
+}
+
+/* Remove visual label for textarea */
+.compliance-query-row label.primary {
+    display: none !important;
+}
+
+.compliance-query-row.workspace-query {
+    border: 1px solid transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+}
+
+.compliance-query-textarea.compact {
+    min-height: 120px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+    box-shadow: none !important;
+}
+.compliance-query-textarea.compact:focus {
+    box-shadow: none !important;
+}
+
+.compliance-action-row {
+    margin-top: 0 !important;
+    gap: 16px !important;
+}
+
+.compliance-form-grid.compact-grid {
+    gap: 16px !important;
+}
+
+.compliance-text-input.compact {
+    height: 48px !important;
+    padding: 8px 12px 8px 36px !important; /* padding for icon */
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px !important;
+}
+
+.compliance-form-group {
+    position: relative;
+}
+
+.input-icon-left {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+}
+
+.compliance-form-group label.secondary {
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+    color: #fff !important;
+}
+
+.btn-compliance-submit.compact-action {
+    height: 48px !important;
+    width: 200px !important;
+    border-radius: 8px !important;
+    /* margin-top removed */ /* align with inputs that have labels */
+}
+
+.compliance-examples-section.lightweight {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.compliance-examples-title {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #fff !important;
+    margin-bottom: 4px !important;
+}
+
+.compliance-examples-sub {
+    font-size: 13px !important;
+    color: rgba(255,255,255,0.5) !important;
+    margin-bottom: 16px !important;
+}
+
+.compliance-examples-section.lightweight .btn-comp-chip {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 24px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    color: rgba(255,255,255,0.7) !important;
+}
+.compliance-examples-section.lightweight .btn-comp-chip:hover {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+    color: #fff !important;
+}
+
+/* Light mode overrides */
+body[data-theme="light"] .workspace-panel {
+    background: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.03) !important;
+}
+body[data-theme="light"] .compliance-query-row.workspace-query {
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+body[data-theme="light"] .compliance-text-input.compact {
+    background: #f9f9f9 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #000 !important;
+}
+body[data-theme="light"] .input-icon-left {
+    color: rgba(0,0,0,0.4);
+}
+body[data-theme="light"] .compliance-form-group label.secondary {
+    color: #333 !important;
+}
+body[data-theme="light"] .compliance-examples-title {
+    color: #000 !important;
+}
+body[data-theme="light"] .compliance-examples-sub {
+    color: rgba(0,0,0,0.5) !important;
+}
+body[data-theme="light"] .compliance-examples-section.lightweight .btn-comp-chip {
+    border-color: rgba(0,0,0,0.15) !important;
+    color: rgba(0,0,0,0.7) !important;
+}
+body[data-theme="light"] .compliance-examples-section.lightweight .btn-comp-chip:hover {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.3) !important;
+    color: #000 !important;
+}
+
+/* FINAL REDESIGN OVERRIDES */
+
+.compliance-layout {
+    padding: 80px 32px 100px !important;
+}
+
+.compliance-workspace-centered {
+    max-width: 1040px !important;
+    margin: 0 !important; /* we want it left aligned? No, user says "centered content column" */
+    margin: 0 auto !important;
+}
+
+.compliance-topbar.centered {
+    max-width: 1040px !important;
+    margin: 0 auto 32px !important;
+    text-align: left !important;
+}
+
+.compliance-title-group {
+    text-align: left !important;
+}
+
+.compliance-heading {
+    font-size: 32px !important;
+    margin-bottom: 8px !important;
+}
+
+.compliance-heading-sub {
+    font-size: 16px !important;
+    color: var(--text-secondary) !important;
+}
+
+.workspace-panel {
+    background: rgba(18, 22, 34, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    margin-bottom: 32px !important;
+    box-shadow: none !important;
+}
+
+/* Remove visual label for textarea */
+.compliance-query-row label.primary {
+    display: none !important;
+}
+
+.compliance-query-row.workspace-query {
+    border: 1px solid transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+}
+
+.compliance-query-textarea.compact {
+    min-height: 120px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+    box-shadow: none !important;
+}
+.compliance-query-textarea.compact:focus {
+    box-shadow: none !important;
+}
+
+.compliance-action-row {
+    margin-top: 0 !important;
+    gap: 16px !important;
+}
+
+.compliance-form-grid.compact-grid {
+    gap: 16px !important;
+}
+
+.compliance-text-input.compact {
+    height: 48px !important;
+    padding: 8px 12px 8px 36px !important; /* padding for icon */
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px !important;
+}
+
+.compliance-form-group {
+    position: relative;
+}
+
+.input-icon-left {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+}
+
+.compliance-form-group label.secondary {
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+    color: #fff !important;
+}
+
+.btn-compliance-submit.compact-action {
+    height: 48px !important;
+    width: 200px !important;
+    border-radius: 8px !important;
+    /* margin-top removed */ /* align with inputs that have labels */
+}
+
+.compliance-examples-section.lightweight {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.compliance-examples-title {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #fff !important;
+    margin-bottom: 4px !important;
+}
+
+.compliance-examples-sub {
+    font-size: 13px !important;
+    color: rgba(255,255,255,0.5) !important;
+    margin-bottom: 16px !important;
+}
+
+.compliance-examples-section.lightweight .btn-comp-chip {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 24px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    color: rgba(255,255,255,0.7) !important;
+}
+.compliance-examples-section.lightweight .btn-comp-chip:hover {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+    color: #fff !important;
+}
+
+/* Light mode overrides */
+body[data-theme="light"] .workspace-panel {
+    background: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.03) !important;
+}
+body[data-theme="light"] .compliance-query-row.workspace-query {
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+body[data-theme="light"] .compliance-text-input.compact {
+    background: #f9f9f9 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #000 !important;
+}
+body[data-theme="light"] .input-icon-left {
+    color: rgba(0,0,0,0.4);
+}
+body[data-theme="light"] .compliance-form-group label.secondary {
+    color: #333 !important;
+}
+body[data-theme="light"] .compliance-examples-title {
+    color: #000 !important;
+}
+body[data-theme="light"] .compliance-examples-sub {
+    color: rgba(0,0,0,0.5) !important;
+}
+body[data-theme="light"] .compliance-examples-section.lightweight .btn-comp-chip {
+    border-color: rgba(0,0,0,0.15) !important;
+    color: rgba(0,0,0,0.7) !important;
+}
+body[data-theme="light"] .compliance-examples-section.lightweight .btn-comp-chip:hover {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.3) !important;
+    color: #000 !important;
+}
+
+@media (max-width: 768px) {
+    .btn-compliance-submit.compact-action {
+        width: 100% !important;
+        margin-top: 16px !important;
+    }
 }

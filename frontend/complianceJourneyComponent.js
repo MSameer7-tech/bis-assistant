@@ -600,7 +600,7 @@ export class ComplianceJourneyComponent {
     /**
      * Renders the base workbench shell.
      */
-        renderLayout() {
+            renderLayout() {
         const t = this.t.bind(this);
         this.container.innerHTML = `
 <div class="compliance-layout" role="region" aria-label="Product Compliance Journey Workspace">
@@ -627,7 +627,7 @@ export class ComplianceJourneyComponent {
         
         <!-- Natural Language Query: large textarea -->
         <div class="compliance-query-row workspace-query">
-          <label for="compInputQuery" class="compliance-form-label primary" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'What do you want to know?'))}</label>
+          <label for="compInputQuery" class="compliance-form-label primary sr-only" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'What do you want to know?'))}</label>
           <div class="compliance-textarea-wrapper">
             <textarea id="compInputQuery" class="compliance-query-textarea compact"
               placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'Describe your product or ask a compliance question...'))}"
@@ -640,16 +640,25 @@ export class ComplianceJourneyComponent {
             <!-- Structured Inputs: 3-column grid -->
             <div class="compliance-form-grid compact-grid">
               <div class="compliance-form-group">
-                <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product'))}</label>
-                <input type="text" id="compInputProduct" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
+                <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product (optional)'))}</label>
+                <div class="input-icon-left">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                </div>
+                <input type="text" id="compInputProduct" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
               </div>
               <div class="compliance-form-group">
-                <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard'))}</label>
-                <input type="text" id="compInputStandard" class="compliance-text-input font-mono compact" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
+                <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (optional)'))}</label>
+                <div class="input-icon-left">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+                <input type="text" id="compInputStandard" class="compliance-text-input font-mono compact" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
               </div>
               <div class="compliance-form-group">
-                <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location'))}</label>
-                <input type="text" id="compInputLocation" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
+                <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (optional)'))}</label>
+                <div class="input-icon-left">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <input type="text" id="compInputLocation" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
               </div>
             </div>
 
@@ -667,7 +676,8 @@ export class ComplianceJourneyComponent {
 
     <!-- Example Chips -->
     <div class="compliance-examples-section lightweight">
-      <span class="compliance-examples-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</span>
+      <div class="compliance-examples-title" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</div>
+      <div class="compliance-examples-sub" data-i18n="compliance_journey.example_queries_sub">${escapeHtml(t('compliance_journey.example_queries_sub', 'Click on an example to populate the form.'))}</div>
       <div class="compliance-chips-wrap">
         <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
         <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
