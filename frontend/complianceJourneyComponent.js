@@ -600,63 +600,61 @@ export class ComplianceJourneyComponent {
     /**
      * Renders the base workbench shell.
      */
-                renderLayout() {
+                    renderLayout() {
         const t = this.t.bind(this);
         this.container.innerHTML = `
-<div class="compliance-layout-quiz" role="region" aria-label="Product Compliance Journey Workspace">
-  <div class="quiz-card" id="complianceInitialState">
-    <h1 class="quiz-title" data-i18n="compliance_journey.title_alt">${escapeHtml(t('compliance_journey.title_alt', 'Product Compliance Journey'))}</h1>
-    <p class="quiz-subtitle" data-i18n="compliance_journey.heading_sub">${escapeHtml(t('compliance_journey.heading_sub', 'Describe your product, enter an Indian Standard, or ask a compliance question.'))}</p>
+<div class="compliance-layout-final" role="region" aria-label="Product Compliance Journey Workspace">
+  <div class="compliance-composer-root" id="complianceInitialState">
+    
+    <header class="composer-header">
+      <h1 class="composer-title" data-i18n="compliance_journey.title_alt">${escapeHtml(t('compliance_journey.title_alt', 'Product Compliance Journey'))}</h1>
+      <p class="composer-subtitle" data-i18n="compliance_journey.heading_sub">${escapeHtml(t('compliance_journey.heading_sub', 'Find the applicable BIS requirements for your product.'))}</p>
+    </header>
 
-    <form id="complianceSearchForm" class="quiz-form" novalidate>
+    <form id="complianceSearchForm" class="composer-form-surface" novalidate>
       
-      <div class="quiz-field-row">
-        <div class="quiz-field full-width" style="width: 100%;">
-          <label for="compInputQuery" class="quiz-label" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'QUERY'))}</label>
-          <textarea id="compInputQuery" class="quiz-input textarea" placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'Describe your product or ask a compliance question...'))}" autocomplete="off" spellcheck="false" rows="2"></textarea>
-        </div>
+      <div class="composer-query-row">
+        <label for="compInputQuery" class="sr-only" data-i18n="compliance_journey.field_query">${escapeHtml(t('compliance_journey.field_query', 'QUERY'))}</label>
+        <textarea id="compInputQuery" class="composer-textarea" placeholder="${escapeHtml(t('compliance_journey.field_query_placeholder_long', 'Describe your product or ask a compliance question...'))}" autocomplete="off" spellcheck="false" rows="2"></textarea>
       </div>
 
-      <div class="quiz-field-row multi-col">
-        <div class="quiz-field">
-          <label for="compInputProduct" class="quiz-label" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'PRODUCT (OPTIONAL)'))}</label>
-          <input type="text" id="compInputProduct" class="quiz-input" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
+      <div class="composer-secondary-row">
+        <div class="composer-field">
+          <label for="compInputProduct" class="composer-label" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product Name'))}</label>
+          <input type="text" id="compInputProduct" class="composer-input" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes'))}" autocomplete="off" spellcheck="false" />
         </div>
-        <div class="quiz-field">
-          <label for="compInputStandard" class="quiz-label" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'INDIAN STANDARD (OPTIONAL)'))}</label>
-          <input type="text" id="compInputStandard" class="quiz-input font-mono" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
+        <div class="composer-field">
+          <label for="compInputStandard" class="composer-label" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (IS)'))}</label>
+          <input type="text" id="compInputStandard" class="composer-input font-mono" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985'))}" autocomplete="off" spellcheck="false" />
         </div>
-        <div class="quiz-field">
-          <label for="compInputLocation" class="quiz-label" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'LOCATION (OPTIONAL)'))}</label>
-          <input type="text" id="compInputLocation" class="quiz-input" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
+        <div class="composer-field">
+          <label for="compInputLocation" class="composer-label" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (Optional)'))}</label>
+          <input type="text" id="compInputLocation" class="composer-input" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi'))}" autocomplete="off" spellcheck="false" />
         </div>
         
-        <div class="quiz-field action-field">
-          <label class="quiz-label">&nbsp;</label>
-          <button type="submit" id="btnComplianceSubmit" class="quiz-button" aria-label="Generate Compliance Journey">
-            <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Initialize'))}</span>
+        <div class="composer-field-action">
+          <label class="composer-label">&nbsp;</label>
+          <button type="submit" id="btnComplianceSubmit" class="composer-button" aria-label="Generate Compliance Journey">
+            <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate Compliance Journey &rarr;'))}</span>
             <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true" style="margin-left: 8px;"></div>
           </button>
         </div>
       </div>
 
-      <div class="quiz-meta-row">
-        <div class="quiz-meta-col">
-          <label class="quiz-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'EXAMPLES'))}</label>
-          <div class="quiz-chips">
-            <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes · IS 4985</button>
-            
-            <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan · IS 374</button>
-            
-            <button type="button" class="btn-comp-chip" data-product="secondary cell" data-standard="IS 16046 (Part 2)" title="Example: Lithium Battery · IS 16046 Part 2">Lithium Battery · IS 16046 Part 2</button>
-          </div>
-        </div>
-      </div>
-
     </form>
+
+    <div class="composer-examples-row">
+      <span class="composer-examples-label" data-i18n="compliance_journey.example_queries_label">${escapeHtml(t('compliance_journey.example_queries_label', 'Try an example'))}</span>
+      <div class="composer-chips">
+        <button type="button" class="btn-comp-chip" data-product="pvc pipes" data-standard="IS 4985" title="Example: PVC Pipes · IS 4985">PVC Pipes &middot; IS 4985</button>
+        <button type="button" class="btn-comp-chip" data-product="ceiling fan" data-standard="IS 374" title="Example: Ceiling Fan · IS 374">Ceiling Fan &middot; IS 374</button>
+        <button type="button" class="btn-comp-chip" data-product="secondary cell" data-standard="IS 16046 (Part 2)" title="Example: Lithium Battery · IS 16046 Part 2">Lithium Battery &middot; IS 16046 Part 2</button>
+        <button type="button" class="btn-comp-chip" data-standard="IS 15750" title="Example: IS 15750">IS 15750</button>
+        <button type="button" class="btn-comp-chip" data-product="timber doors" title="Example: Timber Doors">Timber Doors</button>
+      </div>
+    </div>
   </div>
   
-  <!-- Results Viewport (hidden initially, shown when results arrive) -->
   <section id="complianceResultsContainer" class="compliance-results-container" aria-live="polite" style="display: none;"></section>
 </div>
         `;
@@ -763,9 +761,8 @@ export class ComplianceJourneyComponent {
         const resultsContainer = this.container?.querySelector('#complianceResultsContainer');
         const initialState = this.container?.querySelector('#complianceInitialState');
         
-        if (initialState) {
-            initialState.style.display = 'none';
-        }
+        // Composer remains visible
+        // if (initialState) initialState.style.display = "none";
         
         if (resultsContainer) {
             resultsContainer.style.display = 'block';
