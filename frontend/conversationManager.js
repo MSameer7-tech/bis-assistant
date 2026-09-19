@@ -175,6 +175,12 @@ export function groupConversations(convList) {
     const older = [];
 
     convList.forEach(c => {
+        // Unsaved draft session with no messages should not appear under date groups (like TODAY)
+        const hasMessages = Array.isArray(c.messages) && c.messages.length > 0;
+        if (!c.is_pinned && !hasMessages) {
+            return;
+        }
+
         if (c.is_pinned) {
             pinned.push(c);
             return; // Invariant: never duplicated under date groups
@@ -442,6 +448,16 @@ export class ConversationManager {
         }
 
         const groups = groupConversations(filtered);
+        if (groups.length === 0) {
+            container.innerHTML = `
+                <div class="conv-empty-message">
+                    <span class="conv-empty-icon">${ICONS.chat}</span>
+                    <span>${filterQuery ? 'No matching conversations' : 'No conversations yet'}</span>
+                </div>
+            `;
+            return;
+        }
+
         let html = '';
 
         groups.forEach(group => {

@@ -728,7 +728,7 @@ function initApp() {
     function createNewConversation(switchViewToAssistant = true) {
         const newConv = {
             id: generateUUID(),
-            title: 'New Session',
+            title: 'New conversation',
             messages: [],
             is_pinned: false,
             title_source: 'default',
@@ -801,7 +801,9 @@ function initApp() {
         if (!conv) return;
 
         const isEmpty = !conv.messages || conv.messages.length === 0;
-        currentChatTitle.textContent = conv.title || (isEmpty ? 'New Session' : 'Conversation');
+        currentChatTitle.textContent = (isEmpty || !conv.title || conv.title === 'New Session' || conv.title === 'New conversation')
+            ? 'New conversation'
+            : conv.title;
 
         if (isEmpty) {
             applyPersonalization();
