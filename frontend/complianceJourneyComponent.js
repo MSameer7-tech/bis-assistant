@@ -615,7 +615,7 @@ export class ComplianceJourneyComponent {
         ${escapeHtml(t('compliance_journey.heading', 'Find your BIS requirements.'))}
       </h2>
       <p class="compliance-heading-sub" data-i18n="compliance_journey.heading_sub">
-        ${escapeHtml(t('compliance_journey.heading_sub', 'Describe your product, enter an Indian Standard, or ask a compliance question.'))}
+        ${escapeHtml(t('compliance_journey.heading_sub', 'Enter a product, Indian Standard, or compliance question to get a step-by-step assessment.'))}
       </p>
     </div>
   </header>
@@ -640,24 +640,18 @@ export class ComplianceJourneyComponent {
             <!-- Structured Inputs: 3-column grid -->
             <div class="compliance-form-grid compact-grid">
               <div class="compliance-form-group">
-                <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product (optional)'))}</label>
-                <div class="input-icon-left">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                </div>
+                <label for="compInputProduct" class="compliance-form-label secondary" data-i18n="compliance_journey.field_product">${escapeHtml(t('compliance_journey.field_product', 'Product Name'))}</label>
+                
                 <input type="text" id="compInputProduct" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_product_placeholder', 'e.g. PVC pipes, ceiling fan'))}" autocomplete="off" spellcheck="false" />
               </div>
               <div class="compliance-form-group">
-                <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (optional)'))}</label>
-                <div class="input-icon-left">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                </div>
+                <label for="compInputStandard" class="compliance-form-label secondary" data-i18n="compliance_journey.field_standard">${escapeHtml(t('compliance_journey.field_standard', 'Indian Standard (IS)'))}</label>
+                
                 <input type="text" id="compInputStandard" class="compliance-text-input font-mono compact" placeholder="${escapeHtml(t('compliance_journey.field_standard_placeholder', 'e.g. IS 4985, IS 374'))}" autocomplete="off" spellcheck="false" />
               </div>
               <div class="compliance-form-group">
-                <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (optional)'))}</label>
-                <div class="input-icon-left">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                </div>
+                <label for="compInputLocation" class="compliance-form-label secondary" data-i18n="compliance_journey.field_location">${escapeHtml(t('compliance_journey.field_location', 'Location (Optional)'))}</label>
+                
                 <input type="text" id="compInputLocation" class="compliance-text-input compact" placeholder="${escapeHtml(t('compliance_journey.field_location_placeholder', 'e.g. Delhi, Mumbai'))}" autocomplete="off" spellcheck="false" />
               </div>
             </div>
@@ -665,7 +659,7 @@ export class ComplianceJourneyComponent {
             <!-- Generate Button -->
             <div class="compliance-submit-wrapper">
               <button type="submit" id="btnComplianceSubmit" class="btn-compliance-submit compact-action" aria-label="Generate Compliance Journey">
-                <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate journey'))}</span>
+                <span id="btnComplianceText" data-i18n="compliance_journey.btn_generate">${escapeHtml(t('compliance_journey.btn_generate', 'Generate Compliance Journey'))}</span>
                 <svg id="btnComplianceIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 <div id="compSpinner" class="compliance-spinner hidden" aria-hidden="true"></div>
               </button>
@@ -1196,7 +1190,7 @@ export class ComplianceJourneyComponent {
         const spinner = this.container?.querySelector('#compSpinner');
 
         if (btn) btn.disabled = isLoading;
-        if (text) text.textContent = isLoading ? this.t('compliance_journey.btn_generating', 'Querying Authoritative BIS Evidence...') : this.t('compliance_journey.btn_generate', 'Generate journey');
+        if (text) text.textContent = isLoading ? this.t('compliance_journey.btn_generating', 'Querying Authoritative BIS Evidence...') : this.t('compliance_journey.btn_generate', 'Generate Compliance Journey');
         if (icon) icon.classList.toggle('hidden', isLoading);
         if (spinner) spinner.classList.toggle('hidden', !isLoading);
     }
