@@ -3419,15 +3419,15 @@ def build_deterministic_grounded_answer(
                     if lm:
                         lab_id = lm.group(1)
             if lab_id and lab_id not in [l[0] for l in labs]:
-                labs.append((f"Laboratory {lab_id}", "Accredited Testing Laboratory", f"Testing under {std_num}."))
+                labs.append((f"Accredited BIS Laboratory", "Accredited Testing Laboratory", f"Testing under {std_num}."))
 
         if labs:
             lab_lines = []
             for i, (lname, ltype, lscope) in enumerate(labs, 1):
                 if resp_lang == "hi":
-                    lab_lines.append(f"{i}. **{lname}** (मान्यता प्राप्त परीक्षण प्रयोगशाला)\n   - कार्यक्षेत्र (Scope): {lscope}")
+                    lab_lines.append(f"**{lname}**\nकार्यक्षेत्र (Scope): {lscope}\n")
                 else:
-                    lab_lines.append(f"{i}. **{lname}** ({ltype})\n   - Scope: {lscope}")
+                    lab_lines.append(f"**{lname}**\nScope: {lscope}\n")
             labs_str = "\n".join(lab_lines)
             title_display = official_title or std_title
             if response_style == "Quick & Simple":
@@ -4131,7 +4131,7 @@ def orchestrate_assistant_query(
                     else:
                         lab_lines.append(f"### BIS-Recognized Testing Laboratories for {std_label}\n")
                         lab_lines.append(f"Found **{total}** recognized laboratories.\n")
-                    shown = candidates[:10]
+                    shown = candidates[:5]
                     for i, cand in enumerate(shown, 1):
                         name = getattr(cand, 'laboratory_name', 'Unknown')
                         code = getattr(cand, 'public_lab_code', '')
@@ -4141,13 +4141,13 @@ def orchestrate_assistant_query(
                         city = city if city and city != 'None' else ''
                         state = state if state and state != 'None' else ''
                         location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
-                        lab_lines.append(f"{i}. **{name}**" + (f" ({code})" if code else "") + (f" \u2014 {location_str}" if location_str else ""))
+                        lab_lines.append(f"**{name}**\n{location_str}\n")
                     if total > 10:
                         remaining = total - 10
                         if resp_lang_early == "hi":
                             lab_lines.append(f"\n...\u0914\u0930 {remaining} \u0905\u0928\u094d\u092f \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\u0964 \u0935\u093f\u0938\u094d\u0924\u0943\u0924 \u0938\u0942\u091a\u0940 \u0915\u0947 \u0932\u093f\u090f BIS Lab Finder \u0926\u0947\u0916\u0947\u0902\u0964")
                         else:
-                            lab_lines.append(f"\n...and {remaining} more. Use the BIS Lab Finder for the full list.")
+                            lab_lines.append(f"\n<button class=\"btn-assistant-cta primary\" onclick=\"window.location.href='/labs'\">View all {total} laboratories &rarr;</button>")
                     lab_answer = "\n".join(lab_lines)
                     lab_dispatch_success = True
                     return {
