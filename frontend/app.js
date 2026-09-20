@@ -1248,47 +1248,33 @@ function initApp() {
     // Helper: Preprocess Answer Text (Remove irrelevant sections & normalize headers)
     // -------------------------------------------------------------------------
     function preprocessAnswerText(rawText, userQueryText) {
-        if (!rawText) return '';
+        if (!rawText) return "";
         let text = rawText.trim()
-            .replace(/!?\[(?:image|alt)\]\([^)]*\)/gi, '')
-            .replace(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/[^\s\)]+/gi, '')
-            .replace(/<svg[\s\S]*?<\/svg>/gi, '')
-            .replace(/\bsvgsvg\b/gi, '')
+            .replace(/!?\[(?:image|alt)\]\([^)]*\)/gi, "")
+            .replace(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/[^\s\)]+/gi, "")
+            .replace(/<svg[\s\S]*?<\/svg>/gi, "")
+            .replace(/\bsvgsvg\b/gi, "")
             .trim();
-        const userQ = (userQueryText || '').toLowerCase();
-
-        const isLabOrFeeQuery = /\b(labs?|laborator(?:y|ies)|testing\s+facilit(?:y|ies)|testing\s+scope|where\s+to\s+test|who\s+can\s+test|accredited|fees?|costs?|charges?|pricing|rates?|how\s+much)\b/i.test(userQ);
-
-        // 1. Remove irrelevant Testing Information if user did not ask for testing/labs/fees
-        if (!isLabOrFeeQuery) {
-            text = text.replace(/(?:^|\n)(?:#{1,4}\s*|\*\*)?(?:TESTING INFORMATION|Testing Information|TESTING AND LABORATORY INFORMATION|Testing & Laboratory Information)\*?:?[\s\S]*?(?=(?:\n#{1,4}\s+[A-Z]|\n\*\*[A-Z]|$))/gi, '');
-            text = text.replace(/(?:^|\n)Testing associated with this standard includes:[\s\S]*?(?=(?:\n#{1,4}\s+[A-Z]|\n\*\*[A-Z]|$))/gi, '');
-        }
-
-        // 2. Only add hashes to raw uppercase section headers if missing
-        const headerMaps = [
-            { regex: /^\s*(?:\*\*)?APPLICABLE STANDARDS\*?:?\s*$/i, title: "Applicable Standards" },
-            { regex: /^\s*(?:\*\*)?SCOPE (?:AND|&) (?:APPLICATION|OVERVIEW|SPECIFICATIONS)\*?:?\s*$/i, title: "Scope & Overview" },
-            { regex: /^\s*(?:\*\*)?CERTIFICATION (?:AND|&) COMPLIANCE(?: SCHEME)?\*?:?\s*$/i, title: "Certification & Compliance Scheme" },
-            { regex: /^\s*(?:\*\*)?TESTING INFORMATION\*?:?\s*$/i, title: "Testing & Laboratory Information" },
-            { regex: /^\s*(?:\*\*)?VERIFIED TESTING LABORATORIES\*?:?\s*$/i, title: "Verified Testing Laboratories" },
-            { regex: /^\s*(?:\*\*)?TESTING FEES?(?: SCHEDULE)?\*?:?\s*$/i, title: "Testing Fee Schedule" }
+        
+        // Remove internal terminology and noise
+        const removeTerms = [
+            /\b(RAG|PC-3|PC-4|PC-5|GROUNDED|HYBRID|LLM_FALLBACK|BASELINE_UNCALIBRATED)\b/g,
+            /\b(NOT_IN_CORPUS|UNKNOWN|GENERAL)\b/g,
+            /Not verified by BIS evidence/gi,
+            /LLM generated/gi,
+            /General knowledge/gi,
+            /RAG retrieved this/gi,
+            /Based on the provided context/gi,
+            /Based on the retrieved evidence/gi
         ];
-
-        const lines = text.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            const trimmed = lines[i].trim();
-            if (!trimmed.startsWith('#')) {
-                for (const h of headerMaps) {
-                    if (h.regex.test(trimmed)) {
-                        lines[i] = `### ${h.title}`;
-                        break;
-                    }
-                }
-            }
+        
+        for (const term of removeTerms) {
+            text = text.replace(term, "");
         }
 
-        return lines.join('\n').trim();
+        text = text.replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+
+        return text.trim();
     }
 
     function appendAssistantResponseToDOM(data, animate = false) {
@@ -1462,21 +1448,21 @@ function initApp() {
         }
 
         // 5. Contextual Actions
-        let contextualActionsHtml = '';
+        let contextualActionsHtml = "";
         let actions = [];
 
         // 5a. Compliance Journey Action
-        let complianceJourneyHtml = '';
+        let complianceJourneyHtml = "";
         if (data.compliance_journey) {
             complianceJourneyHtml = ComplianceJourneyComponent.renderJourneyCard(data.compliance_journey, { t: (k, fb) => t(k, fb) });
         } else if (matchedStd) {
-            const isComplianceIntent = ['COMPLIANCE_REQUIREMENT', 'CERTIFICATION', 'QCO', 'PROCESS', 'MANDATORY_STATUS'].includes(intent) || 
-                                       /\b(compliance|certification|qco|mandatory|regulatory|process|requirements)\b/i.test(userQueryText);
+            const isComplianceIntent = ["COMPLIANCE_REQUIREMENT", "CERTIFICATION", "PROCESS", "MANDATORY_STATUS"].includes(intent) || 
+                                       /\b(product compliance|certification requirements?|regulatory requirements?|compliance journey)\b/i.test(userQueryText);
             
-            if (isComplianceIntent) {
+            if (isComplianceIntent && !/\b(what is|explain|define|difference between)\b/i.test(userQueryText)) {
                 actions.push(`
                     <button type="button" class="btn-contextual-action btn-chat-open-compliance" data-standard="${escapeHtml(matchedStd)}">
-                        ${t('compliance_journey.chat_bridge_btn_short', 'Explore compliance requirements &rarr;')}
+                        ${t("compliance_journey.chat_bridge_btn_short", "Explore compliance requirements &rarr;")}
                     </button>
                 `);
             }
@@ -1484,13 +1470,17 @@ function initApp() {
 
         // 5b. Lab Finder Action
         if (matchedStd && isLabQuery) {
-            const locMatch = (userQueryText || '').match(/\b(?:in|near|at|around)\s+([A-Za-z]+)\b/i);
-            const locText = locMatch ? locMatch[1] : '';
-            actions.push(`
-                <button type="button" class="btn-contextual-action btn-chat-open-lab" data-standard="${escapeHtml(matchedStd)}" data-location="${escapeHtml(locText)}">
-                    ${t('assistant.actions.find_lab', 'Find a BIS laboratory &rarr;')}
-                </button>
-            `);
+            const isStrictLabIntent = ["LAB_SEARCH"].includes(intent) || 
+                                     /\b(product testing|required testing|laboratory selection|laboratory availability|find a bis laboratory|find a lab|what tests are required)\b/i.test(userQueryText);
+            if (isStrictLabIntent) {
+                const locMatch = (userQueryText || "").match(/\b(?:in|near|at|around)\s+([A-Za-z]+)\b/i);
+                const locText = locMatch ? locMatch[1] : "";
+                actions.push(`
+                    <button type="button" class="btn-contextual-action btn-chat-open-lab" data-standard="${escapeHtml(matchedStd)}" data-location="${escapeHtml(locText)}">
+                        ${t("assistant.actions.find_lab", "Find a BIS laboratory &rarr;")}
+                    </button>
+                `);
+            }
         }
 
         if (actions.length > 0) {
@@ -1675,7 +1665,7 @@ function initApp() {
                     <div class="table-container">
                         <table class="editorial-table">
                             <thead><tr>${headerCells.map(h => `<th>${formatInline(h)}</th>`).join('')}</tr></thead>
-                            <tbody>${tableRows.map(r => `<tr>${r.map(c => `<td>${formatInline(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+                            <tbody>${tableRows.map(r => `<tr>${r.map((c, idx) => `<td data-label=\"${escapeHtml(headerCells[idx])}\">${formatInline(c)}</td>`).join('')}</tr>`).join('')}</tbody>
                         </table>
                     </div>
                 `;
@@ -1762,15 +1752,18 @@ function initApp() {
     }
 
     function formatInline(str) {
-        if (!str) return '';
+        if (!str) return "";
         let formatted = escapeHtml(str);
 
         // Bold
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Inline code
-        formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
         // Italics
-        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        formatted = formatted.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+        // Inline code
+        formatted = formatted.replace(/`([^`]+)`/g, "<code class=\"inline-code\">$1</code>");
+        
+        // Subtle highlighting for Indian Standards (e.g. IS 4985, IS 12254:2021)
+        formatted = formatted.replace(/\b(IS\s*\d+(?::\d{4})?(?:\s+Part\s+\d+)?)\b/g, "<span class=\"inline-standard\">$1</span>");
 
         return formatted;
     }

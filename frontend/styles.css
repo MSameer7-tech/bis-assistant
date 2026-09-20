@@ -1859,22 +1859,21 @@ html, body {
 
 .assistant-bubble {
     width: fit-content;
-    max-width: min(720px, 75vw);
-    background: linear-gradient(135deg, #12131a 0%, #0f1016 100%);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.045);
-    border-radius: 22px;
-    padding: 20px 24px;
-    color: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-    font-size: 15.5px;
-    line-height: 1.95;
-    letter-spacing: -0.012em;
-    font-weight: 500;
+    max-width: min(840px, 85vw); /* slightly wider for tables */
+    background: linear-gradient(135deg, #181920 0%, #15161c 100%); /* slightly flatter dark */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(255, 255, 255, 0.03); /* minimal border */
+    border-radius: 16px; /* softer, less card-like radius */
+    padding: 18px 24px; /* 18-24px padding requested */
+    color: rgba(255, 255, 255, 0.85); /* muted but readable */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* very light shadow */
+    font-size: 14px; /* 13-14px requested */
+    line-height: 1.6; /* 1.6 requested */
+    font-weight: 400;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px; /* 8-14px spacing between sections requested */
 }
 
 /* Response Style Personalization - Subtle Typography & Density Adjustments */
@@ -15780,4 +15779,176 @@ body[data-theme="light"] .btn-comp-chip:hover {
 /* Remove redundant header from final results card since composer is frozen above it */
 .journey-header-banner {
     display: none !important;
+}
+
+
+/* --- Answer Formatting Refinements --- */
+.assistant-bubble .editorial-main-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+    text-transform: none !important;
+}
+
+.assistant-bubble .editorial-heading,
+.assistant-bubble h3,
+.assistant-bubble h4,
+.assistant-bubble h5,
+.assistant-bubble h6 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 14px 0 6px 0;
+    text-transform: none !important;
+    border-bottom: none !important;
+}
+
+.assistant-bubble .editorial-p,
+.assistant-bubble p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0 0 10px 0;
+    font-weight: 400;
+}
+
+.assistant-bubble .editorial-list,
+.assistant-bubble .editorial-num-list,
+.assistant-bubble .editorial-alpha-list,
+.assistant-bubble ul,
+.assistant-bubble ol {
+    margin: 0 0 10px 0;
+    padding-left: 20px;
+}
+
+.assistant-bubble .editorial-list li,
+.assistant-bubble .editorial-num-list li,
+.assistant-bubble .editorial-alpha-list li,
+.assistant-bubble li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 8px; /* 6-10px between bullets */
+    font-weight: 400;
+}
+
+/* Subtle standard highlight */
+.inline-standard {
+    font-weight: 500;
+    color: var(--accent-purple);
+    background: rgba(134, 120, 249, 0.08);
+    padding: 0 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* Comparisons */
+.assistant-bubble .table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.assistant-bubble .editorial-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.assistant-bubble .editorial-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.assistant-bubble .editorial-table td {
+    padding: 8px 12px;
+    color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: top;
+}
+
+@media (max-width: 600px) {
+    /* Stacked comparison tables */
+    .assistant-bubble .editorial-table,
+    .assistant-bubble .editorial-table thead,
+    .assistant-bubble .editorial-table tbody,
+    .assistant-bubble .editorial-table th,
+    .assistant-bubble .editorial-table td,
+    .assistant-bubble .editorial-table tr {
+        display: block;
+    }
+    
+    .assistant-bubble .editorial-table thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    
+    .assistant-bubble .editorial-table tr {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        padding: 8px;
+    }
+    
+    .assistant-bubble .editorial-table td {
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        position: relative;
+        padding-left: 50%;
+    }
+    
+    .assistant-bubble .editorial-table td:before {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: 600;
+        color: var(--text-primary);
+        content: attr(data-label);
+    }
+}
+
+/* Light theme overrides */
+[data-theme="light"] .assistant-bubble .editorial-main-title,
+[data-theme="light"] .assistant-bubble .editorial-heading,
+[data-theme="light"] .assistant-bubble h3,
+[data-theme="light"] .assistant-bubble h4 {
+    color: #111827;
+}
+
+[data-theme="light"] .assistant-bubble p,
+[data-theme="light"] .assistant-bubble li,
+[data-theme="light"] .assistant-bubble td {
+    color: #374151;
+}
+
+[data-theme="light"] .inline-standard {
+    background: rgba(99, 102, 241, 0.06);
+    color: #4F46E5;
+}
+
+[data-theme="light"] .assistant-bubble .editorial-table th {
+    color: #111827;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .assistant-bubble .editorial-table td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Remove decorative elements */
+.assistant-bubble .heading-pip {
+    display: none !important;
+}
+
+.assistant-bubble.style-professional-compliance {
+    border-left: none !important;
 }
