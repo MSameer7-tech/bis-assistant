@@ -1614,8 +1614,54 @@ function initApp() {
     function renderEditorialMarkdown(rawText, userQueryText = '') {
         if (!rawText) return '';
 
-        const text = preprocessAnswerText(rawText, userQueryText);
-        let lines = text.split('\n');
+        let text = preprocessAnswerText(rawText, userQueryText);
+        
+        // Fix split numbered list items (e.g. LLM outputs "1. Check IS 4985. 2. Verify" on one line)
+        text = text.replace(/ (\d{1,2}[\.\)]\s+[A-Z])/g, "\n$1");
+
+        let rawLines = text.split('\n');
+        let lines = [];
+        let inCodeBlockPre = false;
+        
+        // Rejoin hard-wrapped lines caused by LLM 80-char limits (e.g. "under IS\n4985.")
+        for (let j = 0; j < rawLines.length; j++) {
+            let line = rawLines[j];
+            let trimmed = line.trim();
+            
+            if (trimmed.startsWith('```')) {
+                inCodeBlockPre = !inCodeBlockPre;
+                lines.push(line);
+                continue;
+            }
+            if (inCodeBlockPre || !trimmed) {
+                lines.push(line);
+                continue;
+            }
+            
+            const isBlock = trimmed.startsWith('#') || 
+                            /^[-*+•]\s+/.test(trimmed) || 
+                            /^\d{1,2}[\.\)]\s+/.test(trimmed) || 
+                            /^[A-Za-z][\.\)]\s+/.test(trimmed) && trimmed.length > 3 ||
+                            trimmed.startsWith('>') ||
+                            trimmed.startsWith('|') ||
+                            /^\*\*[^*]+\*\*$/.test(trimmed);
+                            
+            if (isBlock) {
+                lines.push(line);
+            } else {
+                if (lines.length > 0) {
+                    let prev = lines[lines.length - 1];
+                    let prevTrimmed = prev.trim();
+                    if (prevTrimmed !== '' && !prevTrimmed.startsWith('```') && !prevTrimmed.startsWith('|')) {
+                        lines[lines.length - 1] = prev + ' ' + trimmed;
+                    } else {
+                        lines.push(line);
+                    }
+                } else {
+                    lines.push(line);
+                }
+            }
+        }
         let html = '';
         let inList = false;
         let inNumList = false;
@@ -1750,7 +1796,7 @@ function initApp() {
                 html += `<li${margin}>${formatInline(content)}</li>`;
             }
             // Numbered list items
-            else if (/^(\s*)\d+[\.\)]\s+/.test(trimmed)) {
+            else if (/^(\s*)\d{1,2}[\.\)]\s+/.test(trimmed)) {
                 const numMatch = trimmed.match(/^(\d+)[\.\)]\s+/);
                 const itemNum = numMatch ? parseInt(numMatch[1], 10) : 1;
                 if (inList || inAlphaList) closeAllLists();
@@ -1764,7 +1810,7 @@ function initApp() {
                 html += `<li value="${itemNum}"${margin}>${formatInline(content)}</li>`;
             }
             // Numbered list items (e.g. "1. " or "1) ")
-            else if (/^\d+[\.\)]\s+/.test(trimmed)) {
+            else if (/^\d{1,2}[\.\)]\s+/.test(trimmed)) {
                 const numMatch = trimmed.match(/^(\d+)[\.\)]\s+/);
                 const itemNum = numMatch ? parseInt(numMatch[1], 10) : 1;
                 if (inList || inAlphaList) closeAllLists();
