@@ -1809,6 +1809,23 @@ function initApp() {
         if (!str) return "";
         let formatted = escapeHtml(str);
 
+        // Safely restore basic HTML formatting tags emitted by LLMs (often inside Markdown tables)
+        formatted = formatted.replace(/&lt;ul&gt;/gi, '<ul class="editorial-list">')
+                             .replace(/&lt;\/ul&gt;/gi, '</ul>')
+                             .replace(/&lt;ol&gt;/gi, '<ol class="editorial-num-list">')
+                             .replace(/&lt;\/ol&gt;/gi, '</ol>')
+                             .replace(/&lt;li&gt;/gi, '<li>')
+                             .replace(/&lt;\/li&gt;/gi, '</li>')
+                             .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+                             .replace(/&lt;b&gt;/gi, '<strong>')
+                             .replace(/&lt;\/b&gt;/gi, '</strong>')
+                             .replace(/&lt;strong&gt;/gi, '<strong>')
+                             .replace(/&lt;\/strong&gt;/gi, '</strong>')
+                             .replace(/&lt;i&gt;/gi, '<em>')
+                             .replace(/&lt;\/i&gt;/gi, '</em>')
+                             .replace(/&lt;em&gt;/gi, '<em>')
+                             .replace(/&lt;\/em&gt;/gi, '</em>');
+
         // Bold
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
         // Italics
