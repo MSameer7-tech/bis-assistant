@@ -37,45 +37,6 @@
         })();
     </script>
     <!-- Synchronous Early Entry-Guard to prevent FOUC (flash of unauthenticated content) -->
-    <script>
-        (function() {
-            var isGuest = false;
-            try {
-                if (sessionStorage.getItem('bis_guest_mode') === 'true') isGuest = true;
-                var p = new URLSearchParams(window.location.search);
-                if (p.get('guest') === 'true' || p.get('guest') === '1') {
-                    sessionStorage.setItem('bis_guest_mode', 'true');
-                    isGuest = true;
-                }
-            } catch(e) {}
-
-            if (isGuest) return;
-
-            var hasCandidateToken = false;
-            try {
-                if (localStorage.getItem('bis_supabase_auth_token')) {
-                    hasCandidateToken = true;
-                } else {
-                    for (var i = 0; i < localStorage.length; i++) {
-                        var k = localStorage.key(i);
-                        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
-                            hasCandidateToken = true;
-                            break;
-                        }
-                    }
-                }
-            } catch(e) {}
-
-            if (!hasCandidateToken) {
-                var isLocalDev = window.location.hostname === 'localhost' || 
-                                 window.location.hostname === '127.0.0.1' || 
-                                 window.location.port === '3000';
-                var isStatic = window.location.protocol === 'file:' || window.location.pathname.endsWith('.html') || isLocalDev;
-                var target = isStatic ? './login.html' : '/login';
-                window.location.replace(target);
-            }
-        })();
-    </script>
     <style> 
         .compliance-warnings-section, 
         .compliance-provenance-section, 

@@ -4102,8 +4102,7 @@ function initApp() {
 
     validateSession().then((authState) => {
         if (!authState.authenticated) {
-            window.location.replace(getLoginUrl());
-            return;
+            authState.isGuest = true;
         }
         if (authLoadingScreen) {
             authLoadingScreen.classList.add('hidden');
