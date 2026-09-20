@@ -1272,7 +1272,7 @@ function initApp() {
             text = text.replace(term, "");
         }
 
-        text = text.replace(/\(\s*\)/g, "").replace(/\s{2,}/g, " ");
+        text = text.replace(/\(\s*\)/g, "").replace(/[ \t]{2,}/g, " ");
 
         return text.trim();
     }
