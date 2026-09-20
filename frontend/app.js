@@ -1297,10 +1297,10 @@ function initApp() {
         text = text.replace(/^(\*\*[A-Za-z][^*]+\*\*)\s*[-–:]\s*(.+)$/gm, "$1\n$2");
 
         // Force inline bullet lists to expand to newlines
-        text = text.replace(/([.:;])\s+[-*•]\s+([A-Za-z0-9])/g, "$1\n- $2");
+        text = text.replace(/([.:;])\s+[-*•–—]\s+([A-Za-z0-9])/g, "$1\n- $2");
         
         // Force inline numbered lists to expand to newlines
-        text = text.replace(/([a-z0-9.:;])\s+(\d+\.)\s+([A-Za-z0-9*])/gi, "$1\n$2 $3");
+        text = text.replace(/([a-z0-9.:;])\s+(\d{1,2}\.)\s+([A-Za-z0-9*])/gi, "$1\n$2 $3");
 
         // Ensure table rows are on their own lines (if they were squashed like "| Row 1 | Row 2 |")
         // Not perfectly safe for all text, but usually | is only used in tables here
@@ -1629,6 +1629,7 @@ function initApp() {
         let inCodeBlockPre = false;
         
         // Rejoin hard-wrapped lines caused by LLM 80-char limits (e.g. "under IS\n4985.")
+        let lastWasBlock = false;
         for (let j = 0; j < rawLines.length; j++) {
             let line = rawLines[j];
             let trimmed = line.trim();
@@ -1636,15 +1637,21 @@ function initApp() {
             if (trimmed.startsWith('```')) {
                 inCodeBlockPre = !inCodeBlockPre;
                 lines.push(line);
+                lastWasBlock = true; // treat code fences as block boundaries
                 continue;
             }
-            if (inCodeBlockPre || !trimmed) {
+            if (inCodeBlockPre) {
                 lines.push(line);
+                continue;
+            }
+            if (!trimmed) {
+                lines.push(line);
+                lastWasBlock = true; // empty lines break paragraphs
                 continue;
             }
             
             const isBlock = trimmed.startsWith('#') || 
-                            /^[-*+•]\s+/.test(trimmed) || 
+                            /^[-*+•–—]\s+/.test(trimmed) || 
                             /^\d{1,2}[\.\)]\s+/.test(trimmed) || 
                             /^[A-Za-z][\.\)]\s+/.test(trimmed) && trimmed.length > 3 ||
                             trimmed.startsWith('>') ||
@@ -1653,20 +1660,24 @@ function initApp() {
                             
             if (isBlock) {
                 lines.push(line);
+                lastWasBlock = true;
             } else {
                 if (lines.length > 0) {
                     let prev = lines[lines.length - 1];
                     let prevTrimmed = prev.trim();
-                    if (prevTrimmed !== '' && !prevTrimmed.startsWith('```') && !prevTrimmed.startsWith('|')) {
+                    if (prevTrimmed !== '' && !lastWasBlock && !prevTrimmed.startsWith('|')) {
                         lines[lines.length - 1] = prev + ' ' + trimmed;
                     } else {
                         lines.push(line);
+                        lastWasBlock = false;
                     }
                 } else {
                     lines.push(line);
+                    lastWasBlock = false;
                 }
             }
         }
+
         let html = '';
         let inList = false;
         let inNumList = false;
@@ -1789,13 +1800,13 @@ function initApp() {
                 html += `<blockquote>${formatInline(trimmed.substring(2))}</blockquote>`;
             }
             // Unordered list items
-            else if (/^(\s*)[-*+•]\s+/.test(trimmed)) {
+            else if (/^(\s*)[-*+•–—]\s+/.test(trimmed)) {
                 if (inNumList || inAlphaList) closeAllLists();
                 if (!inList) {
                     html += '<ul class="editorial-list">';
                     inList = true;
                 }
-                const content = trimmed.replace(/^[-*+•]\s+/, '');
+                const content = trimmed.replace(/^[-*+•–—]\s+/, '');
                 const indent = line.match(/^(\s*)/)[1].length;
                 const margin = indent > 0 ? ` style="margin-left: ${indent * 8}px;"` : "";
                 html += `<li${margin}>${formatInline(content)}</li>`;
