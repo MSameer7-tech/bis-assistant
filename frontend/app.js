@@ -1286,7 +1286,12 @@ function initApp() {
         text = text.replace(/([^\n#])\s*(#{2,4}\s+[A-Za-z])/g, "$1\n\n$2");
         
         // Force newlines for Standalone Bold if squashed (e.g. "Text. **Heading**")
-        text = text.replace(/([^\n])\s*(\*\*[A-Za-z][^*]+\*\*(?:\s*[-–:]|$))/g, "$1\n\n$2");
+        text = text.replace(/^([^\n]+?)\s+(\*\*[A-Za-z][^*]+\*\*(?:\s*[-–:]|$))/gm, (match, p1, p2) => {
+            if (/^\s*\d{1,2}[\.\)]$/.test(p1) || /^\s*[A-Za-z][\.\)]$/.test(p1)) {
+                return match;
+            }
+            return p1 + "\n\n" + p2;
+        });
 
         // Break apart "Heading - Content" if it got squashed on one line
         text = text.replace(/^(\*\*[A-Za-z][^*]+\*\*)\s*[-–:]\s*(.+)$/gm, "$1\n$2");
@@ -1295,7 +1300,7 @@ function initApp() {
         text = text.replace(/([.:;])\s+[-*•]\s+([A-Za-z0-9])/g, "$1\n- $2");
         
         // Force inline numbered lists to expand to newlines
-        text = text.replace(/([a-z0-9.:;])\s+(\d+\.)\s+([A-Za-z0-9])/gi, "$1\n$2 $3");
+        text = text.replace(/([a-z0-9.:;])\s+(\d+\.)\s+([A-Za-z0-9*])/gi, "$1\n$2 $3");
 
         // Ensure table rows are on their own lines (if they were squashed like "| Row 1 | Row 2 |")
         // Not perfectly safe for all text, but usually | is only used in tables here
