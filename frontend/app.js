@@ -1272,7 +1272,14 @@ function initApp() {
             text = text.replace(term, "");
         }
 
-        text = text.replace(/\(\s*\)/g, "").replace(/[ \t]{2,}/g, " ");
+        text = text.replace(/\(\s*\)/g, "").replace(/[ 	]{2,}/g, " ");
+
+        // Force inline bullet lists to expand to newlines
+        text = text.replace(/([.:;])\s+[-*•]\s+([A-Za-z0-9])/g, "$1\n- $2");
+        
+        // Force inline numbered lists to expand to newlines
+        text = text.replace(/([a-z0-9.:;])\s+(\d+\.)\s+([A-Za-z0-9])/gi, "$1\n$2 $3");
+
 
         return text.trim();
     }
