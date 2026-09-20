@@ -4098,6 +4098,72 @@ def orchestrate_assistant_query(
 
     rag_result = query_production_rag(search_query, engine=engine)
 
+    # ---- INJECT PC-5 DETERMINISTIC REGULATORY EVIDENCE ----
+    if query_ctx.get("intent") in (INTENT_CERTIFICATION, INTENT_QCO, INTENT_DEFINITION, INTENT_AMBIGUOUS) or "qco" in search_query.lower() or "quality control order" in search_query.lower() or "mandatory" in search_query.lower():
+        stds_for_pc5 = query_ctx.get("is_numbers", [])
+        prod_for_pc5 = query_ctx.get("product")
+        if stds_for_pc5 or prod_for_pc5:
+            try:
+                from ai.compliance.journey_orchestrator import get_compliance_orchestrator
+                from ai.compliance.journey_models import ComplianceJourneyRequest
+                pc_orch = get_compliance_orchestrator()
+                pc_req = ComplianceJourneyRequest(
+                    query=search_query,
+                    product=prod_for_pc5,
+                    standard=stds_for_pc5[0] if stds_for_pc5 else None
+                )
+                pc_res = pc_orch.build_journey(pc_req)
+                
+                # Fetch QCO index for notification numbers!
+                from backend.compliance_rag_synthesizer import QCOAuthoritativeIndex
+                from pathlib import Path
+                qco_index = QCOAuthoritativeIndex(Path(__file__).resolve().parent.parent)
+                qco_info = qco_index.get_qco_info_for_standard(stds_for_pc5[0]) if stds_for_pc5 else None
+                
+                if hasattr(pc_res, "mandatory_certification"):
+                    mand_stat = pc_res.mandatory_certification.status
+                    query_ctx["pc5_mandatory_status"] = mand_stat
+                    
+                    notifs = qco_info.get("notification_numbers", []) if qco_info else pc_res.regulatory_status.notification_numbers
+                    eff_date = qco_info.get("effective_date") if qco_info else pc_res.regulatory_status.effective_date
+                    
+                    if mand_stat == "MANDATORY_CERTIFICATION_CONFIRMED":
+                        qco_ev = {
+                            "text": f"MANDATORY CERTIFICATION CONFIRMED. A statutory Quality Control Order (QCO) establishes mandatory BIS certification for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5}. Notification numbers: {', '.join(notifs) if notifs else 'Unknown'}. Effective Date: {eff_date or 'Not specified'}.",
+                            "heading": "Government Quality Control Order (QCO) Mandate",
+                            "standard_number": stds_for_pc5[0] if stds_for_pc5 else "",
+                            "standard_title": f"Mandatory Certification Order for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5}",
+                            "source": "PC5_DETERMINISTIC"
+                        }
+                        rag_result.setdefault("evidence", []).insert(0, qco_ev)
+                        rag_result.setdefault("claims", []).append({
+                            "subject_entity": stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5,
+                            "predicate": "REQUIRES",
+                            "object_entity": "Mandatory BIS Certification (QCO)",
+                            "statement": "Authoritative PC-5 data confirms mandatory certification under QCO.",
+                            "source": "BIS_VERIFIED"
+                        })
+                    elif mand_stat == "MANDATORY_CERTIFICATION_NOT_ESTABLISHED":
+                        qco_ev = {
+                            "text": f"MANDATORY CERTIFICATION NOT ESTABLISHED. Mandatory certification for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5} is not established from the available evidence. The existence of an Indian Standard specifies product requirements but does not automatically mandate certification without a QCO.",
+                            "heading": "Regulatory Status",
+                            "standard_number": stds_for_pc5[0] if stds_for_pc5 else "",
+                            "standard_title": f"Regulatory Status for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5}",
+                            "source": "PC5_DETERMINISTIC"
+                        }
+                        rag_result.setdefault("evidence", []).insert(0, qco_ev)
+                    elif mand_stat == "QCO_CONFLICT":
+                        qco_ev = {
+                            "text": f"QCO CONFLICT DETECTED. Available regulatory records for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5} contain a conflict regarding mandatory certification. Do not choose one side arbitrarily.",
+                            "heading": "Regulatory Conflict",
+                            "standard_number": stds_for_pc5[0] if stds_for_pc5 else "",
+                            "standard_title": f"Regulatory Conflict for {stds_for_pc5[0] if stds_for_pc5 else prod_for_pc5}",
+                            "source": "PC5_DETERMINISTIC"
+                        }
+                        rag_result.setdefault("evidence", []).insert(0, qco_ev)
+            except Exception as e:
+                logger.error(f"Error fetching deterministic QCO context: {e}")
+
     # ---- Phase 14: Intent-Specific Dispatch ----
     detected_intent = query_ctx.get("intent", INTENT_AMBIGUOUS)
     logger.info(f"DEBUG: detected_intent = {detected_intent}")
@@ -4746,7 +4812,42 @@ def orchestrate_assistant_query(
         evidence_list = rag_result.get("evidence", [])
         claims_list = rag_result.get("claims", [])
         has_qco, qco_name = check_statutory_mandatory_certification(evidence_list, claims_list)
-        if not has_qco:
+        
+        # --- NEW DETERMINISTIC GUARD ---
+        pc5_stat = query_ctx.get("pc5_mandatory_status")
+        if pc5_stat:
+            ans_lower = final_answer.lower()
+            if pc5_stat == "MANDATORY_CERTIFICATION_CONFIRMED":
+                bad_phrases = ["not mandatory", "does not require", "no quality control order", "not established", "cannot verify", "could not be verified", "not automatically require", "does not automatically require"]
+                if any(p in ans_lower for p in bad_phrases):
+                    logger.warning("Deterministic guard triggered: Model denied mandatory certification despite PC-5 confirmation.")
+                    # Direct deterministic rewrite
+                    notifs = [e for e in evidence_list if e.get("source") == "PC5_DETERMINISTIC"]
+                    n_text = notifs[0].get("text") if notifs else "Mandatory certification confirmed."
+                    final_answer = f"Yes. {query_ctx.get('is_numbers', [query_ctx.get('product')])[0]} is subject to mandatory BIS certification. {n_text}"
+                    active_generation_mode = "GROUNDED"
+                    final_status = "PARTIAL"
+            elif pc5_stat == "MANDATORY_CERTIFICATION_NOT_ESTABLISHED":
+                bad_phrases = ["is mandatory", "requires mandatory", "must obtain", "subject to mandatory"]
+                if any(p in ans_lower for p in bad_phrases) and "does not" not in ans_lower and "not mandatory" not in ans_lower:
+                    logger.warning("Deterministic guard triggered: Model claimed mandatory certification despite PC-5 NOT_ESTABLISHED.")
+                    final_answer = f"Mandatory certification has not been established from the available BIS records for {query_ctx.get('is_numbers', [query_ctx.get('product')])[0]}."
+                    active_generation_mode = "GROUNDED"
+                    final_status = "PARTIAL"
+            elif pc5_stat == "QCO_CONFLICT":
+                if ("is mandatory" in ans_lower or "is not mandatory" in ans_lower) and "conflict" not in ans_lower and "unclear" not in ans_lower:
+                    logger.warning("Deterministic guard triggered: Model chose side in QCO conflict.")
+                    final_answer = f"There is a conflict in the available regulatory records regarding the mandatory certification status for {query_ctx.get('is_numbers', [query_ctx.get('product')])[0]}."
+                    active_generation_mode = "GROUNDED"
+                    final_status = "PARTIAL"
+            elif pc5_stat == "QCO_STATUS_UNKNOWN":
+                if ("is mandatory" in ans_lower or "not mandatory" in ans_lower) and "unknown" not in ans_lower:
+                    logger.warning("Deterministic guard triggered: Model asserted status for UNKNOWN.")
+                    final_answer = f"The mandatory certification status for {query_ctx.get('is_numbers', [query_ctx.get('product')])[0]} is currently unknown in the available records."
+                    active_generation_mode = "GROUNDED"
+                    final_status = "PARTIAL"
+
+        if not has_qco and not pc5_stat:
             if active_generation_mode == "LLM_FALLBACK":
                 # For LLM fallback, ensure no absolute unconditional claims are made
                 abs_patterns = [
