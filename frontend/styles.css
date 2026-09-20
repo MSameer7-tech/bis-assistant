@@ -16512,3 +16512,43 @@ body {
         padding-bottom: calc(env(safe-area-inset-bottom) + 20px) !important;
     }
 }
+
+/* Fix specificity issues for onboarding modal selected states in light mode */
+[data-theme="light"] .onboarding-option-card.selected .option-title {
+    color: #1D1D1F;
+    font-weight: 600;
+}
+[data-theme="light"] .onboarding-option-card.selected .option-check-circle,
+[data-theme="light"] .onboarding-option-card.selected .option-icon-wrap {
+    background: #6366F1;
+    border-color: #6366F1;
+    color: #ffffff;
+}
+
+[data-theme="light"] .onboarding-chip-card.selected .chip-label {
+    color: #4F46E5;
+    font-weight: 600;
+}
+[data-theme="light"] .onboarding-chip-card.selected .chip-check-box {
+    background: #4F46E5;
+    border-color: #4F46E5;
+    color: #ffffff;
+}
+
+[data-theme="light"] .onboarding-lang-card.selected .lang-native {
+    color: #1D1D1F;
+}
+[data-theme="light"] .onboarding-lang-card.selected .lang-en {
+    color: #4F46E5;
+}
+
+[data-theme="light"] .onboarding-style-card.selected .style-title,
+[data-theme="light"] .onboarding-theme-card.selected .theme-card-title {
+    color: #1D1D1F;
+}
+[data-theme="light"] .onboarding-style-card.selected .style-icon-wrap,
+[data-theme="light"] .onboarding-theme-card.selected .theme-card-icon-wrap {
+    background: #6366F1;
+    border-color: #6366F1;
+    color: #ffffff;
+}
