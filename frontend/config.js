@@ -13,7 +13,7 @@
  */
 
 // Configure your production backend URL here in one place when deployed:
-export const PRODUCTION_BACKEND_URL = '';
+export const PRODUCTION_BACKEND_URL = 'https://bis-backend-production-e6d7.up.railway.app';
 
 export function getApiBaseUrl() {
     if (typeof window !== 'undefined') {
