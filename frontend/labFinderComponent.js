@@ -786,7 +786,9 @@ export class LabFinderComponent {
 
         // If search was monkeypatched (e.g. by unit tests) or if queryVal is empty and standardVal is set:
         const isMonkeyPatched = typeof this.search === 'function' && this.search !== LabFinderComponent.prototype.search;
-        if (isMonkeyPatched || (!queryVal && standardVal)) {
+        const isStrictStandard = /^IS\s*\d+/i.test(effectiveQuery);
+        if (isMonkeyPatched || (!queryVal && standardVal && !queryVal.trim()) || isStrictStandard) {
+            requestOptions.standard = effectiveQuery;
             this.search(requestOptions);
             return;
         }

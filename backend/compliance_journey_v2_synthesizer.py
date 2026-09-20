@@ -792,7 +792,7 @@ class ComplianceJourneyV2Synthesizer:
             "   - Comparison Questions: Use a Markdown table.\n"
             "   - Answer Length: Decide based on the query. 1-3 sentences for simple questions. Do not make a simple question unnecessarily long, and do not compress complex answers into one paragraph.\n"
             "   - Remove Repetition: Do not repeat facts across the opening sentence, bullet lists, key information, and footers. State it once.\n"
-            "   - Semantic Markdown: Use **bold**, *italic*, bullets, numbered lists, and short headings. Do NOT output raw HTML. Do not use excessive bolding, emojis, or long horizontal separators."
+            "   - Semantic Markdown: Use **bold**, *italic*, bullets, and numbered lists. Do NOT output raw HTML. DO NOT output markdown tables (|---|). DO NOT output ### or ## heading syntax. Use CAPS or bolding instead for emphasis."
         )
 
         # Build context summary
@@ -890,7 +890,7 @@ STAGE 2 (Applicable Indian Standards):
 "Which Indian Standard(s) apply? State the primary standard concisely, or provide a bulleted list if multiple apply."
 
 STAGE 3 (QCO / Regulatory Status):
-"What QCO or regulatory order applies? State the regulatory status first, followed by compact bulleted facts (order, notification, effective date; or conflict summary)."
+"What QCO or regulatory order applies? State the regulatory status first, followed by compact facts (order, notification)."
 
 STAGE 4 (Mandatory Certification):
 "Is BIS certification mandatory? State the requirement directly in the first sentence, followed by the regulatory basis."
@@ -899,7 +899,7 @@ STAGE 5 (Certification Scheme):
 "Which BIS certification scheme applies? State the specific scheme concisely (e.g. Scheme-I, Scheme-II/CRS, or unestablished)."
 
 STAGE 6 (Required Testing):
-"What testing is required? Provide a 1-sentence SIT introduction, followed by a structured bullet list of specific tests. Summarize frequency/SIT briefly. Do not dump a single dense paragraph."
+"What testing is required? Use a clean, concise list for tests, frequency, and sampling. Avoid dense paragraphs."
 
 STAGE 7 (Factory Inspection):
 "What factory inspection applies? State clearly if required or not, followed by key quality control points in bullets if in evidence."
@@ -914,10 +914,10 @@ STAGE 10 (Certification Process):
 "What is the step-by-step certification workflow? Provide a numbered sequence (1., 2., 3.) of procedural steps."
 
 ASSESSMENT:
-"Answer the user's original question directly in the first sentence, followed by a structured summary."
+"Write one concise executive summary paragraph stating the identified product, standard, regulatory position, certification/testing/lab requirements. Followed by a concise 'At a glance' section summarizing the journey."
 
 NEXT STEPS:
-"Provide numbered practical next actions (1., 2., 3.)."
+"Provide a simple, concise final checklist (1., 2., 3.) of 4-5 actions (e.g. apply for licence, complete testing, use a lab, prepare records, factory inspection). Keep each item to one line."
 
 OUTPUT FORMAT: Return STRICT JSON matching:
 {{

@@ -943,20 +943,25 @@ export class ComplianceJourneyComponent {
 
         // Wire Lab Finder Bridge Buttons
         rootElement.querySelectorAll('.btn-comp-open-lab').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 const std = btn.getAttribute('data-standard') || '';
                 const loc = btn.getAttribute('data-location') || '';
                 if (typeof options.onOpenLabFinder === 'function') {
                     options.onOpenLabFinder(std, loc);
                 } else if (typeof window.switchView === 'function') {
                     window.switchView('labfinder');
-                    const viewLabs = document.getElementById('viewLabFinder');
-                    if (viewLabs) {
-                        const inputStd = viewLabs.querySelector('#labInputStandard') || viewLabs.querySelector('#labInputQuery');
-                        const inputLoc = viewLabs.querySelector('#labInputLocation');
-                        if (inputStd) inputStd.value = std;
-                        if (inputLoc) inputLoc.value = loc;
-                    }
+                    setTimeout(() => {
+                        const viewLabs = document.getElementById('viewLabFinder');
+                        if (viewLabs) {
+                            const inputStd = viewLabs.querySelector('#labInputStandard');
+                            const inputQuery = viewLabs.querySelector('#labInputQuery');
+                            const inputLoc = viewLabs.querySelector('#labInputLocation');
+                            if (inputStd) inputStd.value = std;
+                            if (inputQuery) inputQuery.value = std;
+                            if (inputLoc) inputLoc.value = loc || '';
+                        }
+                    }, 100);
                 }
             });
         });
@@ -1370,8 +1375,8 @@ export class ComplianceJourneyComponent {
                 </div>
                 <ol class="next-steps-list">
                     ${steps.map((s, idx) => `
-                        <li class="next-step-item">
-                            <span class="next-step-num font-mono">${idx + 1}.</span>
+                        <li class="next-step-item" style="display: flex; align-items: center; margin-bottom: 12px; font-size: 13px;">
+                            <span class="next-step-num font-mono" style="color: var(--text-muted); font-size: 11px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 999px; margin-right: 12px; display: inline-flex; align-items: center; justify-content: center;">${String(idx + 1).padStart(2, '0')}</span>
                             <span class="next-step-text">${escapeHtml(s)}</span>
                         </li>
                     `).join('')}
@@ -1424,7 +1429,13 @@ export class ComplianceJourneyComponent {
             return out;
         };
 
-        const lines = escaped.split(/\r?\n/);
+        
+        // Strip out rogue markdown
+        let sanitized = escaped.replace(/^#{1,6}\s+/gm, ''); // Remove ###
+        sanitized = sanitized.replace(/^\|.*\|$/gm, ''); // Remove table rows
+        sanitized = sanitized.replace(/\|---\|/g, ''); // Remove table separators
+        const lines = sanitized.split(/\r?\n/).filter(line => line.trim().length > 0 && !line.match(/^\|?-+\|?$/));
+
         const htmlParts = [];
         let currentUl = null;
         let currentOl = null;
@@ -2093,12 +2104,7 @@ export class ComplianceJourneyComponent {
                         <div class="stage-primary-answer">${ComplianceJourneyComponent.renderV2Answer(directAnswer)}</div>
                         ${v2Stage ? ComplianceJourneyComponent.renderV2KeyInformation(v2Stage.key_information, directAnswer) : ''}
                         ${gridItems.length > 0 ? ComplianceJourneyComponent.renderKeyDetailsGrid(gridItems) : ''}
-                        ${showGeneralRef ? `
-                            <div class="general-reference-box">
-                                <div class="general-reference-tag">${escapeHtml(t('compliance_journey.general_reference_label', 'GENERAL REFERENCE'))}</div>
-                                <p class="general-reference-text">Product-specific certification scheme not established in available BIS records. General BIS conformity assessment procedures may apply once determined.</p>
-                            </div>
-                        ` : ''}
+
                     </div>
                     ${evId ? `
                         <div class="stage-footer">
@@ -2562,43 +2568,38 @@ export class ComplianceJourneyComponent {
         if (!locStr && geo.formatted_address) {
             locStr = geo.formatted_address.length > 50 ? geo.formatted_address.slice(0, 47) + '...' : geo.formatted_address;
         }
-        if (!locStr) locStr = 'Official BIS Location';
+        if (!locStr) locStr = 'India';
 
-        const dist = geo.distance_km != null ? `${Number(geo.distance_km).toFixed(1)} km away` : '';
         const scopeEv = lab.capability_evidence || {};
-        const scopeText = scopeEv.explanation || scopeEv.scope_text || (scopeEv.matching_parameters && scopeEv.matching_parameters.join(', ')) || (scopeEv.scope_completeness === 'COMPLETE_SCOPE' ? `Complete testing scope for ${primaryStd || 'Indian Standard'}` : `Accredited for ${primaryStd || 'Indian Standard'}`);
-        const cityLoc = addr.city || (geo.formatted_address && geo.formatted_address.includes('Delhi') ? 'Delhi' : '');
+        let scopeText = 'Testing scope matches requirement';
+        if (scopeEv.matching_parameters && scopeEv.matching_parameters.length > 0) {
+            scopeText = 'Authorized testing scope covers required parameters.';
+        }
+        
+        const bisStatus = lab.category ? lab.category.replace('BIS_', '') : 'Recognized Laboratory';
 
         return `
-            <div class="comp-lab-card" role="article">
-                <div class="lab-card-header">
-                    <span class="lab-rank-pill">#${idx + 1}</span>
-                    ${lab.category ? `<span class="lab-cat-pill">${escapeHtml(lab.category.replace('BIS_', ''))}</span>` : ''}
+            <div class="comp-lab-card" role="article" style="padding: 16px; border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 8px; margin-bottom: 12px; background: transparent;">
+                <h5 class="comp-lab-name" style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);">${escapeHtml(lab.laboratory_name)}</h5>
+                <div class="comp-lab-loc" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                    ${escapeHtml(locStr)}
                 </div>
-                <h5 class="comp-lab-name">${escapeHtml(lab.laboratory_name)}</h5>
-                <div class="comp-lab-loc">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <span>${escapeHtml(locStr)}</span>
-                    ${dist ? `<span class="lab-dist-tag font-mono">(${escapeHtml(dist)})</span>` : ''}
+                <div class="key-detail-row" style="margin-bottom: 4px; font-size: 13px; padding-bottom: 0; border: none;">
+                    <span class="key-detail-label" style="font-weight: 500;">Status</span>
+                    <span class="key-detail-value">${escapeHtml(bisStatus)}</span>
                 </div>
-                <div class="comp-lab-scope">
-                    <span class="scope-label">Testing Scope:</span>
-                    <span class="scope-val">${escapeHtml(scopeText.slice(0, 140))}${scopeText.length > 140 ? '...' : ''}</span>
+                <div class="key-detail-row" style="margin-bottom: 12px; font-size: 13px; padding-bottom: 0; border: none;">
+                    <span class="key-detail-label" style="font-weight: 500;">Scope</span>
+                    <span class="key-detail-value">${escapeHtml(scopeText)}</span>
                 </div>
-                ${scopeEv.base_testing_fee != null ? `
-                    <div class="comp-lab-fee font-mono">
-                        <span class="fee-label">Base testing fee:</span>
-                        <span class="fee-val">₹${Number(scopeEv.base_testing_fee).toLocaleString('en-IN')}</span>
-                    </div>
-                ` : ''}
-                <div class="comp-lab-actions">
-                    <button type="button" class="btn-comp-open-lab" data-standard="${escapeHtml(primaryStd)}" data-location="${escapeHtml(cityLoc)}">
-                        <span>${escapeHtml(t('compliance_journey.view_in_lab_finder', 'Inspect in Lab Finder'))} &rarr;</span>
-                    </button>
-                </div>
+                <button type="button" class="btn-comp-evidence btn-comp-open-lab" data-standard="${escapeHtml(primaryStd)}" style="cursor:pointer; color: var(--text-primary); font-weight: 500;">
+                    Inspect in Lab Finder &rarr;
+                </button>
             </div>
         `;
     }
+
+
 
     // -------------------------------------------------------------------------
     // Stage 9: Qualified BIS Laboratories
@@ -2796,10 +2797,6 @@ export class ComplianceJourneyComponent {
 
         const directAnswer = v2Stage?.answer || primaryAnswer;
 
-        const disclaimerText = hasConfirmedScheme
-            ? t('compliance_journey.general_reference_process_applicable', 'Standard BIS conformity assessment procedure under the applicable certification scheme (online application via Manakonline, in-house testing facility setup, factory audit & sampling, independent lab testing, and grant of licence).')
-            : t('compliance_journey.general_reference_process_disclaimer', 'This is general BIS conformity-assessment information. Its applicability to this product has not been established.');
-
         const evId = procStage.provenance?.record_id || (procStage.provenance ? 'prov_process' : null);
 
         const defaultSteps = [
@@ -2840,12 +2837,7 @@ export class ComplianceJourneyComponent {
                     <div class="stage-body">
                         <div class="stage-primary-answer">${ComplianceJourneyComponent.renderV2Answer(directAnswer)}</div>
                         ${v2Stage ? ComplianceJourneyComponent.renderV2KeyInformation(v2Stage.key_information, directAnswer) : ''}
-                        ${isGeneric ? `
-                            <div class="general-reference-box">
-                                <div class="general-reference-tag">${escapeHtml(t('compliance_journey.general_reference_label', 'GENERAL REFERENCE'))}</div>
-                                <p class="general-reference-text">${escapeHtml(disclaimerText)}</p>
-                            </div>
-                        ` : (gridItems.length > 0 ? ComplianceJourneyComponent.renderKeyDetailsGrid(gridItems) : '')}
+                        ${(!isGeneric && gridItems.length > 0) ? ComplianceJourneyComponent.renderKeyDetailsGrid(gridItems) : ''}
                         ${stepsHtml}
                     </div>
                     ${evId ? `

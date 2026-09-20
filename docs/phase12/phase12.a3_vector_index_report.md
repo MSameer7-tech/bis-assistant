@@ -18,15 +18,15 @@ Generate a deterministic local semantic vector index for all 1,187 Phase 12.3 re
 |----------|--------|
 | v22 | `68229fbe37078b6571da7a0b71747fd4b5b383f232b796c71ae6e773c0c13dbe` |
 | Phase 12.2 | `c91c1f0a46f235ff64738c9e1ea1fecedf9078b94076779ffd1635d95b068486` |
-| Phase 12.3 | `ebb5f102d872246f82b534a4182624d6d9c0f5cac7697dfe887d1d237f3b135a` |
+| Phase 12.3 | `09227f02feb2e72cfeac47fde37f861d6293077fe32fe1499b4373b2153b5f6d` |
 | BM25 | `4d6a07b644b5a9d172ee5c7acd34ff017746aaf58321424f462908ba87a54df6` |
 
 ## 4. Embedding Environment
 - **Python**: 3.13
-- **PyTorch**: 2.14.0
-- **Sentence Transformers**: 6.0.1
+- **PyTorch**: 2.13.0
+- **Sentence Transformers**: 6.0.0
 - **Transformers**: 5.16.1
-- **Tokenizers**: 0.23.2
+- **Tokenizers**: 0.23.1
 - **NumPy**: 2.5.2
 - **Device**: CPU
 - **Offline mode**: Enforced (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`)
@@ -63,7 +63,7 @@ Generate a deterministic local semantic vector index for all 1,187 Phase 12.3 re
 - **Inf values**: 0
 - **Finite values**: 455808
 - **Norm range**: [1.000000, 1.000000]
-- **Generation time**: 4.73s
+- **Generation time**: 8.86s
 
 ## 9. Domain Coverage
 
@@ -219,7 +219,7 @@ Generate a deterministic local semantic vector index for all 1,187 Phase 12.3 re
 - **BM25 unchanged**: True
 
 ## 17. Performance
-- **Generation time**: 4.73s for 1187 units
+- **Generation time**: 8.86s for 1187 units
 - **Batch size**: 64
 - **Vector matrix size**: 1780.6 KB
 - **Metadata size**: 376.6 KB

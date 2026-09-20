@@ -1,3 +1,4 @@
+import { apiUrl } from './config.js';
 /**
  * BIS AI Assistant - Conversation Manager Module
  *
@@ -121,7 +122,7 @@ export async function requestGroqTitle(firstMessage, convId, onTitleReady) {
     if (!firstMessage || !convId) return;
 
     try {
-        const resp = await fetch('/api/v1/conversation/title', {
+        const resp = await fetch(apiUrl('/api/v1/conversation/title'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ first_message: firstMessage })

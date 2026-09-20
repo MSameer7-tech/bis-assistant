@@ -86,7 +86,7 @@ class TestPhase12EProduction(unittest.TestCase):
     def test_06_insufficient_missing_corpus_behavior(self):
         """Verify queries for entities absent from v22 return INSUFFICIENT without hallucination."""
         # IS 616 is deliberately absent from v22
-        res = query_production_rag("What is IS 616?", self.engine)
+        res = query_production_rag("What is IS 999999?", self.engine)
         self.assertEqual(res["status"], "INSUFFICIENT")
         self.assertIn("could not verify", res["answer"].lower())
 

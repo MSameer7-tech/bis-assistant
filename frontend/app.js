@@ -118,13 +118,17 @@ function initApp() {
                     onOpenEvidence: (evId) => openEvidenceDrawer(evId),
                     onOpenLabFinder: (std, loc) => {
                         switchView('labfinder');
-                        if (labFinder && viewLabFinder) {
-                            const inputStd = viewLabFinder.querySelector('#labInputStandard') || viewLabFinder.querySelector('#labInputQuery');
-                            const inputLoc = viewLabFinder.querySelector('#labInputLocation');
-                            if (inputStd) inputStd.value = std;
-                            if (inputLoc) inputLoc.value = loc || '';
-                            labFinder.executeSearchFromInputs();
-                        }
+                        setTimeout(() => {
+                            if (labFinder && viewLabFinder) {
+                                const inputStd = viewLabFinder.querySelector('#labInputStandard');
+                                const inputQuery = viewLabFinder.querySelector('#labInputQuery');
+                                const inputLoc = viewLabFinder.querySelector('#labInputLocation');
+                                if (inputStd) inputStd.value = std || '';
+                                if (inputQuery) inputQuery.value = std || '';
+                                if (inputLoc) inputLoc.value = loc || '';
+                                labFinder.executeSearchFromInputs();
+                            }
+                        }, 100);
                     }
                 });
                 complianceJourney.init();
@@ -1272,7 +1276,20 @@ function initApp() {
             text = text.replace(term, "");
         }
 
+        // Clean up empty parens and duplicate spaces
         text = text.replace(/\(\s*\)/g, "").replace(/[ 	]{2,}/g, " ");
+
+        // Convert literal <br> or \<br> to newlines BEFORE line-splitting
+        text = text.replace(/\\?<\/?br\s*\/?>/gi, "\n");
+
+        // Force newlines around headings if they got squashed
+        text = text.replace(/([^\n#])\s*(#{2,4}\s+[A-Za-z])/g, "$1\n\n$2");
+        
+        // Force newlines for Standalone Bold if squashed (e.g. "Text. **Heading**")
+        text = text.replace(/([^\n])\s*(\*\*[A-Za-z][^*]+\*\*(?:\s*[-–:]|$))/g, "$1\n\n$2");
+
+        // Break apart "Heading - Content" if it got squashed on one line
+        text = text.replace(/^(\*\*[A-Za-z][^*]+\*\*)\s*[-–:]\s*(.+)$/gm, "$1\n$2");
 
         // Force inline bullet lists to expand to newlines
         text = text.replace(/([.:;])\s+[-*•]\s+([A-Za-z0-9])/g, "$1\n- $2");
@@ -1280,6 +1297,9 @@ function initApp() {
         // Force inline numbered lists to expand to newlines
         text = text.replace(/([a-z0-9.:;])\s+(\d+\.)\s+([A-Za-z0-9])/gi, "$1\n$2 $3");
 
+        // Ensure table rows are on their own lines (if they were squashed like "| Row 1 | Row 2 |")
+        // Not perfectly safe for all text, but usually | is only used in tables here
+        text = text.replace(/\|\s+\|/g, "|\n|");
 
         return text.trim();
     }
@@ -1462,18 +1482,7 @@ function initApp() {
         let complianceJourneyHtml = "";
         if (data.compliance_journey) {
             complianceJourneyHtml = ComplianceJourneyComponent.renderJourneyCard(data.compliance_journey, { t: (k, fb) => t(k, fb) });
-        } else if (matchedStd) {
-            const isComplianceIntent = ["COMPLIANCE_REQUIREMENT", "CERTIFICATION", "PROCESS", "MANDATORY_STATUS"].includes(intent) || 
-                                       /\b(product compliance|certification requirements?|regulatory requirements?|compliance journey)\b/i.test(userQueryText);
-            
-            if (isComplianceIntent && !/\b(what is|explain|define|difference between)\b/i.test(userQueryText)) {
-                actions.push(`
-                    <button type="button" class="btn-contextual-action btn-chat-open-compliance" data-standard="${escapeHtml(matchedStd)}">
-                        ${t("compliance_journey.chat_bridge_btn_short", "Explore compliance requirements &rarr;")}
-                    </button>
-                `);
-            }
-        }
+        } else if (false) {}
 
         // 5b. Lab Finder Action
         if (matchedStd && isLabQuery) {
@@ -1547,8 +1556,10 @@ function initApp() {
                 switchView('labfinder');
                 if (labFinder && viewLabFinder) {
                     const inputStd = viewLabFinder.querySelector('#labInputStandard');
+                    const inputQuery = viewLabFinder.querySelector('#labInputQuery');
                     const inputLoc = viewLabFinder.querySelector('#labInputLocation');
                     if (inputStd) inputStd.value = std;
+                    if (inputQuery) inputQuery.value = std;
                     if (inputLoc) inputLoc.value = loc || '';
                     labFinder.executeSearchFromInputs();
                 }
@@ -1578,13 +1589,17 @@ function initApp() {
                 onOpenEvidence: (evId) => openEvidenceDrawer(evId),
                 onOpenLabFinder: (std, loc) => {
                     switchView('labfinder');
-                    if (labFinder && viewLabFinder) {
-                        const inputStd = viewLabFinder.querySelector('#labInputStandard') || viewLabFinder.querySelector('#labInputQuery');
-                        const inputLoc = viewLabFinder.querySelector('#labInputLocation');
-                        if (inputStd) inputStd.value = std;
-                        if (inputLoc) inputLoc.value = loc || '';
-                        labFinder.executeSearchFromInputs();
-                    }
+                    setTimeout(() => {
+                        if (labFinder && viewLabFinder) {
+                            const inputStd = viewLabFinder.querySelector('#labInputStandard');
+                            const inputQuery = viewLabFinder.querySelector('#labInputQuery');
+                            const inputLoc = viewLabFinder.querySelector('#labInputLocation');
+                            if (inputStd) inputStd.value = std || '';
+                            if (inputQuery) inputQuery.value = std || '';
+                            if (inputLoc) inputLoc.value = loc || '';
+                            labFinder.executeSearchFromInputs();
+                        }
+                    }, 100);
                 }
             });
         }
@@ -1656,23 +1671,39 @@ function initApp() {
                 continue;
             }
 
-            // Markdown Table: line contains '|' and next line is '| --- |'
-            if (trimmed.startsWith('|') && trimmed.endsWith('|') && i + 1 < lines.length && /^\|(?:\s*:?-+:?\s*\|)+$/.test(lines[i + 1].trim())) {
+            // Markdown Table (Robust)
+            if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.indexOf('|', 1) !== -1) {
                 closeAllLists();
-                const headerCells = trimmed.slice(1, -1).split('|').map(c => c.trim());
-                i += 2; // skip header and separator
-                let tableRows = [];
-                while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
-                    const rowCells = lines[i].trim().slice(1, -1).split('|').map(c => c.trim());
-                    tableRows.push(rowCells);
-                    i++;
+                // If it's just a separator row, ignore it and continue
+                if (/^\|(?:\s*:?-+:?\s*\|)+$/.test(trimmed)) {
+                     continue;
                 }
-                i--; // back up one line because loop increments
+                
+                const headerCells = trimmed.slice(1, -1).split('|').map(c => c.trim());
+                let tableRows = [];
+                i++;
+                
+                while (i < lines.length) {
+                    let nextTrimmed = lines[i].trim();
+                    if (nextTrimmed.startsWith('|') && nextTrimmed.endsWith('|')) {
+                        if (/^\|(?:\s*:?-+:?\s*\|)+$/.test(nextTrimmed)) {
+                             i++;
+                             continue;
+                        }
+                        const rowCells = nextTrimmed.slice(1, -1).split('|').map(c => c.trim());
+                        tableRows.push(rowCells);
+                        i++;
+                    } else {
+                        break;
+                    }
+                }
+                i--; // Step back
+                
                 html += `
                     <div class="table-container">
                         <table class="editorial-table">
                             <thead><tr>${headerCells.map(h => `<th>${formatInline(h)}</th>`).join('')}</tr></thead>
-                            <tbody>${tableRows.map(r => `<tr>${r.map((c, idx) => `<td data-label=\"${escapeHtml(headerCells[idx])}\">${formatInline(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+                            <tbody>${tableRows.map(r => `<tr>${r.map((c, idx) => `<td data-label="${escapeHtml(headerCells[idx] || '')}">${formatInline(c)}</td>`).join('')}</tr>`).join('')}</tbody>
                         </table>
                     </div>
                 `;
@@ -1706,15 +1737,31 @@ function initApp() {
                 closeAllLists();
                 html += `<blockquote>${formatInline(trimmed.substring(2))}</blockquote>`;
             }
-            // Standard and Key-Value Bullets (clean list items without enclosing cards)
-            else if (/^[-*+•]\s+/.test(trimmed)) {
+            // Unordered list items
+            else if (/^(\s*)[-*+•]\s+/.test(trimmed)) {
                 if (inNumList || inAlphaList) closeAllLists();
                 if (!inList) {
                     html += '<ul class="editorial-list">';
                     inList = true;
                 }
                 const content = trimmed.replace(/^[-*+•]\s+/, '');
-                html += `<li>${formatInline(content)}</li>`;
+                const indent = line.match(/^(\s*)/)[1].length;
+                const margin = indent > 0 ? ` style="margin-left: ${indent * 8}px;"` : "";
+                html += `<li${margin}>${formatInline(content)}</li>`;
+            }
+            // Numbered list items
+            else if (/^(\s*)\d+[\.\)]\s+/.test(trimmed)) {
+                const numMatch = trimmed.match(/^(\d+)[\.\)]\s+/);
+                const itemNum = numMatch ? parseInt(numMatch[1], 10) : 1;
+                if (inList || inAlphaList) closeAllLists();
+                if (!inNumList) {
+                    html += `<ol class="editorial-num-list" start="${itemNum}">`;
+                    inNumList = true;
+                }
+                const content = trimmed.replace(/^\d+[\.\)]\s+/, '');
+                const indent = line.match(/^(\s*)/)[1].length;
+                const margin = indent > 0 ? ` style="margin-left: ${indent * 8}px;"` : "";
+                html += `<li value="${itemNum}"${margin}>${formatInline(content)}</li>`;
             }
             // Numbered list items (e.g. "1. " or "1) ")
             else if (/^\d+[\.\)]\s+/.test(trimmed)) {
@@ -1769,8 +1816,16 @@ function initApp() {
         // Inline code
         formatted = formatted.replace(/`([^`]+)`/g, "<code class=\"inline-code\">$1</code>");
         
-        // Subtle highlighting for Indian Standards (e.g. IS 4985, IS 12254:2021)
-        formatted = formatted.replace(/\b(IS\s*\d+(?::\d{4})?(?:\s+Part\s+\d+)?)\b/g, "<span class=\"inline-standard\">$1</span>");
+        // 1. Process Macros FIRST, so their contents are evaluated
+        formatted = formatted.replace(/\[CTA_LAB_BUTTON:(\d+)\|([^\]]+)\]/g, '<button class="btn-contextual-action btn-chat-open-lab" style="margin-top: 10px;" data-standard="$2">View all $1 laboratories &rarr;</button>');
+
+        formatted = formatted.replace(/\[LAB_ITEM:\s*(.*?)\s*\|\s*(.*?)\]/g, '<div class="chat-lab-item"><strong>$1</strong><div class="lab-loc" style="font-size: 0.9em; color: var(--text-secondary, #6b7280); line-height: 1.3; margin-top: 2px;">$2</div></div>');
+
+        // 2. Subtle highlighting for Indian Standards (e.g. IS 4985)
+        // We use a negative lookahead to ensure we don't match inside HTML attributes (like data-standard="IS 374")
+        // and a negative lookbehind (hard in JS, so we use a replacer function or just a simpler check)
+        // A safer way: only match IS ... if it is NOT preceded by an equals sign and quote `="` or inside a tag.
+        formatted = formatted.replace(/(^|>|[^="a-zA-Z])\b(IS\s*\d+(?::\d{4})?(?:\s+Part\s+\d+)?)\b(?=[^<]*(?:<|$))/g, "$1<span class=\"inline-standard\">$2</span>");
 
         return formatted;
     }

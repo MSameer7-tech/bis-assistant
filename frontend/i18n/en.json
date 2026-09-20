@@ -43,13 +43,15 @@
       "insufficient": "Insufficient Evidence",
       "error": "Error processing query",
       "hybrid": "Partially BIS-verified • Additional information is unverified",
-      "fallback": "General knowledge • Not BIS-verified"
+      "fallback": "General knowledge • Not BIS-verified",
+      "general_guidance": "Some details above are general guidance and should be confirmed against the applicable BIS requirements."
     },
     "actions": {
       "copy": "Copy answer",
       "copied": "Copied!",
       "view_evidence": "View Evidence",
-      "supporting_evidence": "Supporting Evidence"
+      "supporting_evidence": "Supporting Evidence",
+      "find_lab": "Find a BIS laboratory →"
     }
   },
   "home": {
@@ -235,7 +237,7 @@
     "field_standard_placeholder": "e.g. IS 4985, IS 374, IS 16046 Part 2",
     "field_location": "Location (Optional)",
     "field_location_placeholder": "e.g. Delhi, Mumbai, Bengaluru",
-    "field_query": "Natural Language Query",
+    "field_query": "Describe your product or ask a question",
     "field_query_placeholder": "e.g. I manufacture PVC pipes for drinking water. What BIS standards, certification, testing and laboratories apply?",
     "btn_generate": "Generate Compliance Journey",
     "btn_generating": "Querying Authoritative BIS Evidence...",
@@ -248,7 +250,6 @@
     "heading_sub": "Enter a product, Indian Standard, or compliance question to get a step-by-step assessment.",
     "workspace_title": "Start with your product",
     "workspace_sub": "Describe what you manufacture, enter an Indian Standard, or ask a compliance question.",
-    "field_query": "Describe your product or ask a question",
     "field_query_placeholder_long": "e.g. I manufacture PVC pipes for drinking water. What BIS standards, certification, testing and laboratories apply?",
     "supporting_line": "Standards • Certification • Testing • Laboratories",
     "preview_title": "Your compliance journey",
@@ -422,7 +423,8 @@
     "loader_footer_subnote": "This may take a few moments",
     "loader_ready": "Journey ready",
     "loader_error_title": "Unable to build the compliance journey",
-    "btn_try_again": "Try again"
+    "btn_try_again": "Try again",
+    "chat_bridge_btn_short": "Explore compliance requirements →"
   },
   "auth": {
     "signin_title": "Sign in to BIS Assistant",

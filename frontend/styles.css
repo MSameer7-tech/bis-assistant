@@ -15952,3 +15952,419 @@ body[data-theme="light"] .btn-comp-chip:hover {
 .assistant-bubble.style-professional-compliance {
     border-left: none !important;
 }
+
+/* PILLED CHIPS FIX */
+.btn-comp-chip {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-secondary, #94a3b8) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 6px 14px !important;
+    border-radius: 999px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+
+    font-family: inherit !important;
+}
+
+.btn-comp-chip:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+body[data-theme="light"] .btn-comp-chip {
+    background: rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #475569 !important;
+}
+
+body[data-theme="light"] .btn-comp-chip:hover {
+    background: rgba(0, 0, 0, 0.06) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    color: #0f172a !important;
+}
+
+/* FIX FONT INHERITANCE */
+.quiz-title, .quiz-subtitle, .quiz-label, .quiz-input, .quiz-button {
+    font-family: inherit !important;
+}
+
+/* REDESIGN 2026 - COMPLIANCE JOURNEY */
+
+.compliance-timeline-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+    padding-left: 0 !important;
+    border: none !important;
+    margin-top: 24px !important;
+}
+
+.compliance-timeline-container::before {
+    display: none !important;
+}
+
+.compliance-stage-item {
+    position: relative !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.compliance-stage-item[data-stage-num="9"],
+.compliance-stage-item[data-stage-num="10"] {
+    grid-column: 1 / -1 !important;
+}
+
+.stage-marker {
+    display: none !important;
+}
+
+.stage-card {
+    width: 100% !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.stage-eyebrow {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--text-muted) !important;
+    margin-bottom: 4px !important;
+    display: block !important;
+    font-weight: 600 !important;
+}
+
+.stage-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 0 12px 0 !important;
+}
+
+.stage-primary-answer {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 12px !important;
+}
+
+.stage-body {
+    flex-grow: 1 !important;
+}
+
+.stage-footer {
+    margin-top: 16px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.05)) !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.btn-comp-evidence {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
+    padding: 0 !important;
+    font-weight: 500 !important;
+}
+
+.btn-comp-evidence:hover {
+    color: var(--text-primary) !important;
+    background: transparent !important;
+    transform: none !important;
+}
+
+/* Assessment Redesign */
+.compliance-assessment-banner {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+.assessment-banner-header {
+    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
+}
+
+.assessment-banner-title {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+}
+
+.assessment-banner-text {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: var(--text-secondary) !important;
+}
+
+.assessment-banner-text table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 16px 0 !important;
+}
+
+.assessment-banner-text th,
+.assessment-banner-text td {
+    padding: 12px 16px !important;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+    text-align: left !important;
+    font-size: 13px !important;
+}
+
+.assessment-banner-text th {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .compliance-timeline-container {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Clean grid items */
+.key-details-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-top: 12px !important;
+}
+
+.key-detail-row {
+    display: grid !important;
+    grid-template-columns: 1fr 2fr !important;
+    gap: 12px !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.05)) !important;
+    padding-bottom: 8px !important;
+}
+.key-detail-row:last-child {
+    border-bottom: none !important;
+}
+
+.key-detail-label {
+    color: var(--text-muted) !important;
+    font-weight: 500 !important;
+}
+.key-detail-value {
+    color: var(--text-primary) !important;
+}
+
+/* TYPOGRAPHY AND COLOR POLISH 2026 */
+
+.compliance-journey-card {
+    --text-primary: #F3F4F6 !important;
+    --text-secondary: #C4C7D0 !important;
+    --text-muted: #8B8F9A !important;
+    --text-subtle: #6B7080 !important;
+    --color-accent: #9b82f3 !important; /* subtle purple/indigo */
+}
+body[data-theme="light"] .compliance-journey-card {
+    --text-primary: #111827 !important;
+    --text-secondary: #374151 !important;
+    --text-muted: #6B7280 !important;
+    --text-subtle: #9CA3AF !important;
+    --color-accent: #6366f1 !important;
+}
+
+/* 1. Page/Main title */
+/* Assuming page title uses existing globals, but we enforce card text */
+
+/* 2. Assessment Typography */
+.assessment-banner-header {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 12px !important;
+}
+.assessment-banner-title {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    color: var(--color-accent) !important;
+}
+.assessment-banner-text {
+    font-size: 13.5px !important;
+    line-height: 1.6 !important;
+    color: var(--text-secondary) !important;
+}
+
+.assessment-label {
+    display: block !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    margin-top: 14px !important;
+    margin-bottom: 2px !important;
+}
+/* First label brighter (e.g. 'Answer:') */
+.assessment-banner-text p:first-child .assessment-label,
+.assessment-banner-text ul:first-child li:first-child .assessment-label {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* 3. Stage Eyebrow */
+.stage-eyebrow {
+    font-size: 10.5px !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    color: var(--color-accent) !important;
+    margin-bottom: 4px !important;
+    display: block !important;
+}
+
+/* 4. Stage Title */
+.stage-title {
+    font-size: 15.5px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 0 12px 0 !important;
+    line-height: 1.3 !important;
+}
+
+/* 5. Primary Answer */
+.stage-primary-answer {
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    line-height: 1.55 !important;
+    color: var(--text-primary) !important;
+    margin-bottom: 12px !important;
+}
+
+/* 6. Body Text */
+.v2-answer-p, .v2-answer-ul, .v2-answer-ol, .stage-subtle-indicator, .empty-labs-content p, .assessment-banner-text p {
+    font-size: 13.5px !important;
+    line-height: 1.6 !important;
+    color: var(--text-secondary) !important;
+}
+
+/* 7. Field Labels */
+.key-detail-label {
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    letter-spacing: 0.02em !important;
+}
+
+/* 8. Field Values */
+.key-detail-value {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+}
+
+/* 9. Evidence Links */
+.btn-comp-evidence {
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: var(--color-accent) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    text-decoration: none !important;
+    opacity: 0.85;
+}
+.btn-comp-evidence:hover {
+    opacity: 1;
+    color: var(--color-accent) !important;
+}
+
+/* 10. Laboratory Names */
+.comp-lab-name {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+/* 11. Laboratory Metadata */
+.comp-lab-loc, .lab-dist-tag {
+    font-size: 11.5px !important;
+    color: var(--text-muted) !important;
+}
+
+/* 12. Next Steps */
+.next-step-num {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--text-subtle) !important;
+    background: rgba(139, 143, 154, 0.1) !important; 
+}
+body[data-theme="light"] .next-step-num {
+    background: rgba(107, 114, 128, 0.1) !important;
+}
+.next-step-text {
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
+    line-height: 1.5 !important;
+}
+.next-steps-title {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: 0.08em !important;
+}
+
+/* 13. Standard / Technical Text */
+.standard-accent {
+    font-weight: 600 !important;
+    color: var(--color-accent) !important;
+}
+
+/* 14. Important Numbers (e.g. lab count) */
+.remaining-labs-wrapper button, .btn-toggle-all-labs {
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Ensure lists don't break flex in key-detail-value */
+.key-detail-value ul {
+    margin: 0 !important;
+    padding-left: 16px !important;
+}
+
+/* Remove visual noise */
+.compliance-journey-card * {
+    text-shadow: none !important;
+}
+
+/* Standard bold treatment across journey card */
+.compliance-journey-card strong, 
+.compliance-journey-card b {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Exception for our specific assessment labels which are already targeted above, 
+   but just in case let's re-affirm their muted nature if they are .assessment-label */
+.assessment-label {
+    color: var(--text-muted) !important;
+}

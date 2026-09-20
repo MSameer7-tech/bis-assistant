@@ -78,6 +78,7 @@ if frontend_origin:
             allowed_origins.append(clean_origin)
 
 is_production = bool(
+    os.getenv("RENDER") or
     os.getenv("RAILWAY_ENVIRONMENT") or 
     os.getenv("ENV") == "production" or 
     os.getenv("ENVIRONMENT") == "production"

@@ -331,7 +331,7 @@ class TestPC6ChatIntegration:
         assert "/api/compliance/journey" in app_js
         assert "compliance_journey" in app_js
         assert "ComplianceJourneyComponent.renderJourneyCard" in app_js
-        assert "chat-compliance-bridge-card" in app_js
+        assert "chat-contextual-actions" in app_js
         assert "btn-chat-open-compliance" in app_js
 
     def test_app_js_view_switching_integration(self):

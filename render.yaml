@@ -1,0 +1,46 @@
+# Render Blueprint – BIS AI Assistant Backend
+# https://docs.render.com/blueprint-spec
+services:
+  - type: web
+    name: bis-ai-assistant
+    runtime: python
+    plan: standard
+
+    # Build
+    buildCommand: |
+      pip install -r requirements.txt && python scripts/prepare_production_model.py
+
+    # Start – Render injects $PORT automatically
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+
+    # Health check (lightweight, no Groq, no RAG init)
+    healthCheckPath: /api/health
+
+    envVars:
+      # --- Required ---
+      - key: GROQ_API_KEY
+        sync: false           # must be set manually in Render dashboard
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+      # --- CORS: your Vercel frontend origin ---
+      - key: FRONTEND_ORIGIN
+        sync: false           # e.g. https://bis-ai-assistant.vercel.app
+
+      # --- Optional ---
+      - key: GEOAPIFY_API_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: BIS_LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: BIS_LLM_TEMPERATURE
+        value: "0.0"
+      - key: BIS_LLM_MAX_TOKENS
+        value: "2048"
+      - key: BIS_LLM_TIMEOUT
+        value: "30.0"
+      - key: PYTHON_VERSION
+        value: "3.12.3"

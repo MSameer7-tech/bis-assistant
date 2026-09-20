@@ -806,7 +806,9 @@ def classify_orchestrator_intent(
     # 2. LAB_SEARCH
     lab_pattern = r'\b(?:labs|laboratory|laboratories|where\s+to\s+test|where\s+can\s+i\s+test|where\s+can\s+i\s+get|testing\s+facilit(?:y|ies)|test\s+centers?|recognized\s+labs?|recognized\s+laboratories|who\s+tests?|empanelled\s+labs?|find\s+.*laborator(?:y|ies)|find\s+labs?|search\s+labs?|प्रयोगशाला|प्रयोगशालाएं|परीक्षण\s+केंद्र|परीक्षण\s+सुविधा|कहाँ\s+परीक्षण|कहाँ\s+टेस्ट)\b'
     if re.search(lab_pattern, q_lower):
-        return INTENT_LAB_SEARCH
+        broad_cues = ["requirement", "requirements", "certification", "certifications", "mandatory", "process", "explain", "what is", "difference", "compare", "what tests", "which tests", "tests required", "testing required", "what should i", "specification", "specifications", "how to", "how do"]
+        if sum(1 for c in broad_cues if c in q_lower) == 0:
+            return INTENT_LAB_SEARCH
 
     # 3. AMENDMENT_HISTORY
     amend_cues = [
@@ -4098,6 +4100,7 @@ def orchestrate_assistant_query(
 
     # ---- Phase 14: Intent-Specific Dispatch ----
     detected_intent = query_ctx.get("intent", INTENT_AMBIGUOUS)
+    logger.info(f"DEBUG: detected_intent = {detected_intent}")
     resp_lang_early = query_ctx.get("response_language", "en")
 
     # LAB_SEARCH: Route to F3 Lab Finder
@@ -4126,12 +4129,12 @@ def orchestrate_assistant_query(
                     std_label = stds[0] if stds else (prod or "the specified standard")
                     lab_lines = []
                     if resp_lang_early == "hi":
-                        lab_lines.append(f"### {std_label} \u0915\u0947 \u0932\u093f\u090f BIS-\u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u0930\u0940\u0915\u094d\u0937\u0923 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\n")
-                        lab_lines.append(f"\u0915\u0941\u0932 **{total}** \u092e\u093e\u0928\u094d\u092f\u0924\u093e \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902 \u092e\u093f\u0932\u0940\u0902\u0964\n")
+                        lab_lines.append(f"### {std_label} के लिए BIS-मान्यता प्राप्त परीक्षण प्रयोगशालाएं\n")
+                        lab_lines.append(f"कुल **{total}** मान्यता प्राप्त प्रयोगशालाएं मिलीं।\n")
                     else:
                         lab_lines.append(f"### BIS-Recognized Testing Laboratories for {std_label}\n")
                         lab_lines.append(f"Found **{total}** recognized laboratories.\n")
-                    shown = candidates[:5]
+                    shown = candidates[:15]
                     for i, cand in enumerate(shown, 1):
                         name = getattr(cand, 'laboratory_name', 'Unknown')
                         code = getattr(cand, 'public_lab_code', '')
@@ -4141,13 +4144,13 @@ def orchestrate_assistant_query(
                         city = city if city and city != 'None' else ''
                         state = state if state and state != 'None' else ''
                         location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
-                        lab_lines.append(f"**{name}**\n{location_str}\n")
-                    if total > 10:
-                        remaining = total - 10
+                        lab_lines.append(f"[LAB_ITEM: {name} | {location_str}]")
+                    if total > 5:
+                        remaining = total - 5
                         if resp_lang_early == "hi":
-                            lab_lines.append(f"\n...\u0914\u0930 {remaining} \u0905\u0928\u094d\u092f \u092a\u094d\u0930\u092f\u094b\u0917\u0936\u093e\u0932\u093e\u090f\u0902\u0964 \u0935\u093f\u0938\u094d\u0924\u0943\u0924 \u0938\u0942\u091a\u0940 \u0915\u0947 \u0932\u093f\u090f BIS Lab Finder \u0926\u0947\u0916\u0947\u0902\u0964")
+                            lab_lines.append(f"\n[CTA_LAB_BUTTON:{total}|{std_label}]")
                         else:
-                            lab_lines.append(f"\n<button class=\"btn-assistant-cta primary\" onclick=\"window.location.href='/labs'\">View all {total} laboratories &rarr;</button>")
+                            lab_lines.append(f"\n[CTA_LAB_BUTTON:{total}|{std_label}]")
                     lab_answer = "\n".join(lab_lines)
                     lab_dispatch_success = True
                     return {
@@ -4853,6 +4856,50 @@ def orchestrate_assistant_query(
     elif active_generation_mode == "LLM_FALLBACK":
         claims_out = []
         unsupported_claims_out = []
+
+    # Append F3 Lab Finder results to general/broad queries that also mention laboratories
+    if detected_intent != INTENT_LAB_SEARCH:
+        lab_pattern = r'\b(?:labs|laboratory|laboratories|where\s+to\s+test|where\s+can\s+i\s+test|where\s+can\s+i\s+get|testing\s+facilit(?:y|ies)|test\s+centers?|recognized\s+labs?|recognized\s+laboratories|who\s+tests?|empanelled\s+labs?|find\s+.*laborator(?:y|ies)|find\s+labs?|search\s+labs?|प्रयोगशाला|प्रयोगशालाएं|परीक्षण\s+केंद्र|परीक्षण\s+सुविधा|कहाँ\s+परीक्षण|कहाँ\s+टेस्ट)\b'
+        if re.search(lab_pattern, clean_query.lower()):
+            try:
+                if "execute_natural_search" in globals():
+                    lab_query_parts = []
+                    stds = query_ctx.get("is_numbers", [])
+                    prod = query_ctx.get("product")
+                    if stds:
+                        lab_query_parts.append(f"Find BIS-recognized laboratories that can test according to {stds[0]}")
+                    elif prod:
+                        lab_query_parts.append(f"Find BIS-recognized laboratories for testing {prod}")
+                    else:
+                        lab_query_parts.append(clean_query)
+                    lab_search_query = " ".join(lab_query_parts)
+                    lab_response = execute_natural_search(LabNaturalSearchRequest(query=lab_search_query))
+                    if lab_response.status in ("success", "MATCH") and lab_response.search_results and lab_response.search_results.total_matching > 0:
+                        candidates = lab_response.search_results.candidates
+                        total = lab_response.search_results.total_matching
+                        std_label = stds[0] if stds else (prod or "the specified standard")
+                        lab_lines = []
+                        lab_lines.append(f"\n\n---\n\n### BIS-Recognized Testing Laboratories for {std_label}\n")
+                        lab_lines.append(f"Found **{total}** recognized laboratories.\n")
+                        shown = candidates[:15]
+                        for i, cand in enumerate(shown, 1):
+                            name = getattr(cand, 'laboratory_name', 'Unknown')
+                            addr = getattr(cand, 'address', None)
+                            city = getattr(addr, 'city', '') if addr else ''
+                            state = getattr(addr, 'state', '') if addr else ''
+                            city = city if city and city != 'None' else ''
+                            state = state if state and state != 'None' else ''
+                            location_str = f"{city}, {state}".strip(", ") if (city or state) else ""
+                            # Use macro for frontend rendering
+                            lab_lines.append(f"[LAB_ITEM: {name} | {location_str}]")
+                        if total > 15:
+                            lab_lines.append(f"\n[CTA_LAB_BUTTON:{total}|{std_label}]")
+                        else:
+                            # Show it anyway if there are labs, because it's a useful deep-link to the workspace
+                            lab_lines.append(f"\n[CTA_LAB_BUTTON:{total}|{std_label}]")
+                        final_answer += "\n" + "\n".join(lab_lines)
+            except Exception as e:
+                pass
 
     # Build structured response contract
     response = {

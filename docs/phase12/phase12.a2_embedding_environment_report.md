@@ -4,7 +4,7 @@
 `PHASE_12_A2_STATUS: FAIL`
 
 ## Environment
-- **macOS version**: 26.6.2
+- **macOS version**: 27.0
 - **CPU architecture**: arm64
 - **Python version**: 3.14.4
 - **Active virtual environment**: `scratch/venv` (Re-created with Python 3.9 from `/usr/bin/python3`)

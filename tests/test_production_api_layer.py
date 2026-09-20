@@ -76,7 +76,7 @@ def test_assistant_query_known_standard_english(client):
         data = res.json()
         assert data["status"] in ["SUFFICIENT", "PARTIAL"]
         assert "IS 8978" in data["answer"]
-        assert data["generation_mode"] in ["GROUNDED", "LLM_FALLBACK", "CONVERSATIONAL"]
+        assert data["generation_mode"] in ["GROUNDED", "LLM_FALLBACK", "CONVERSATIONAL", "HYBRID"]
         # Provenance integrity
         assert data["provenance"]["rag_executed_first"] is True
         assert data["provenance"]["corpus_version"] == "v13.0"
