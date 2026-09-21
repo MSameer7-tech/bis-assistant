@@ -4147,12 +4147,14 @@ function initApp() {
             switchView('labfinder');
         } else if (hash === '#compliance' || hash === '#journey') {
             switchView('compliance');
-        } else if (hash === '#login' || hash === '#signin') {
-            switchView('home');
-            openAuthModal('signin');
-        } else if (hash === '#signup') {
-            switchView('home');
-            openAuthModal('signup');
+        } else if (hash === '#login' || hash === '#signin' || hash === '#signup') {
+            // Unify routing: redirect to the actual login page instead of opening the legacy modal
+            try {
+                window.location.href = getLoginUrl();
+            } catch (e) {
+                switchView('home');
+                openAuthModal(hash === '#signup' ? 'signup' : 'signin');
+            }
         } else {
             // Direct page or #home defaults to the homepage
             switchView('home');
@@ -4212,7 +4214,11 @@ function initApp() {
             // New user accessing any URL for the first time should automatically go to the login page
             if (!localStorage.getItem('bis_auth_prompted')) {
                 localStorage.setItem('bis_auth_prompted', 'true');
-                window.location.hash = '#login';
+                try {
+                    window.location.href = getLoginUrl();
+                } catch (e) {
+                    window.location.hash = '#login';
+                }
             }
             return;
         }
