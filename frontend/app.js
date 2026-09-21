@@ -4150,7 +4150,7 @@ function initApp() {
         } else if (hash === '#login' || hash === '#signin' || hash === '#signup') {
             // Unify routing: redirect to the actual login page instead of opening the legacy modal
             try {
-                window.location.href = getLoginUrl();
+                window.location.replace(getLoginUrl());
             } catch (e) {
                 switchView('home');
                 openAuthModal(hash === '#signup' ? 'signup' : 'signin');
@@ -4202,9 +4202,6 @@ function initApp() {
         if (!authState.authenticated) {
             authState.isGuest = true;
         }
-        if (authLoadingScreen) {
-            authLoadingScreen.classList.add('hidden');
-        }
 
         if (authState.isGuest) {
             // Guest mode: LocalStorage persistence only
@@ -4215,12 +4212,22 @@ function initApp() {
             if (!localStorage.getItem('bis_auth_prompted')) {
                 localStorage.setItem('bis_auth_prompted', 'true');
                 try {
-                    window.location.href = getLoginUrl();
+                    window.location.replace(getLoginUrl());
+                    return; // DO NOT hide authLoadingScreen if we are redirecting!
                 } catch (e) {
                     window.location.hash = '#login';
                 }
             }
+            
+            // Safe to hide loading screen if no redirect
+            if (authLoadingScreen) {
+                authLoadingScreen.classList.add('hidden');
+            }
             return;
+        }
+        
+        if (authLoadingScreen) {
+            authLoadingScreen.classList.add('hidden');
         }
 
         // Authenticated user:
