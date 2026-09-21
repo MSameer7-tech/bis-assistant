@@ -4209,13 +4209,10 @@ function initApp() {
             const guestPrefs = getUserPreferences();
             applyPersonalization(guestPrefs);
             
-            const currentHash = (window.location.hash || '').toLowerCase();
-            // If they land on the base URL, direct them to the login page instead of the personalization modal
-            if (currentHash === '' || currentHash === '#home') {
-                if (!localStorage.getItem('bis_auth_prompted')) {
-                    localStorage.setItem('bis_auth_prompted', 'true');
-                    window.location.hash = '#login';
-                }
+            // New user accessing any URL for the first time should automatically go to the login page
+            if (!localStorage.getItem('bis_auth_prompted')) {
+                localStorage.setItem('bis_auth_prompted', 'true');
+                window.location.hash = '#login';
             }
             return;
         }
