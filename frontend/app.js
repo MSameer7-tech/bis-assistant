@@ -4191,8 +4191,14 @@ function initApp() {
             // Guest mode: LocalStorage persistence only
             const guestPrefs = getUserPreferences();
             applyPersonalization(guestPrefs);
-            if (!localStorage.getItem('bis_onboarding_completed')) {
-                openOnboarding(false);
+            
+            const currentHash = (window.location.hash || '').toLowerCase();
+            // If they land on the base URL, direct them to the login page instead of the personalization modal
+            if (currentHash === '' || currentHash === '#home') {
+                if (!localStorage.getItem('bis_auth_prompted')) {
+                    localStorage.setItem('bis_auth_prompted', 'true');
+                    window.location.hash = '#login';
+                }
             }
             return;
         }
@@ -4202,6 +4208,11 @@ function initApp() {
         const userId = user?.id;
 
         if (userId) {
+            const currentHash = (window.location.hash || '').toLowerCase();
+            if (currentHash === '#login' || currentHash === '#signin' || currentHash === '#signup') {
+                closeAuthModal();
+                window.location.hash = '#home';
+            }
             // Render from user-scoped local cache immediately without blocking
             const cachedUserPrefs = getUserPreferences(userId);
             applyPersonalization(cachedUserPrefs);
