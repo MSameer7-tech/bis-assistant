@@ -2931,6 +2931,10 @@ function initApp() {
         if (btnSystemInfo) {
             btnSystemInfo.addEventListener('click', (e) => {
                 e.stopPropagation();
+                // Disable System Modal for logged out guest mode
+                if (typeof getCachedUser === 'function' && !getCachedUser()) {
+                    return;
+                }
                 openSystemModal();
             });
         }
@@ -3975,6 +3979,13 @@ function initApp() {
                 const meta = effectiveUser.user_metadata || {};
                 const displayName = meta.full_name || meta.name || effectiveUser.name || effectiveUser.email?.split('@')[0] || 'Workspace User';
 
+                if (btnSystemInfo) {
+                    btnSystemInfo.style.cursor = 'pointer';
+                    btnSystemInfo.setAttribute('title', 'System Status');
+                    btnSystemInfo.setAttribute('role', 'button');
+                    btnSystemInfo.setAttribute('tabindex', '0');
+                }
+
                 // Display login email or GitHub username
                 const githubUsername = meta.user_name || meta.preferred_username;
                 const loginEmail = effectiveUser.email || meta.email || '';
@@ -4057,6 +4068,12 @@ function initApp() {
                 if (sidebarUserSubText) {
                     sidebarUserSubText.setAttribute('data-i18n', 'nav.status_operational');
                     sidebarUserSubText.textContent = t('nav.status_operational', 'Operational');
+                }
+                if (btnSystemInfo) {
+                    btnSystemInfo.style.cursor = 'default';
+                    btnSystemInfo.removeAttribute('title');
+                    btnSystemInfo.removeAttribute('role');
+                    btnSystemInfo.removeAttribute('tabindex');
                 }
 
                 if (sidebarAvatarImg) sidebarAvatarImg.classList.add('hidden');
