@@ -2312,21 +2312,37 @@ class GroqClient:
         ssl_ctx = self._get_ssl_context()
         
         last_err = None
-        max_attempts = len(self._keys)
+        max_total_wait = 180.0  # Max total time to wait across all retries for big queries
+        start_time = time.time()
         attempts = 0
         
         if trace_info is not None:
             trace_info["groq_invoked"] = True
             trace_info["failover_used"] = False
             
-        while attempts < max_attempts:
+        while time.time() - start_time < max_total_wait:
             key_id = self._get_next_available_key()
             if not key_id:
-                err_msg = "GROQ_ALL_KEYS_RATE_LIMITED"
-                if trace_info is not None:
-                    trace_info["final_status"] = "ERROR"
-                    trace_info["failure_reason"] = err_msg
-                raise RuntimeError(err_msg)
+                # All keys are on cooldown. Find the one that unlocks soonest.
+                now = time.time()
+                min_wait = None
+                with self._lock:
+                    for k, state in self._key_state.items():
+                        if state["status"] == "COOLDOWN":
+                            wait = state["cooldown_until"] - now
+                            if wait > 0:
+                                min_wait = wait if min_wait is None else min(min_wait, wait)
+                
+                if min_wait is not None and min_wait > 0:
+                    # Sleep until the key is available, capped to avoid hanging indefinitely
+                    sleep_time = min(min_wait + 0.5, 30.0)
+                    if time.time() + sleep_time - start_time > max_total_wait:
+                        break  # Will exceed max_total_wait, give up
+                    time.sleep(sleep_time)
+                    continue
+                else:
+                    # No keys available and no wait time (all INVALID)
+                    break
                 
             attempts += 1
             if trace_info is not None:
@@ -2348,7 +2364,9 @@ class GroqClient:
             )
 
             try:
-                with urllib.request.urlopen(req, context=ssl_ctx, timeout=self.timeout) as resp:
+                # Dynamically increase timeout for large queries after failures
+                current_timeout = self.timeout + (attempts * 2.0)
+                with urllib.request.urlopen(req, context=ssl_ctx, timeout=current_timeout) as resp:
                     resp_data = json.loads(resp.read().decode("utf-8"))
                     choices = resp_data.get("choices", [])
                     if not choices:
@@ -2363,7 +2381,7 @@ class GroqClient:
             except urllib.error.HTTPError as e:
                 err_body = e.read().decode("utf-8", errors="ignore")
                 if e.code == 429:
-                    wait_sec = 30.0
+                    wait_sec = min(2.0 ** attempts, 60.0)  # Exponential backoff by default
                     m = re.search(r"try again in ([0-9.]+)s", err_body, re.IGNORECASE)
                     if m:
                         try:
@@ -2371,7 +2389,7 @@ class GroqClient:
                         except Exception:
                             pass
                     self._mark_key_status(key_id, "COOLDOWN", wait_sec)
-                    last_err = RuntimeError(f"Rate limited on {key_id}")
+                    last_err = RuntimeError(f"Rate limited on {key_id}. Wait {wait_sec}s.")
                     continue
                 elif e.code in (401, 403):
                     self._mark_key_status(key_id, "INVALID")
@@ -2384,7 +2402,7 @@ class GroqClient:
                         trace_info["failure_reason"] = str(err)
                     raise err
                 elif e.code >= 500:
-                    self._mark_key_status(key_id, "COOLDOWN", 10.0)
+                    self._mark_key_status(key_id, "COOLDOWN", min(5.0 * attempts, 30.0))
                     last_err = RuntimeError(f"Groq Server Error {e.code} on {key_id}")
                     continue
                 else:
@@ -2393,18 +2411,18 @@ class GroqClient:
                     continue
 
             except urllib.error.URLError as e:
-                self._mark_key_status(key_id, "COOLDOWN", 10.0)
+                self._mark_key_status(key_id, "COOLDOWN", min(2.0 ** attempts, 30.0))
                 last_err = RuntimeError(f"Groq Network Error on {key_id}: {e.reason}")
                 continue
 
-        err_msg = "GROQ_ALL_KEYS_RATE_LIMITED"
+        err_msg = f"GROQ_ALL_KEYS_RATE_LIMITED (after {int(time.time() - start_time)}s wait)"
         if last_err and not isinstance(last_err, RuntimeError) or (last_err and "Rate limited" not in str(last_err)):
             err_msg = f"GROQ_ALL_KEYS_RATE_LIMITED - Last error: {str(last_err)}"
             
         if trace_info is not None:
             trace_info["final_status"] = "ERROR"
             trace_info["failure_reason"] = err_msg
-        raise RuntimeError(err_msg)
+        raise last_err or RuntimeError(err_msg)
 
 # -----------------------------------------------------------------------------
 # Prompt Construction
