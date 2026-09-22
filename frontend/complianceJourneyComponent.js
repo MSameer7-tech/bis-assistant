@@ -355,9 +355,15 @@ export class ComplianceJourneyComponent {
                 const inputStd = this.container.querySelector('#compInputStandard');
                 const inputQuery = this.container.querySelector('#compInputQuery');
 
-                if (inputProd) inputProd.value = prod;
-                if (inputStd) inputStd.value = std;
-                if (inputQuery) inputQuery.value = '';
+                // Fill query box instead of specific fields to prevent stale state bugs
+                if (inputProd) inputProd.value = '';
+                if (inputStd) inputStd.value = '';
+                if (inputQuery) {
+                    if (prod && std) inputQuery.value = `${prod} (${std})`;
+                    else if (prod) inputQuery.value = prod;
+                    else if (std) inputQuery.value = std;
+                    else inputQuery.value = '';
+                }
 
                 this.executeSearchFromInputs();
             });
@@ -404,7 +410,12 @@ export class ComplianceJourneyComponent {
     executeFromQuery(queryText, options = {}) {
         if (!queryText) return;
         const inputQuery = this.container?.querySelector('#compInputQuery');
+        const inputProd = this.container?.querySelector('#compInputProduct');
+        const inputStd = this.container?.querySelector('#compInputStandard');
         if (inputQuery) inputQuery.value = queryText;
+        if (inputProd && !options.product) inputProd.value = '';
+        if (inputStd && !options.standard) inputStd.value = '';
+        
         this.executeSearch({
             query: queryText,
             product: options.product || null,
@@ -496,10 +507,11 @@ export class ComplianceJourneyComponent {
                                 location: clarifyData.slots?.location || clarifyData.refined_request?.location || payload.location,
                                 query: payload.query
                             };
-                            if (clarifyData.resolved_standard) {
+                            // Do not backfill resolved standard to prevent stale state bugs
+                            /* if (clarifyData.resolved_standard) {
                                 const inputStd = this.container.querySelector('#compInputStandard');
                                 if (inputStd && !inputStd.value) inputStd.value = clarifyData.resolved_standard;
-                            }
+                            } */
                         }
                     }
                 } catch (clarifyErr) {
@@ -721,11 +733,17 @@ export class ComplianceJourneyComponent {
                 const prod = btn.getAttribute('data-product') || '';
                 const std = btn.getAttribute('data-standard') || '';
 
-                // Populate form inputs
+                // Prevent stale state by only populating the main query box visually if needed
                 const inputProd = this.container?.querySelector('#compInputProduct');
                 const inputStd = this.container?.querySelector('#compInputStandard');
-                if (inputProd) inputProd.value = prod;
-                if (inputStd) inputStd.value = std;
+                const inputQuery = this.container?.querySelector('#compInputQuery');
+                if (inputProd) inputProd.value = '';
+                if (inputStd) inputStd.value = '';
+                if (inputQuery) {
+                    if (prod && std) inputQuery.value = `${prod} (${std})`;
+                    else if (prod) inputQuery.value = prod;
+                    else if (std) inputQuery.value = std;
+                }
 
                 // Show non-blocking progress banner
                 const resultsContainer = this.container?.querySelector('#complianceResultsContainer');

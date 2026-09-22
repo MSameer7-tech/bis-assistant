@@ -1580,9 +1580,9 @@ function initApp() {
                     const inputStd = viewComplianceJourney.querySelector('#compInputStandard');
                     const inputProd = viewComplianceJourney.querySelector('#compInputProduct');
                     const inputQuery = viewComplianceJourney.querySelector('#compInputQuery');
-                    if (inputStd) inputStd.value = std || '';
+                    if (inputStd) inputStd.value = '';
                     if (inputProd) inputProd.value = '';
-                    if (inputQuery) inputQuery.value = '';
+                    if (inputQuery) inputQuery.value = std || '';
                     complianceJourney.executeSearchFromInputs();
                 }
             });
